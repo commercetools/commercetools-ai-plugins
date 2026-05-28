@@ -1,12 +1,12 @@
 {
   "$comment": "Single source of truth for plugin metadata. Edit here, then run `npm run build` to regenerate all vendor manifests.",
-  "name": "commercetools-ai-toolkit",
-  "displayName": "commercetools AI Toolkit",
+  "name": "commercetools",
+  "displayName": "commercetools",
   "version": "0.1.0",
   "description": "commercetools skills, subagents, and MCP servers for AI coding agents (Claude Code, Cursor, VS Code Copilot, OpenAI Codex, Gemini CLI).",
   "author": {
-    "name": "commercetools Enablement Technology",
-    "email": "enablement-tech-team@commercetools.com",
+    "name": "commercetools",
+    "email": "support@commercetools.com",
     "url": "https://commercetools.com"
   },
   "homepage": "https://commercetools.com",
@@ -26,7 +26,7 @@
     "description": "Official commercetools skills, agents and MCP servers.",
     "owner": {
       "name": "commercetools",
-      "email": "enablement-tech-team@commercetools.com",
+      "email": "support@commercetools.com",
       "url": "https://commercetools.com"
     }
   }

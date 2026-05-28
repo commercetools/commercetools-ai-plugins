@@ -19,7 +19,7 @@ It auto-detects which agent(s) you have installed and drops the skills in the ri
 /plugin marketplace add commercetools/commercetools-skills
 
 # Install the bundle
-/plugin install commercetools-ai-toolkit@commercetools
+/plugin install commercetools@commercetools
 ```
 
 Plugin contents (skills, agents, MCP) become available immediately. Pin a version with `@<version>` or update with `/plugin marketplace update`.
@@ -50,10 +50,10 @@ To install from a marketplace once we submit it, configure `chat.plugins.marketp
 codex plugin marketplace add commercetools/commercetools-skills
 
 # Install
-codex plugin install commercetools-ai-toolkit
+codex plugin install commercetools
 ```
 
-Codex installs the bundle into `~/.codex/plugins/cache/commercetools/commercetools-ai-toolkit/<version>/`.
+Codex installs the bundle into `~/.codex/plugins/cache/commercetools/commercetools/<version>/`.
 
 ## Gemini CLI
 

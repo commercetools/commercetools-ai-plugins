@@ -1,5 +1,5 @@
 {
-  "name": "commercetools-ai-toolkit",
+  "name": "commercetools",
   "version": "0.1.0",
   "description": "commercetools skills, subagents, and MCP servers for AI coding agents (Claude Code, Cursor, VS Code Copilot, OpenAI Codex, Gemini CLI).",
   "mcpServers": {

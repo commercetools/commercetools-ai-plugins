@@ -9,16 +9,16 @@ name: Smoke Test
 # LLM credits. Each job is offline-only (no API calls to the vendor's models).
 #
 # Vendors NOT covered here, and why:
-#   - Cursor: GUI-only, no headless CLI exists yet
+#   - Cursor: GUI-only, no headless CLI exists yet.
 #   - GitHub Copilot CLI: doesn't accept --path <local>, can only install from
 #     a github URL. Can't smoke-test a PR branch this way. Revisit when
 #     local-path install lands.
 #   - OpenAI Codex: marketplace install rejects plugins whose source path
 #     resolves to the repository root (openai/codex#17066). Since our design
 #     IS "the repo is the plugin," we can't local-smoke-test the install
-#     path. The Codex CLI install itself + manifest schema validation (in
-#     ci.yml) covers the offline checks. Revisit when the upstream bug is
-#     fixed or if we restructure with a Codex-specific subdir.
+#     pipeline. Manifest correctness is still checked offline in ci.yml via
+#     the published codex-hooks JSON Schema. Revisit when the upstream bug
+#     is fixed or if we restructure with a Codex-specific subdir.
 
 on:
   pull_request:
@@ -48,34 +48,6 @@ jobs:
 
       - name: Validate plugin layout against Claude Code (offline)
         run: claude plugin validate ./
-
-  smoke-codex-cli:
-    name: OpenAI Codex (CLI install only)
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-
-      - name: Install dev deps
-        run: npm ci
-
-      - name: Build manifests
-        run: npm run build
-
-      - name: Install Codex CLI (smoke check)
-        # We can't run the full `marketplace add` → `plugin install` flow
-        # locally because Codex rejects plugin source paths that resolve to
-        # the repo root (openai/codex#17066). Installing the CLI confirms
-        # at least that there are no install-blocking issues with the
-        # environment; manifest correctness is covered by JSON Schema
-        # validation in ci.yml.
-        run: |
-          npm install -g @openai/codex
-          codex --version
 
   smoke-gemini:
     name: Gemini CLI
@@ -121,4 +93,4 @@ jobs:
           echo "--- captured output ---"
           cat /tmp/gemini-exts.txt
           echo "--- end ---"
-          grep -q commercetools-ai-toolkit /tmp/gemini-exts.txt
+          grep -q commercetools /tmp/gemini-exts.txt

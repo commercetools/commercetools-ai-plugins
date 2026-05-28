@@ -7,7 +7,7 @@ One repo, five tools. Install with a single command from your editor of choice:
 | Tool | Install command |
 | :--- | :--- |
 | **Universal** | `npx skills add commercetools/commercetools-skills` |
-| **Claude Code** | `/plugin marketplace add commercetools/commercetools-skills` then `/plugin install commercetools-ai-toolkit@commercetools` |
+| **Claude Code** | `/plugin marketplace add commercetools/commercetools-skills` then `/plugin install commercetools@commercetools` |
 | **Cursor** | Settings → Plugins → Install from Git URL → `https://github.com/commercetools/commercetools-skills` |
 | **VS Code Copilot** | Command Palette → `Chat: Install Plugin From Source` → `https://github.com/commercetools/commercetools-skills` |
 | **OpenAI Codex** | `codex plugin marketplace add commercetools/commercetools-skills` |

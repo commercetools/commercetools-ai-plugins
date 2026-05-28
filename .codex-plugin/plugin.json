@@ -1,10 +1,10 @@
 {
-  "name": "commercetools-ai-toolkit",
+  "name": "commercetools",
   "version": "0.1.0",
   "description": "commercetools skills, subagents, and MCP servers for AI coding agents (Claude Code, Cursor, VS Code Copilot, OpenAI Codex, Gemini CLI).",
   "author": {
-    "name": "commercetools Enablement Technology",
-    "email": "enablement-tech-team@commercetools.com",
+    "name": "commercetools",
+    "email": "support@commercetools.com",
     "url": "https://commercetools.com"
   },
   "homepage": "https://commercetools.com",
@@ -21,9 +21,9 @@
   "mcpServers": "./.codex-plugin/mcp.json",
   "hooks": "./.codex-plugin/hooks.json",
   "interface": {
-    "displayName": "commercetools AI Toolkit",
+    "displayName": "commercetools",
     "shortDescription": "commercetools skills, subagents, and MCP servers for AI coding agents (Claude Code, Cursor, VS Code Copilot, OpenAI Codex, Gemini CLI).",
-    "developerName": "commercetools Enablement Technology",
+    "developerName": "commercetools",
     "category": "Productivity",
     "websiteURL": "https://commercetools.com"
   }

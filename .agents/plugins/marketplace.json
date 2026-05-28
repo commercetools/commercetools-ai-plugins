@@ -5,7 +5,7 @@
   },
   "plugins": [
     {
-      "name": "commercetools-ai-toolkit",
+      "name": "commercetools",
       "source": {
         "source": "git-subdir",
         "url": "https://github.com/commercetools/commercetools-skills.git",

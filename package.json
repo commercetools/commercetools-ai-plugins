@@ -5,10 +5,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node scripts/build.mjs",
-    "validate": "node scripts/validate.mjs",
-    "new-skill": "node scripts/new-skill.mjs",
-    "update-schemas": "node scripts/update-schemas.mjs",
+    "build": "node .internal/scripts/build.mjs",
+    "validate": "node .internal/scripts/validate.mjs",
+    "new-skill": "node .internal/scripts/new-skill.mjs",
+    "update-schemas": "node .internal/scripts/update-schemas.mjs",
     "check": "npm run build && npm run validate"
   },
   "engines": {

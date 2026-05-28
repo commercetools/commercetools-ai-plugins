@@ -12,8 +12,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, "..");
-const SCHEMAS_DIR = path.join(ROOT, "schemas");
+// Scripts live at .internal/scripts/, so the repo root is two levels up.
+const ROOT = path.resolve(__dirname, "../..");
+const SCHEMAS_DIR = path.join(ROOT, ".internal/schemas");
 
 const SCHEMAS = [
   {
@@ -44,7 +45,7 @@ for (const { name, url } of SCHEMAS) {
   // Sanity-check it parses as JSON before writing.
   JSON.parse(body);
   fs.writeFileSync(dest, body);
-  console.log(`OK -> schemas/${name}`);
+  console.log(`OK -> .internal/schemas/${name}`);
 }
 
-console.log("\nDone. Commit the updated schemas/ files if anything changed.");
+console.log("\nDone. Commit the updated .internal/schemas/ files if anything changed.");

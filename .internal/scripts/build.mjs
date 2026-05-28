@@ -16,7 +16,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, "..");
+// Scripts live at .internal/scripts/, so the repo root is two levels up.
+const ROOT = path.resolve(__dirname, "../..");
 
 const readJSON = (rel) =>
   JSON.parse(fs.readFileSync(path.join(ROOT, rel), "utf8"));
@@ -42,9 +43,9 @@ const removeIfExists = (rel) => {
   }
 };
 
-const meta = readJSON("manifests/meta.json");
-const mcpSource = readJSON("mcp/servers.source.json");
-const alwaysOnContext = readText("context/always-on.md");
+const meta = readJSON(".internal/manifests/meta.json");
+const mcpSource = readJSON(".internal/mcp/servers.source.json");
+const alwaysOnContext = readText(".internal/context/always-on.md");
 
 // ---------------------------------------------------------------------------
 // MCP server config: produce per-vendor variants.
@@ -131,7 +132,7 @@ const sessionStartHook = (pluginRootToken) => ({
         hooks: [
           {
             type: "command",
-            command: `cat "${pluginRootToken}/context/always-on.md"`,
+            command: `cat "${pluginRootToken}/.internal/context/always-on.md"`,
           },
         ],
       },

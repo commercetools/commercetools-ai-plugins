@@ -1,6 +1,6 @@
 # Authoring MCP servers
 
-MCP server definitions live in `mcp/servers.source.json`. Each entry declares a `transport` (either `http` or `stdio`) and the build script translates the entry into each vendor's native config shape.
+MCP server definitions live in `.internal/mcp/servers.source.json`. Each entry declares a `transport` (either `http` or `stdio`) and the build script translates the entry into each vendor's native config shape.
 
 
 ## Currently shipped

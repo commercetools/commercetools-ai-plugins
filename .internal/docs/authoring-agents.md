@@ -40,7 +40,7 @@ maxTurns: 30
 If a specific agent genuinely needs Claude-only tuning (e.g. `effort: high` for an expensive reasoning agent), the right approach is to make `agents/` vendor-specific via the build:
 
 1. Move the source file to `agents/source/<name>.md` with the full Claude frontmatter
-2. Update `scripts/build.mjs` to emit:
+2. Update `.internal/scripts/build.mjs` to emit:
    - `.claude-plugin/agents/<name>.md` — full frontmatter
    - `agents/<name>.md` — stripped to `name` + `description`
 3. Point Claude's `plugin.json` at `./.claude-plugin/agents/<name>.md`

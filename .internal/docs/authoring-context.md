@@ -5,7 +5,7 @@ The toolkit ships a short, always-loaded "framing" prompt that gives the assista
 ## Source of truth
 
 ```
-context/always-on.md          ← single canonical file, authored by the team
+.internal/context/always-on.md  ← single canonical file, authored by the team
 ```
 
 Keep it **under 200 words**. Every session pays the token cost on every prompt, so anything that belongs in a situational skill should go in a skill, not here.
@@ -31,7 +31,7 @@ Each vendor has a different native mechanism (or none at all). The build script 
 
 ```bash
 # Edit
-vim context/always-on.md
+vim .internal/context/always-on.md
 
 # Regenerate all 5 vendor artifacts
 npm run build
@@ -40,10 +40,10 @@ npm run build
 npm run validate
 ```
 
-Bumping the content does NOT require a version bump on its own, but it's good practice to bump `manifests/meta.json` `version` so users get the update via their tool's plugin-update flow.
+Bumping the content does NOT require a version bump on its own, but it's good practice to bump `.internal/manifests/meta.json` `version` so users get the update via their tool's plugin-update flow.
 
 ## Caveats
 
-- **Shell dependency**: the Claude / Codex hooks use `cat`. Windows users not on WSL or Git Bash may not have it on PATH. If this becomes a real issue, swap the command in `build.mjs` for a `node`-based reader.
+- **Shell dependency**: the Claude / Codex hooks use `cat`. Windows users not on WSL or Git Bash may not have it on PATH. If this becomes a real issue, swap the command in `.internal/scripts/build.mjs` for a `node`-based reader.
 - **Hook runs on every session start**: this is the desired behavior, but on slow filesystems it adds a tiny startup cost.
 - **Token cost**: as noted above, keep the file short.

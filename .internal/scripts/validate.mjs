@@ -24,7 +24,8 @@ import Ajv from "ajv";
 import addFormats from "ajv-formats";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, "..");
+// Scripts live at .internal/scripts/, so the repo root is two levels up.
+const ROOT = path.resolve(__dirname, "../..");
 
 let errors = 0;
 const fail = (msg) => {
@@ -137,15 +138,15 @@ addFormats(ajv);
 
 const schemaChecks = [
   {
-    schema: "schemas/claude-code-plugin-manifest.json",
+    schema: ".internal/schemas/claude-code-plugin-manifest.json",
     target: ".claude-plugin/plugin.json",
   },
   {
-    schema: "schemas/claude-code-marketplace.json",
+    schema: ".internal/schemas/claude-code-marketplace.json",
     target: ".claude-plugin/marketplace.json",
   },
   {
-    schema: "schemas/codex-hooks.json",
+    schema: ".internal/schemas/codex-hooks.json",
     target: ".codex-plugin/hooks.json",
   },
 ];

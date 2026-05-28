@@ -8,11 +8,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, "..");
+// Scripts live at .internal/scripts/, so the repo root is two levels up.
+const ROOT = path.resolve(__dirname, "../..");
 
 const name = process.argv[2];
 if (!name) {
-  console.error("Usage: node scripts/new-skill.mjs <skill-name>");
+  console.error("Usage: npm run new-skill -- <skill-name>");
   console.error("       (name must be kebab-case, e.g. ct-cart-debugger)");
   process.exit(1);
 }

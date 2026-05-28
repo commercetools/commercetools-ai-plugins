@@ -37,6 +37,6 @@ Those are Tier 2/3 concerns — they need an actual LLM call and API keys. We'll
 
 The job logs show the full output of the vendor CLI command that failed. Common failure modes:
 
-- **"plugin not found in list"** — the install step succeeded but the discovery step doesn't see our plugin. Usually means a wrong path in `manifests/meta.json` or the build script. Look at the `tee /tmp/<vendor>-plugins.txt` step output.
-- **"validate failed"** — the vendor's own validator rejected the manifest. Means our schema check was too lenient. Add the new rule to `scripts/validate.mjs` or fix `scripts/build.mjs`.
+- **"plugin not found in list"** — the install step succeeded but the discovery step doesn't see our plugin. Usually means a wrong path in `.internal/manifests/meta.json` or the build script. Look at the `tee /tmp/<vendor>-plugins.txt` step output.
+- **"validate failed"** — the vendor's own validator rejected the manifest. Means our schema check was too lenient. Add the new rule to `.internal/scripts/validate.mjs` or fix `.internal/scripts/build.mjs`.
 - **Vendor CLI auth prompt** — should not happen for any of the commands we run, but if a vendor changes behavior and starts requiring auth for a local-only command, we'll need to either pass a token or switch to a different verification command.

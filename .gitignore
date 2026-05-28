@@ -1,0 +1,11 @@
+node_modules/
+.DS_Store
+*.log
+.env
+.env.local
+.env.*.local
+
+# Claude Code local developer state (NOT to be confused with .claude-plugin/,
+# which is the shipped plugin manifest and MUST be committed). Everything in
+# .claude/ is local-machine session state (permissions, worktrees, etc.).
+.claude/

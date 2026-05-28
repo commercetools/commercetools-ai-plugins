@@ -103,7 +103,8 @@ jobs:
         run: npm install -g @google/gemini-cli
 
       - name: Install extension from this repo (non-interactive)
-        run: gemini extensions install --path "$GITHUB_WORKSPACE" --consent --skip-settings
+        # `source` is a positional arg (github URL or local path), not a --path flag.
+        run: gemini extensions install "$GITHUB_WORKSPACE" --consent --skip-settings
 
       - name: Verify extension appears in `gemini extensions list`
         run: |

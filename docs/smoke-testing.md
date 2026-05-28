@@ -12,15 +12,16 @@ The smoke test is what catches the bugs JSON Schema can't — things like "the c
 | Vendor | Smoke test | What it asserts |
 | :--- | :--- | :--- |
 | Claude Code | `claude plugin validate ./` | Manifest + components validate against Claude's own internal schema (which is sometimes stricter than the published JSON Schema) |
-| OpenAI Codex | Register `./.agents/plugins` as marketplace → `codex plugin install` → `codex plugin list \| grep commercetools-ai-toolkit` | Marketplace catalog parses, install pipeline succeeds, plugin is discoverable |
-| Gemini CLI | `gemini extensions link .` → `gemini extensions list \| grep commercetools-ai-toolkit` | Extension manifest loads, `gemini-extension.json` is well-formed |
+| OpenAI Codex | `codex --version` (CLI install only — see limitation below) | CLI is installable on a clean Ubuntu runner; manifest correctness covered by JSON Schema validation in `ci.yml` |
+| Gemini CLI | `gemini extensions install --path . --consent --skip-settings` → `gemini extensions list \| grep commercetools-ai-toolkit` | Extension manifest loads, install succeeds, extension is discoverable |
 
 ## What's NOT covered, and why
 
-| Vendor | Why no smoke test |
+| Vendor | Why no full smoke test |
 | :--- | :--- |
 | **Cursor** | GUI-only. No headless CLI exists, so there's nothing to drive from a GitHub Actions runner. Falls back to JSON Schema validation in `ci.yml`. |
 | **GitHub Copilot CLI** | `copilot plugin install` accepts `owner/repo`, `owner/repo:path`, or `https://...`, but **not** a local path. We can't install a PR branch's contents this way. Will revisit when local-path or `--ref` install lands. |
+| **OpenAI Codex (install path)** | The local marketplace install path rejects plugins whose source path resolves to the repo root ([openai/codex#17066](https://github.com/openai/codex/issues/17066)). Our design is "the repo IS the plugin," so we can't run the full install pipeline in CI. We still install the Codex CLI on a clean runner to catch environment regressions, and `ci.yml` validates `.codex-plugin/hooks.json` against the published Codex hooks schema. Real users installing via `codex plugin marketplace add commercetools/commercetools-skills` from GitHub may also hit this until the upstream bug is fixed or we restructure with a Codex-specific subdir. |
 
 ## What the smoke test does NOT catch (and what Tier 2 would)
 

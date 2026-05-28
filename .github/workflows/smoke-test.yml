@@ -13,6 +13,12 @@ name: Smoke Test
 #   - GitHub Copilot CLI: doesn't accept --path <local>, can only install from
 #     a github URL. Can't smoke-test a PR branch this way. Revisit when
 #     local-path install lands.
+#   - OpenAI Codex: marketplace install rejects plugins whose source path
+#     resolves to the repository root (openai/codex#17066). Since our design
+#     IS "the repo is the plugin," we can't local-smoke-test the install
+#     path. The Codex CLI install itself + manifest schema validation (in
+#     ci.yml) covers the offline checks. Revisit when the upstream bug is
+#     fixed or if we restructure with a Codex-specific subdir.
 
 on:
   pull_request:
@@ -23,6 +29,7 @@ jobs:
   smoke-claude-code:
     name: Claude Code
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -42,9 +49,10 @@ jobs:
       - name: Validate plugin layout against Claude Code (offline)
         run: claude plugin validate ./
 
-  smoke-codex:
-    name: OpenAI Codex
+  smoke-codex-cli:
+    name: OpenAI Codex (CLI install only)
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -58,23 +66,26 @@ jobs:
       - name: Build manifests
         run: npm run build
 
-      - name: Install Codex CLI
-        run: npm install -g @openai/codex
-
-      - name: Register local marketplace
-        run: codex plugin marketplace add ./.agents/plugins
-
-      - name: Install plugin from local marketplace
-        run: codex plugin install commercetools-ai-toolkit@commercetools
-
-      - name: Verify plugin appears in `codex plugin list`
+      - name: Install Codex CLI (smoke check)
+        # We can't run the full `marketplace add` → `plugin install` flow
+        # locally because Codex rejects plugin source paths that resolve to
+        # the repo root (openai/codex#17066). Installing the CLI confirms
+        # at least that there are no install-blocking issues with the
+        # environment; manifest correctness is covered by JSON Schema
+        # validation in ci.yml.
         run: |
-          codex plugin list | tee /tmp/codex-plugins.txt
-          grep -q commercetools-ai-toolkit /tmp/codex-plugins.txt
+          npm install -g @openai/codex
+          codex --version
 
   smoke-gemini:
     name: Gemini CLI
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      # Gemini CLI checks for an API key on startup even for local extension
+      # commands. A dummy value lets the CLI proceed past the auth check;
+      # we never actually call the model in this job.
+      GEMINI_API_KEY: dummy-for-smoke-test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -91,8 +102,8 @@ jobs:
       - name: Install Gemini CLI
         run: npm install -g @google/gemini-cli
 
-      - name: Link extension from this repo
-        run: gemini extensions link .
+      - name: Install extension from this repo (non-interactive)
+        run: gemini extensions install --path "$GITHUB_WORKSPACE" --consent --skip-settings
 
       - name: Verify extension appears in `gemini extensions list`
         run: |

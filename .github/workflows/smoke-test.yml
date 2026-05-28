@@ -86,6 +86,9 @@ jobs:
       # commands. A dummy value lets the CLI proceed past the auth check;
       # we never actually call the model in this job.
       GEMINI_API_KEY: dummy-for-smoke-test
+      # Bypass the "Do you trust the files in this folder?" interactive
+      # prompt. Safe here because the workspace IS this repo's own code.
+      GEMINI_CLI_TRUST_WORKSPACE: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

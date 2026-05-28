@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Build manifests
+        run: npm run build
+
+      - name: Fail if build produced uncommitted changes
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::Generated manifests are out of sync. Run 'npm run build' locally and commit the result."
+            git status
+            git diff
+            exit 1
+          fi
+
+      - name: Validate
+        run: npm run validate

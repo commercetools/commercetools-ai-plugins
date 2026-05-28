@@ -1,0 +1,10 @@
+{
+  "$comment": "Canonical MCP server definitions. Each entry must declare a 'transport' field: 'http' for streamable HTTP (uses 'url'), or 'stdio' for local process (uses 'command'/'args'/'env'). The build script translates this into each vendor's native shape. For stdio servers, use ${PLUGIN_ROOT} / ${PROJECT_DIR} as portable placeholders.",
+  "mcpServers": {
+    "commercetools-knowledge": {
+      "transport": "http",
+      "url": "https://docs.commercetools.com/apis/mcp",
+      "description": "commercetools Knowledge MCP. Provides commercetools documentation search, GraphQL/OAS schema lookup, GraphQL query validation, and developer best-practice tips. Public, no auth. Rate-limited to 100 requests / 15 minutes per IP."
+    }
+  }
+}

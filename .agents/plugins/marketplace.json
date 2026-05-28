@@ -1,0 +1,22 @@
+{
+  "name": "commercetools",
+  "interface": {
+    "displayName": "commercetools"
+  },
+  "plugins": [
+    {
+      "name": "commercetools-ai-toolkit",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/commercetools/commercetools-skills.git",
+        "path": "./",
+        "ref": "main"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

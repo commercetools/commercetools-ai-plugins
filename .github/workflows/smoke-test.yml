@@ -1,0 +1,100 @@
+name: Smoke Test
+
+# Tier 1 smoke test: install each vendor's CLI in a clean Linux runner,
+# install this plugin from the repo's local files, and verify the vendor
+# CLI can see the plugin / extension in its registry.
+#
+# This catches "plugin won't load" — wrong file paths after the copy-to-cache
+# step, malformed manifests that schemas missed, etc. — without burning any
+# LLM credits. Each job is offline-only (no API calls to the vendor's models).
+#
+# Vendors NOT covered here, and why:
+#   - Cursor: GUI-only, no headless CLI exists yet
+#   - GitHub Copilot CLI: doesn't accept --path <local>, can only install from
+#     a github URL. Can't smoke-test a PR branch this way. Revisit when
+#     local-path install lands.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  smoke-claude-code:
+    name: Claude Code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dev deps
+        run: npm ci
+
+      - name: Build manifests
+        run: npm run build
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Validate plugin layout against Claude Code (offline)
+        run: claude plugin validate ./
+
+  smoke-codex:
+    name: OpenAI Codex
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dev deps
+        run: npm ci
+
+      - name: Build manifests
+        run: npm run build
+
+      - name: Install Codex CLI
+        run: npm install -g @openai/codex
+
+      - name: Register local marketplace
+        run: codex plugin marketplace add ./.agents/plugins
+
+      - name: Install plugin from local marketplace
+        run: codex plugin install commercetools-ai-toolkit@commercetools
+
+      - name: Verify plugin appears in `codex plugin list`
+        run: |
+          codex plugin list | tee /tmp/codex-plugins.txt
+          grep -q commercetools-ai-toolkit /tmp/codex-plugins.txt
+
+  smoke-gemini:
+    name: Gemini CLI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dev deps
+        run: npm ci
+
+      - name: Build manifests
+        run: npm run build
+
+      - name: Install Gemini CLI
+        run: npm install -g @google/gemini-cli
+
+      - name: Link extension from this repo
+        run: gemini extensions link .
+
+      - name: Verify extension appears in `gemini extensions list`
+        run: |
+          gemini extensions list | tee /tmp/gemini-exts.txt
+          grep -q commercetools-ai-toolkit /tmp/gemini-exts.txt

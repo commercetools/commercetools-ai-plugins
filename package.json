@@ -1,0 +1,26 @@
+{
+  "name": "commercetools-skills",
+  "version": "0.1.0",
+  "description": "commercetools skills, subagents, and MCP servers for Claude Code, Cursor, VS Code Copilot, OpenAI Codex, and Gemini CLI.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "validate": "node scripts/validate.mjs",
+    "new-skill": "node scripts/new-skill.mjs",
+    "update-schemas": "node scripts/update-schemas.mjs",
+    "check": "npm run build && npm run validate"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/commercetools/commercetools-skills.git"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1"
+  }
+}

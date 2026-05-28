@@ -30,12 +30,24 @@ maxTurns: 30
 | :--- | :--- | :--- |
 | `name` | yes | all |
 | `description` | yes | all — drives auto-invocation |
-| `model` | no | Claude Code |
-| `effort` | no | Claude Code (`low` / `medium` / `high`) |
-| `maxTurns` | no | Claude Code |
-| `tools` / `disallowedTools` | no | Claude Code |
+| `model` | no | Claude Code (⚠️ rejected by Gemini today) |
+| `effort` | no | Claude Code (`low` / `medium` / `high`) (⚠️ rejected by Gemini) |
+| `maxTurns` | no | Claude Code (⚠️ rejected by Gemini) |
+| `tools` / `disallowedTools` | no | Claude Code (⚠️ likely rejected by Gemini) |
 
-Don't add `hooks`, `mcpServers`, or `permissionMode` — Claude Code disallows those in plugin-shipped agents for security.
+**Cross-vendor rule of thumb:** only `name` and `description` are universally accepted today. Gemini's agent loader is in preview and rejects unknown frontmatter keys with `Unrecognized key(s) in object: '<field>'`, which fails the whole extension load.
+
+If a specific agent genuinely needs Claude-only tuning (e.g. `effort: high` for an expensive reasoning agent), the right approach is to make `agents/` vendor-specific via the build:
+
+1. Move the source file to `agents/source/<name>.md` with the full Claude frontmatter
+2. Update `scripts/build.mjs` to emit:
+   - `.claude-plugin/agents/<name>.md` — full frontmatter
+   - `agents/<name>.md` — stripped to `name` + `description`
+3. Point Claude's `plugin.json` at `./.claude-plugin/agents/<name>.md`
+
+For now (placeholder agents), keeping the frontmatter minimal works fine across all five vendors.
+
+Don't add `hooks`, `mcpServers`, or `permissionMode` to any agent frontmatter — Claude Code disallows those in plugin-shipped agents for security, and other vendors don't understand them either.
 
 ## Writing the body
 

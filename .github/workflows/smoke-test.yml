@@ -110,6 +110,15 @@ jobs:
         run: gemini extensions install "$GITHUB_WORKSPACE" --consent --skip-settings
 
       - name: Verify extension appears in `gemini extensions list`
+        # Two robustness moves:
+        #   1. Capture both stdout AND stderr — gemini emits some output on
+        #      stderr that a plain pipe to tee would miss.
+        #   2. `|| true` after the list command — gemini sometimes exits
+        #      non-zero on benign warnings. We only care about whether the
+        #      extension name appears in the captured output.
         run: |
-          gemini extensions list | tee /tmp/gemini-exts.txt
+          gemini extensions list > /tmp/gemini-exts.txt 2>&1 || true
+          echo "--- captured output ---"
+          cat /tmp/gemini-exts.txt
+          echo "--- end ---"
           grep -q commercetools-ai-toolkit /tmp/gemini-exts.txt

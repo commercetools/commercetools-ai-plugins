@@ -16,12 +16,12 @@ intersection of what they accept.
 If a future agent genuinely needs Claude-specific tuning, the right move
 is to:
   - Move the full-fidelity source under `agents/source/<name>.md`
-  - Update `scripts/build.mjs` to emit two versions:
+  - Update `.internal/scripts/build.mjs` to emit two versions:
       - `.claude-plugin/agents/<name>.md`  (full frontmatter)
       - `agents/<name>.md`                  (stripped to name+description)
   - Update Claude's plugin.json to point `agents` at the .claude-plugin path
 
-See `docs/authoring-agents.md` for the current cross-vendor compatibility
+See `.internal/docs/authoring-agents.md` for the current cross-vendor compatibility
 matrix.
 -->
 

@@ -29,7 +29,7 @@ Full per-tool walkthrough → [`.internal/docs/install.md`](.internal/docs/insta
 
 📚 **Skills** — focused playbooks the agent reaches for when you ask about specific commercetools tasks (API exploration, cart debugging, custom object modeling, …).
 
-🧑‍🏫 **Subagents** — specialized personas like `ct-architect` for design decisions and `ct-support-debugger` for troubleshooting.
+🧑‍🏫 **Subagents** — specialized personas the agent can delegate to (e.g. architecture decisions, support debugging). Bundle ships with a placeholder; team-authored subagents land in follow-up.
 
 📌 **Always-on context** — every session opens knowing it's working on commercetools. No more re-explaining the cart-to-order lifecycle.
 

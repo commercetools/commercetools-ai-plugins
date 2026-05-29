@@ -1,11 +1,15 @@
-node_modules/
+# OS / editor noise
 .DS_Store
 *.log
+
+# Defense in depth: node_modules should only exist under .internal/, but
+# guard against tools creating one at root anyway.
+node_modules/
+
+# Secrets (defense in depth — keep at root in case anything lands here)
 .env
 .env.local
 .env.*.local
 
-# Claude Code local developer state (NOT to be confused with .claude-plugin/,
-# which is the shipped plugin manifest and MUST be committed). Everything in
-# .claude/ is local-machine session state (permissions, worktrees, etc.).
+# Claude Code local developer state (NOT .claude-plugin/, which IS the plugin)
 .claude/

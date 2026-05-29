@@ -1,0 +1,17 @@
+{
+  "name": "commercetools",
+  "description": "Official commercetools plugins for AI coding agents.",
+  "owner": {
+    "name": "commercetools",
+    "email": "support@commercetools.com",
+    "url": "https://commercetools.com"
+  },
+  "plugins": [
+    {
+      "name": "commercetools",
+      "source": "./",
+      "description": "Build commercetools solutions faster",
+      "version": "0.1.0"
+    }
+  ]
+}

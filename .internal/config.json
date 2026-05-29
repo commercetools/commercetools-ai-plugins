@@ -1,0 +1,31 @@
+{
+  "$comment": "Single source of truth for the commercetools plugin. Edit here, then run `npm run build` to regenerate every vendor manifest.",
+  "name": "commercetools",
+  "displayName": "commercetools",
+  "version": "0.1.0",
+  "description": "Build commercetools solutions faster",
+  "author": {
+    "name": "commercetools",
+    "email": "support@commercetools.com",
+    "url": "https://commercetools.com"
+  },
+  "homepage": "https://commercetools.com",
+  "repository": "https://github.com/commercetools/commercetools-ai-plugins",
+  "license": "MIT",
+  "keywords": ["commercetools", "commerce", "ecommerce"],
+  "marketplace": {
+    "name": "commercetools",
+    "description": "Official commercetools plugins for AI coding agents.",
+    "owner": {
+      "name": "commercetools",
+      "email": "support@commercetools.com",
+      "url": "https://commercetools.com"
+    }
+  },
+  "mcpServers": {
+    "commercetools-knowledge": {
+      "transport": "http",
+      "url": "https://docs.commercetools.com/apis/mcp"
+    }
+  }
+}

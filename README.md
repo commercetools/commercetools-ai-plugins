@@ -25,7 +25,23 @@ The official commercetools Plugins gives **Claude Code**, **Cursor**, **VS Code 
 
 ## What you get
 
-🔌 **`commercetools-knowledge` MCP server** — live documentation search, GraphQL & OpenAPI schema lookup, query validation, and developer best practices. Public endpoint, no API key needed.
+### MCP servers
+
+| MCP server | Description |
+|-------|-------------|
+| `commercetools-knowledge` | live documentation search, GraphQL & OpenAPI schema lookup, query validation, and developer best practices. Public endpoint, no API key needed. |
+| `commerce-mcp` | The commercetools Commerce MCP enables agent to integrate with APIs through function calling. |
+
+### Skills
+
+focused playbooks the agent reaches for when you ask about specific commercetools tasks.
+
+| Skill | Description |
+|-------|-------------|
+| `commercetools-platform` | Core commercetools API and SDK patterns — TypeScript SDK setup, ClientBuilder authentication |
+| `commercetools-storefront` | Shared foundation for storefronts — B2C and B2B storefront NextJs patterns — BFF architecture,  cart, checkout, product listing/detail, search/facets, BOPIS, bundles, promotions, CSR impersonation, business units, quotes, approval workflows |
+| `commercetools-checkout` | commercetools Checkout integration — payment-only mode, full hosted checkout, PSP connectors |
+
 
 # Partial installations
 
@@ -33,7 +49,6 @@ The official commercetools Plugins gives **Claude Code**, **Cursor**, **VS Code 
 | :--- | :--- |
 | **All tools: Skills-only installation** | Terminal: `npx skills add commercetools/commercetools-ai-plugins` <br/> Does not auto-update and lacks agents. Run `npx skills update` regularly to update. |
 | **Knowledge MCP only** | [See its documentation for installation instructions](https://docs.commercetools.com/sdk/mcp/knowledge-mcp) |
-
 
 ## Why this exists
 

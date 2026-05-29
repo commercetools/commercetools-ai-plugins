@@ -107,6 +107,7 @@ const generated = [
   ".codex-plugin/plugin.json",
   ".codex-plugin/mcp.json",
   ".agents/plugins/marketplace.json",
+  "skills.sh.json",
 ];
 for (const rel of generated) {
   const full = path.join(ROOT, rel);
@@ -117,9 +118,10 @@ for (const rel of generated) {
   try {
     const obj = JSON.parse(fs.readFileSync(full, "utf8"));
     // Each generated file must have at least one of these recognized top-level
-    // keys: `name` (manifests/marketplaces) or `mcpServers` (mcp configs).
-    if (!obj.name && !obj.mcpServers)
-      fail(`${rel} has no recognized top-level key (name / mcpServers)`);
+    // keys: `name` (manifests/marketplaces), `mcpServers` (mcp configs), or
+    // `groupings` (skills.sh.json).
+    if (!obj.name && !obj.mcpServers && !obj.groupings)
+      fail(`${rel} has no recognized top-level key (name / mcpServers / groupings)`);
     else ok(rel);
   } catch (e) {
     fail(`${rel} invalid JSON: ${e.message}`);
@@ -139,6 +141,10 @@ const schemaChecks = [
   {
     schema: ".internal/schemas/claude-code-marketplace.json",
     target: ".claude-plugin/marketplace.json",
+  },
+  {
+    schema: ".internal/schemas/skills.sh.schema.json",
+    target: "skills.sh.json",
   },
 ];
 

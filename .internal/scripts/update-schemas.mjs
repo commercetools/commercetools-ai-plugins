@@ -25,6 +25,12 @@ const SCHEMAS = [
     name: "claude-code-marketplace.json",
     url: "https://json.schemastore.org/claude-code-marketplace.json",
   },
+  // NOTE: skills.sh.schema.json is intentionally NOT fetched here. The URL
+  // https://skills.sh/schemas/skills.sh.schema.json that the docs advertise
+  // currently returns 404 (verified 2026-05-29). We ship a hand-authored
+  // local copy at .internal/schemas/skills.sh.schema.json matching the spec
+  // at https://www.skills.sh/docs/customize. When skills.sh publishes a real
+  // schema, add an entry here and delete the hand-authored file.
 ];
 
 fs.mkdirSync(SCHEMAS_DIR, { recursive: true });

@@ -208,4 +208,37 @@ writeJSON(".codex-plugin/mcp.json", mcpFor("codex"));
 // preserves the default install UX with no --sparse flag.
 writeJSON(".agents/plugins/marketplace.json", codexMarketplace);
 
+// ---------------------------------------------------------------------------
+// skills.sh discovery file. Auto-populated from skills/<slug>/SKILL.md so it
+// can't drift from the actual repo contents.
+// ---------------------------------------------------------------------------
+
+const discoverSkillSlugs = () => {
+  const dir = path.join(ROOT, "skills");
+  if (!fs.existsSync(dir)) return [];
+  return fs
+    .readdirSync(dir)
+    .filter((name) => {
+      const p = path.join(dir, name);
+      return (
+        fs.statSync(p).isDirectory() && fs.existsSync(path.join(p, "SKILL.md"))
+      );
+    })
+    .sort();
+};
+
+const skillsShConfig = {
+  $schema: "https://skills.sh/schemas/skills.sh.schema.json",
+  groupings: [
+    {
+      title: "commercetools-skills",
+      description: "Official commercetools skills bundled in the commercetools plugin.",
+      skills: discoverSkillSlugs(),
+    },
+  ],
+};
+
+console.log("\nskills.sh:");
+writeJSON("skills.sh.json", skillsShConfig);
+
 console.log("\nDone.");

@@ -1,0 +1,20 @@
+{
+  "name": "commercetools",
+  "interface": {
+    "displayName": "commercetools",
+    "description": "Official commercetools plugins for AI coding agents."
+  },
+  "plugins": [
+    {
+      "name": "commercetools",
+      "source": {
+        "source": "local",
+        "path": "./.agents/plugins/commercetools"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "commerce"
+    }
+  ]
+}

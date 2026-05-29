@@ -2,7 +2,7 @@
 
 > One install. Your assistant now thinks in commercetools.
 
-Stop pasting commercetools docs into chat. This bundle gives your AI coding agent — **Claude Code**, **Cursor**, or **VS Code Copilot** — live access to the commercetools API surface, GraphQL & REST schemas, and the conventions your senior architects already know.
+Stop pasting commercetools docs into chat. This bundle gives your AI coding agent — **Claude Code**, **Cursor**, **VS Code Copilot**, or **OpenAI Codex** — live access to the commercetools API surface, GraphQL & REST schemas, and the conventions your senior architects already know.
 
 ---
 
@@ -13,6 +13,7 @@ Stop pasting commercetools docs into chat. This bundle gives your AI coding agen
 | **Claude Code** | `/plugin marketplace add commercetools/commercetools-ai-plugins` <br>`/plugin install commercetools@commercetools` |
 | **Cursor** | Settings → Plugins → *Install from Git URL* → `https://github.com/commercetools/commercetools-ai-plugins` |
 | **VS Code Copilot** | Command Palette → *Chat: Install Plugin From Source* → `https://github.com/commercetools/commercetools-ai-plugins` |
+| **OpenAI Codex** | `codex plugin marketplace add commercetools/commercetools-ai-plugins` <br>then `codex plugin add commercetools@commercetools` (or install via `/plugins`) |
 | **Any agent** | `npx skills add commercetools/commercetools-ai-plugins` |
 
 ---

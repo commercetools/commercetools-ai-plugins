@@ -30,7 +30,13 @@ The official commercetools Plugins gives **Claude Code**, **Cursor**, **VS Code 
 | MCP server | Description |
 |-------|-------------|
 | `commercetools-knowledge` | live documentation search, GraphQL & OpenAPI schema lookup, query validation, and developer best practices. Public endpoint, no API key needed. |
-| `commerce-mcp` | The commercetools Commerce MCP enables agent to integrate with APIs through function calling. |
+| `commerce-mcp` | (optional) The commercetools Commerce MCP enables agent to integrate with APIs through function calling. |
+
+To enable the commerce-mcp, you must export the API client credentials to your CLI/OS environment.
+
+```
+export CLIENT_ID=<client-id> CLIENT_SECRET=<client-secret> PROJECT_KEY=<project-key> AUTH_URL=<auth-url> API_URL=<api-url> claude
+```
 
 ### Skills
 

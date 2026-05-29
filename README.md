@@ -10,10 +10,10 @@ Stop pasting commercetools docs into chat. This bundle gives your AI coding agen
 
 | Your editor | Command |
 | :--- | :--- |
-| **Any agent** | `npx skills add commercetools/commercetools-skills` |
-| **Claude Code** | `/plugin marketplace add commercetools/commercetools-skills` <br>`/plugin install commercetools@commercetools` |
-| **Cursor** | Settings → Plugins → *Install from Git URL* → `https://github.com/commercetools/commercetools-skills` |
-| **VS Code Copilot** | Command Palette → *Chat: Install Plugin From Source* → `https://github.com/commercetools/commercetools-skills` |
+| **Any agent** | `npx skills add commercetools/commercetools-ai-plugins` |
+| **Claude Code** | `/plugin marketplace add commercetools/commercetools-ai-plugins` <br>`/plugin install commercetools@commercetools` |
+| **Cursor** | Settings → Plugins → *Install from Git URL* → `https://github.com/commercetools/commercetools-ai-plugins` |
+| **VS Code Copilot** | Command Palette → *Chat: Install Plugin From Source* → `https://github.com/commercetools/commercetools-ai-plugins` |
 
 ---
 

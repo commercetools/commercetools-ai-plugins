@@ -5,16 +5,23 @@ on:
   push:
     branches: [main]
 
+defaults:
+  run:
+    working-directory: .internal
+
 jobs:
   validate:
+    name: Validate
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version-file: .nvmrc
+          node-version-file: .internal/.nvmrc
           cache: npm
+          cache-dependency-path: .internal/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -23,13 +30,41 @@ jobs:
         run: npm run build
 
       - name: Fail if build produced uncommitted changes
+        working-directory: .
         run: |
           if [ -n "$(git status --porcelain)" ]; then
-            echo "::error::Generated manifests are out of sync. Run 'npm run build' locally and commit the result."
+            echo "::error::Generated manifests are out of sync. Run 'npm run build' inside .internal/ and commit the result."
             git status
             git diff
             exit 1
           fi
 
-      - name: Validate
+      - name: Validate (frontmatter + JSON Schema)
         run: npm run validate
+
+  smoke-claude-code:
+    name: Claude Code smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .internal/.nvmrc
+          cache: npm
+          cache-dependency-path: .internal/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build manifests
+        run: npm run build
+
+      - name: Install Claude Code CLI
+        working-directory: .
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Validate plugin layout against Claude Code (offline)
+        working-directory: .
+        run: claude plugin validate ./

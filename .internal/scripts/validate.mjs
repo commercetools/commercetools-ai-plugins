@@ -7,10 +7,9 @@
 //   2. Every agents/<name>.md has `name` and `description` frontmatter.
 //   3. All generated JSON manifests parse and contain required fields.
 //   4. JSON Schema validation (via ajv) of files where a public schema exists
-//      on schemastore.org: Claude plugin.json, Claude marketplace.json, and
-//      Codex hooks.json. Schemas are vendored locally in schemas/ — refresh
-//      with `npm run update-schemas`. Cursor / Copilot / Gemini have no
-//      published schemas yet.
+//      on schemastore.org: Claude plugin.json + Claude marketplace.json.
+//      Schemas are vendored locally in .internal/schemas/ — refresh with
+//      `npm run update-schemas`. Cursor / Copilot have no published schemas.
 //   5. If `claude` is on PATH, run `claude plugin validate ./` for the
 //      most thorough check on the Claude artifacts.
 //
@@ -102,15 +101,12 @@ const generated = [
   ".claude-plugin/plugin.json",
   ".claude-plugin/marketplace.json",
   ".claude-plugin/mcp.json",
-  ".claude-plugin/hooks.json",
   ".cursor-plugin/plugin.json",
   ".cursor-plugin/marketplace.json",
   ".cursor-plugin/mcp.json",
   ".codex-plugin/plugin.json",
   ".codex-plugin/mcp.json",
-  ".codex-plugin/hooks.json",
   ".agents/plugins/marketplace.json",
-  "gemini-extension.json",
 ];
 for (const rel of generated) {
   const full = path.join(ROOT, rel);
@@ -121,10 +117,9 @@ for (const rel of generated) {
   try {
     const obj = JSON.parse(fs.readFileSync(full, "utf8"));
     // Each generated file must have at least one of these recognized top-level
-    // keys: `name` (manifests/marketplaces), `mcpServers` (mcp configs), or
-    // `hooks` (hook configs).
-    if (!obj.name && !obj.mcpServers && !obj.hooks)
-      fail(`${rel} has no recognized top-level key (name / mcpServers / hooks)`);
+    // keys: `name` (manifests/marketplaces) or `mcpServers` (mcp configs).
+    if (!obj.name && !obj.mcpServers)
+      fail(`${rel} has no recognized top-level key (name / mcpServers)`);
     else ok(rel);
   } catch (e) {
     fail(`${rel} invalid JSON: ${e.message}`);
@@ -144,10 +139,6 @@ const schemaChecks = [
   {
     schema: ".internal/schemas/claude-code-marketplace.json",
     target: ".claude-plugin/marketplace.json",
-  },
-  {
-    schema: ".internal/schemas/codex-hooks.json",
-    target: ".codex-plugin/hooks.json",
   },
 ];
 

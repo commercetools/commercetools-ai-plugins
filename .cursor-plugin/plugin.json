@@ -2,7 +2,7 @@
   "name": "commercetools",
   "displayName": "commercetools",
   "version": "0.1.0",
-  "description": "commercetools skills, subagents, and MCP servers for AI coding agents (Claude Code, Cursor, VS Code Copilot, OpenAI Codex, Gemini CLI).",
+  "description": "Build commercetools solutions faster — skills, subagents, and a live commercetools documentation MCP, bundled into one plugin.",
   "author": {
     "name": "commercetools",
     "email": "support@commercetools.com",
@@ -13,12 +13,8 @@
   "license": "MIT",
   "keywords": [
     "commercetools",
-    "composable-commerce",
-    "ecommerce",
-    "skills",
-    "agents",
-    "mcp"
+    "commerce",
+    "ecommerce"
   ],
-  "mcpServers": "./.cursor-plugin/mcp.json",
-  "rules": "./.cursor-plugin/rules/"
+  "mcpServers": "./.cursor-plugin/mcp.json"
 }

@@ -25,10 +25,6 @@ const SCHEMAS = [
     name: "claude-code-marketplace.json",
     url: "https://json.schemastore.org/claude-code-marketplace.json",
   },
-  {
-    name: "codex-hooks.json",
-    url: "https://json.schemastore.org/codex-hooks.json",
-  },
 ];
 
 fs.mkdirSync(SCHEMAS_DIR, { recursive: true });

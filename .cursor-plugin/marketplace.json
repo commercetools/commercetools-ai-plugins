@@ -1,6 +1,6 @@
 {
   "name": "commercetools",
-  "description": "Official commercetools skills, agents and MCP servers.",
+  "description": "Official commercetools plugins for AI coding agents.",
   "owner": {
     "name": "commercetools",
     "email": "support@commercetools.com",
@@ -10,7 +10,7 @@
     {
       "name": "commercetools",
       "source": "./",
-      "description": "commercetools skills, subagents, and MCP servers for AI coding agents (Claude Code, Cursor, VS Code Copilot, OpenAI Codex, Gemini CLI).",
+      "description": "Build commercetools solutions faster — skills, subagents, and a live commercetools documentation MCP, bundled into one plugin.",
       "version": "0.1.0"
     }
   ]

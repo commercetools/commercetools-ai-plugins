@@ -224,7 +224,10 @@ const discoverSkillSlugs = () => {
         fs.statSync(p).isDirectory() && fs.existsSync(path.join(p, "SKILL.md"))
       );
     })
-    .sort();
+    // Sort alphabetically so the generated skills.sh.json has stable ordering
+    // regardless of filesystem readdir order. Using localeCompare for a clear,
+    // deterministic comparison.
+    .sort((a, b) => a.localeCompare(b, "en"));
 };
 
 const skillsShConfig = {

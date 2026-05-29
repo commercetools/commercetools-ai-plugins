@@ -5,7 +5,7 @@
       "title": "commercetools-skills",
       "description": "Official commercetools skills bundled in the commercetools plugin.",
       "skills": [
-        "ct-example-skill"
+        "commercetools-example-skill"
       ]
     }
   ]

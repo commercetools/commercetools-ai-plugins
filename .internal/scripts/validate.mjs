@@ -62,13 +62,19 @@ if (fs.existsSync(skillsDir)) {
       fail(`${entry}/SKILL.md missing frontmatter`);
       continue;
     }
+    const errorsBefore = errors;
     if (!fm.name) fail(`${entry}/SKILL.md missing 'name'`);
     if (!fm.description) fail(`${entry}/SKILL.md missing 'description'`);
     if (fm.name && fm.name !== entry)
       fail(`${entry}/SKILL.md: frontmatter name '${fm.name}' must match directory name`);
     if (fm.name && !/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(fm.name))
       fail(`${entry}/SKILL.md: name '${fm.name}' must be kebab-case`);
-    if (fm.name && fm.description) ok(`skills/${entry}`);
+    // Repo convention: every skill ships under the `commercetools-` namespace
+    // so it's instantly recognizable on skills.sh, in /plugin lists, and in
+    // grep output across someone's whole skills directory.
+    if (fm.name && !fm.name.startsWith("commercetools-"))
+      fail(`${entry}/SKILL.md: name '${fm.name}' must start with 'commercetools-'`);
+    if (errors === errorsBefore) ok(`skills/${entry}`);
   }
 } else {
   ok("(no skills directory yet)");
@@ -85,11 +91,12 @@ if (fs.existsSync(agentsDir)) {
       fail(`${entry} missing frontmatter`);
       continue;
     }
+    const errorsBefore = errors;
     if (!fm.name) fail(`${entry} missing 'name'`);
     if (!fm.description) fail(`${entry} missing 'description'`);
     if (fm.name && fm.name !== entry.replace(/\.md$/, ""))
       fail(`${entry}: frontmatter name must match filename`);
-    if (fm.name && fm.description) ok(`agents/${entry}`);
+    if (errors === errorsBefore) ok(`agents/${entry}`);
   }
 } else {
   ok("(no agents directory yet)");

@@ -1,5 +1,5 @@
 ---
-name: ct-example-skill
+name: commercetools-example-skill
 description: commercetools example skill.
 ---
 

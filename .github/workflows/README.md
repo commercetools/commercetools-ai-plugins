@@ -1,6 +1,6 @@
 # `.github/workflows/`
 
-These workflows run in this repository's CI only. They are **not** part of any installed plugin — Claude Code, Cursor, Copilot, and Codex never read this folder when a customer installs the plugin.
+These workflows run in this repository's CI only. They are **not** part of any installed plugin — Claude Code, Cursor, and Copilot never read this folder when a customer installs the plugin.
 
 What runs here:
 

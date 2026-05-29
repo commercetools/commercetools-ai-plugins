@@ -47,10 +47,6 @@ const STDIO_TOKEN_MAP = {
     "${PLUGIN_ROOT}": "${CLAUDE_PLUGIN_ROOT}",
     "${PROJECT_DIR}": "${workspaceFolder}",
   },
-  codex: {
-    "${PLUGIN_ROOT}": "${PLUGIN_ROOT}",
-    "${PROJECT_DIR}": "${PROJECT_DIR}",
-  },
 };
 
 const substituteTokens = (obj, mapping) => {
@@ -138,46 +134,6 @@ const cursorMarketplace = {
   ],
 };
 
-const codexPlugin = {
-  name: cfg.name,
-  version: cfg.version,
-  description: cfg.description,
-  author: cfg.author,
-  homepage: cfg.homepage,
-  repository: cfg.repository,
-  license: cfg.license,
-  keywords: cfg.keywords,
-  mcpServers: "./.codex-plugin/mcp.json",
-  interface: {
-    displayName: cfg.displayName,
-    shortDescription: cfg.description,
-    developerName: cfg.author.name,
-    category: "Productivity",
-    websiteURL: cfg.homepage,
-  },
-};
-
-const codexMarketplace = {
-  name: cfg.marketplace.name,
-  interface: { displayName: cfg.name },
-  plugins: [
-    {
-      name: cfg.name,
-      source: {
-        source: "git-subdir",
-        url: `${cfg.repository}.git`,
-        path: "./",
-        ref: "main",
-      },
-      policy: {
-        installation: "AVAILABLE",
-        authentication: "ON_INSTALL",
-      },
-      category: "Productivity",
-    },
-  ],
-};
-
 // ---------------------------------------------------------------------------
 // Emit.
 // ---------------------------------------------------------------------------
@@ -198,15 +154,6 @@ console.log(
   "\nVS Code Copilot (auto-detects Claude format — no extra files):",
 );
 console.log("  reads .claude-plugin/plugin.json + .claude-plugin/mcp.json");
-
-console.log("\nOpenAI Codex:");
-writeJSON(".codex-plugin/plugin.json", codexPlugin);
-writeJSON(".codex-plugin/mcp.json", mcpFor("codex"));
-// NOTE: .agents/ is a Codex-specific path despite the generic-sounding name.
-// OpenAI documents .agents/plugins/marketplace.json as the canonical location
-// for Codex marketplace catalogs. Keeping it here (instead of .codex-plugin/)
-// preserves the default install UX with no --sparse flag.
-writeJSON(".agents/plugins/marketplace.json", codexMarketplace);
 
 // ---------------------------------------------------------------------------
 // skills.sh discovery file. Auto-populated from skills/<slug>/SKILL.md so it

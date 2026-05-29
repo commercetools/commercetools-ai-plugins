@@ -111,9 +111,6 @@ const generated = [
   ".cursor-plugin/plugin.json",
   ".cursor-plugin/marketplace.json",
   ".cursor-plugin/mcp.json",
-  ".codex-plugin/plugin.json",
-  ".codex-plugin/mcp.json",
-  ".agents/plugins/marketplace.json",
   "skills.sh.json",
 ];
 for (const rel of generated) {

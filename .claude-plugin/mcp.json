@@ -5,9 +5,14 @@
       "url": "https://docs.commercetools.com/apis/mcp"
     },
     "commerce-mcp": {
-     "type": "stdio",
+      "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@commercetools/commerce-mcp", "--tools=all.read", "--dynamicToolLoadingThreshold=650"]
+      "args": [
+        "-y",
+        "@commercetools/commerce-mcp",
+        "--tools=all.read",
+        "--dynamicToolLoadingThreshold=650"
+      ]
     }
   }
 }

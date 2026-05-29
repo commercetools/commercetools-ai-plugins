@@ -8,7 +8,8 @@
     "build": "node scripts/build.mjs",
     "validate": "node scripts/validate.mjs",
     "update-schemas": "node scripts/update-schemas.mjs",
-    "check": "npm run build && npm run validate"
+    "check": "npm run build && npm run validate",
+    "generate-vscode-mcp-install-link": "node scripts/generate-vscode-mcp-install-link.mjs"
   },
   "engines": {
     "node": ">=18"

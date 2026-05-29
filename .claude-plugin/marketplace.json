@@ -10,7 +10,7 @@
     {
       "name": "commercetools",
       "source": "./",
-      "description": "Build commercetools solutions faster — skills, subagents, and a live commercetools documentation MCP, bundled into one plugin.",
+      "description": "Build commercetools solutions faster",
       "version": "0.1.0",
       "author": {
         "name": "commercetools",

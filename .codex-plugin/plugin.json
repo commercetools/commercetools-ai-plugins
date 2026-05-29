@@ -1,7 +1,7 @@
 {
   "name": "commercetools",
   "version": "0.1.0",
-  "description": "Build commercetools solutions faster — skills, subagents, and a live commercetools documentation MCP, bundled into one plugin.",
+  "description": "Build commercetools solutions faster",
   "author": {
     "name": "commercetools",
     "email": "support@commercetools.com",
@@ -18,7 +18,7 @@
   "mcpServers": "./.codex-plugin/mcp.json",
   "interface": {
     "displayName": "commercetools",
-    "shortDescription": "Build commercetools solutions faster — skills, subagents, and a live commercetools documentation MCP, bundled into one plugin.",
+    "shortDescription": "Build commercetools solutions faster",
     "developerName": "commercetools",
     "category": "Productivity",
     "websiteURL": "https://commercetools.com"

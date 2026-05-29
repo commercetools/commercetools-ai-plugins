@@ -1,0 +1,9 @@
+{
+  "groupings": [
+    {
+      "title": "Examples",
+      "description": "Starter skills shipped with the commercetools toolkit. Expand this list as real skills are added to skills/.",
+      "skills": ["ct-example-skill"]
+    }
+  ]
+}

@@ -10,10 +10,10 @@ Stop pasting commercetools docs into chat. This bundle gives your AI coding agen
 
 | Your editor | Command |
 | :--- | :--- |
-| **Any agent** | `npx skills add commercetools/commercetools-ai-plugins` |
 | **Claude Code** | `/plugin marketplace add commercetools/commercetools-ai-plugins` <br>`/plugin install commercetools@commercetools` |
 | **Cursor** | Settings → Plugins → *Install from Git URL* → `https://github.com/commercetools/commercetools-ai-plugins` |
 | **VS Code Copilot** | Command Palette → *Chat: Install Plugin From Source* → `https://github.com/commercetools/commercetools-ai-plugins` |
+| **Any agent** | `npx skills add commercetools/commercetools-ai-plugins` |
 
 ---
 
@@ -44,10 +44,6 @@ After installing, ask your agent:
 The agent will reach for the bundled MCP server, query the live docs, and respond with the right API call — with the right field names, the right scope, and the right caveats.
 
 ---
-
-## Contributing
-
-See [`.internal/README.md`](.internal/README.md) for repo layout, authoring workflow, and release process.
 
 ## License
 

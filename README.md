@@ -35,7 +35,7 @@ The official commercetools Plugins gives **Claude Code**, **Cursor**, **VS Code 
 To enable the commerce-mcp, you must export the API client credentials to your CLI/OS environment.
 
 ```
-export CLIENT_ID=<client-id> CLIENT_SECRET=<client-secret> PROJECT_KEY=<project-key> AUTH_URL=<auth-url> API_URL=<api-url> claude
+export CLIENT_ID=<client-id> CLIENT_SECRET=<client-secret> PROJECT_KEY=<project-key> AUTH_URL=<auth-url> API_URL=<api-url>
 ```
 
 ### Skills

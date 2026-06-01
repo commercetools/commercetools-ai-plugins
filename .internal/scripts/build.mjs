@@ -247,7 +247,8 @@ const discoverSkillSlugs = () => {
 };
 
 const skillsShConfig = {
-  $schema: "https://skills.sh/schemas/skills.sh.schema.json",
+  // schema is broken 404 at the moment .. uncomment when its working again
+  // $schema: "https://skills.sh/schemas/skills.sh.schema.json",
   groupings: [
     {
       title: "commercetools-skills",

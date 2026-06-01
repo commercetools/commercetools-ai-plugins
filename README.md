@@ -32,7 +32,7 @@ The official commercetools Plugins gives **Claude Code**, **Cursor**, **VS Code 
 | Tool | Command |
 | :--- | :--- |
 | **All tools: Skills-only installation** | Terminal: `npx skills add commercetools/commercetools-ai-plugins` <br/> Does not auto-update and lacks agents. Run `npx skills update` regularly to update. |
-| **VS Code: Knowledge MCP only** | [Click here to install](vscode:mcp/install?%7B%22name%22%3A%22commercetools-knowledge%22%2C%22transport%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fdocs.commercetools.com%2Fapis%2Fmcp%22%7D) |
+| **Knowledge MCP only** | [See its documentation for installation instructions](https://docs.commercetools.com/sdk/mcp/knowledge-mcp) |
 
 
 ## Why this exists

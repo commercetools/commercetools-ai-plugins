@@ -49,3 +49,10 @@ After installing, ask your agent:
 
 The agent will reach for the bundled MCP server, query the live docs, and respond with the right API call — with the right field names, the right scope, and the right caveats.
 
+## License
+
+**Skills & Text**: All Markdown (.md) text is licensed under [Creative Commons BY 4.0](LICENSE). You may freely use, share, and adapt it, provided you give clear attribution to commercetools and indicate if changes were made.
+
+**Code Snippets**: All code, both markdown embedded as well as in its own files, is licensed under [MIT](LICENSE-MIT). 
+
+**Brand Assets**: All rights reserved on the commercetools logo, name, and related trademarks. 

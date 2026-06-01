@@ -16,5 +16,6 @@
     "commerce",
     "ecommerce"
   ],
+  "logo": "assets/commercetools-symbol.svg",
   "mcpServers": "./.cursor-plugin/mcp.json"
 }

@@ -23,6 +23,8 @@ Anthrophic / Claude:
  * https://code.claude.com/docs/en/plugins-reference.md
  * https://code.claude.com/docs/en/skills.md
  * https://code.claude.com/docs/en/sub-agents.md
+ * https://claude.com/docs/connectors/building/submission.md
+ * https://claude.com/docs/connectors/building/review-criteria
 
 OpenAI / Codex:
  * https://developers.openai.com/codex/plugins.md
@@ -30,6 +32,7 @@ OpenAI / Codex:
  * https://developers.openai.com/codex/skills.md
  * https://developers.openai.com/codex/mcp.md
  * https://developers.openai.com/codex/subagents.md
+ * https://developers.openai.com/apps-sdk/deploy/submission
 
 GitHub / VS Code: 
  * https://code.visualstudio.com/raw/docs/copilot/customization/agent-plugins.md

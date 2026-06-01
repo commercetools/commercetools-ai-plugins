@@ -2,7 +2,7 @@
 
 > Stop pasting commercetools docs into chat. One install makes your agents "think commercetools". You focus on the what.
 
-The official commercetools Plugins gives **Claude Code**, **Cursor**, **VS Code Copilot**, or other coding agents access to:
+The official commercetools Plugins gives **Claude Code**, **Cursor**, **VS Code Copilot**, **OpenAI Codex**, or other coding agents access to:
 
 🔌 **commercetools Knowledge MCP** — live up to date documentation search, GraphQL & OpenAPI schema lookup, query validation, and developer best practices. Public endpoint, no API key needed. [--> Read the docs!](https://docs.commercetools.com/sdk/mcp/knowledge-mcp)
  
@@ -19,6 +19,13 @@ The official commercetools Plugins gives **Claude Code**, **Cursor**, **VS Code 
 | **Claude Code** | Chat: `/plugin marketplace add commercetools/commercetools-ai-plugins` <br>`/plugin install commercetools@commercetools` |
 | **Cursor** | Settings → Plugins → *Install from Git URL* → `https://github.com/commercetools/commercetools-ai-plugins` |
 | **VS Code Copilot** | Command Palette → *Chat: Install Plugin From Source* → `https://github.com/commercetools/commercetools-ai-plugins` |
+| **OpenAI Codex** | Terminal: `codex plugin marketplace add commercetools/commercetools-ai-plugins && codex plugin add commercetools@commercetools` (or install via `/plugins`) |
+
+---
+
+## What you get
+
+🔌 **`commercetools-knowledge` MCP server** — live documentation search, GraphQL & OpenAPI schema lookup, query validation, and developer best practices. Public endpoint, no API key needed.
 
 # Partial installations
 

@@ -68,3 +68,49 @@ jobs:
       - name: Validate plugin layout against Claude Code (offline)
         working-directory: .
         run: claude plugin validate ./
+
+  smoke-codex:
+    name: Codex smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      # @openai/codex requires Node 22+, above the repo's .nvmrc (20), so this
+      # job pins its own version instead of reading the node-version-file.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: .internal/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build manifests
+        run: npm run build
+
+      - name: Install Codex CLI
+        working-directory: .
+        run: npm install -g @openai/codex
+
+      # Codex plugin subcommands are local file ops — no auth/network. `plugin add`
+      # drives resolve_plugin_source_path (openai/codex#17066): it exits non-zero
+      # if the generated source.path ever regresses to the blocked repo root ("./").
+      # `plugin list` exits 0 even when a plugin is "not installed", so we don't
+      # rely on its exit code — we assert the plugin shows up installed + enabled.
+      - name: Validate plugin layout against Codex (offline, no auth)
+        working-directory: .
+        env:
+          CODEX_HOME: ${{ runner.temp }}/codex-home
+        run: |
+          set -euo pipefail
+          mkdir -p "$CODEX_HOME"
+          codex plugin marketplace add ./
+          codex plugin add commercetools@commercetools
+          codex plugin list | tee codex-plugin-list.txt
+          if ! grep -E 'commercetools@commercetools' codex-plugin-list.txt | grep -q 'installed, enabled'; then
+            echo "::error::Codex did not report commercetools@commercetools as installed + enabled"
+            exit 1
+          fi
+          rm -f codex-plugin-list.txt

@@ -22,6 +22,7 @@ npm run check      # build + validate
 | :--- | :--- | :--- |
 | `.claude-plugin/{plugin,marketplace,mcp}.json` | Claude Code (and VS Code Copilot via Claude format auto-detect) | Manifest, marketplace catalog, MCP server config |
 | `.cursor-plugin/{plugin,marketplace,mcp}.json` | Cursor | Same |
+| `.agents/plugins/{marketplace.json,commercetools/...}` | OpenAI Codex | Repo marketplace + a self-contained plugin nested in the same hidden folder (see Codex note below) |
 | `skills.sh.json` (repo root) | skills.sh | Discovery / grouping file, auto-populated from `skills/` |
 
 Vendor manifest specs (don't restate them here — read the source):
@@ -31,7 +32,7 @@ Vendor manifest specs (don't restate them here — read the source):
 - [VS Code Copilot agent plugins](https://code.visualstudio.com/docs/copilot/customization/agent-plugins)
 - [skills.sh customization](https://www.skills.sh/docs/customize)
 
-> OpenAI Codex was previously supported but removed pending [openai/codex#17066](https://github.com/openai/codex/issues/17066), which blocks marketplace installs of plugins whose source path resolves to the repo root. Re-add by restoring the `codexPlugin` / `codexMarketplace` builders in `scripts/build.mjs` and the matching entries in `validate.mjs` once the upstream fix lands.
+> **OpenAI Codex.** Codex hardcodes its repo marketplace at `.agents/plugins/marketplace.json` (used for both `codex plugin marketplace add` and in-repo auto-discovery), so that folder is mandatory and can't be renamed. On top of that, [openai/codex#17066](https://github.com/openai/codex/issues/17066) (still open) rejects marketplace plugins whose `source.path` resolves to the repo root (`"./"`) — the layout every other vendor here uses to share root-level `skills/`. Workaround: keep Codex's whole footprint inside the single hidden `.agents/` folder by nesting the plugin at `.agents/plugins/commercetools/` (a subdir path, unaffected by the bug), and have `build.mjs` copy `skills/` into `.agents/plugins/commercetools/skills/` so the plugin is self-contained. The copy is a generated artifact kept in sync by `npm run build` and the CI uncommitted-changes gate. **Once #17066 ships:** in `codexMarketplace` set `source.path` back to `"./"`, drop the `copyDir(...)` call and the nested plugin dir — Codex then shares the root layout like everyone else (only `.agents/plugins/marketplace.json` remains).
 
 ## Validation
 

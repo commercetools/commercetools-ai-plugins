@@ -1,0 +1,25 @@
+{
+  "name": "commercetools",
+  "displayName": "commercetools",
+  "version": "0.1.0",
+  "description": "Build commercetools solutions faster",
+  "author": {
+    "name": "commercetools",
+    "email": "support@commercetools.com",
+    "url": "https://commercetools.com"
+  },
+  "homepage": "https://commercetools.com",
+  "repository": "https://github.com/commercetools/commercetools-ai-plugins",
+  "license": "MIT",
+  "keywords": [
+    "commercetools",
+    "commerce",
+    "ecommerce"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "commercetools",
+    "category": "commerce"
+  }
+}

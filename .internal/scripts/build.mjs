@@ -2,14 +2,42 @@
 // Generate every vendor's plugin manifest + MCP config from the single source
 // of truth at .internal/config.json.
 //
-// Skills (skills/) and agents (agents/) are NOT touched — every vendor reads
-// them directly from the repo root.
+// Skills (skills/) and agents (agents/) are read directly from the repo root by
+// every vendor — with ONE exception: Codex. Its marketplace can't point a plugin's
+// source at the repo root (openai/codex#17066), so Codex gets a self-contained
+// plugin nested inside its mandated marketplace dir (.agents/plugins/<name>/) with
+// a build-time COPY of skills/. Everything Codex needs lives under the single
+// .agents/ folder. Revert to the shared root layout once that upstream issue ships
+// (see codexMarketplace below).
 //
 // Usage: `npm run build` from .internal/.
 
 import fs from "node:fs";
 import path from "node:path";
 import { ROOT, readJSON, writeJSON, config } from "./util.mjs";
+
+// Recursively copy a directory tree (absolute paths). Plain readdir/copyFile so
+// it works on every supported Node without relying on fs.cpSync.
+const copyTree = (src, dest) => {
+  fs.mkdirSync(dest, { recursive: true });
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    const s = path.join(src, entry.name);
+    const d = path.join(dest, entry.name);
+    if (entry.isDirectory()) copyTree(s, d);
+    else fs.copyFileSync(s, d);
+  }
+};
+
+// Mirror a directory (relative to ROOT) into another. The destination is wiped
+// first so deletions in the source propagate to the generated copy.
+const copyDir = (srcRel, destRel) => {
+  const src = path.join(ROOT, srcRel);
+  const dest = path.join(ROOT, destRel);
+  fs.rmSync(dest, { recursive: true, force: true });
+  if (!fs.existsSync(src)) return;
+  copyTree(src, dest);
+  console.log(`  copied ${srcRel}/ -> ${destRel}/`);
+};
 
 const cfg = config;
 
@@ -32,6 +60,13 @@ const STDIO_TOKEN_MAP = {
   "vscode-copilot": {
     "${PLUGIN_ROOT}": "${CLAUDE_PLUGIN_ROOT}",
     "${PROJECT_DIR}": "${workspaceFolder}",
+  },
+  // Codex's exact stdio placeholder tokens are unverified — the only MCP server
+  // today uses http transport, so this mapping is never exercised. Confirm the
+  // real Codex tokens before adding any stdio server.
+  codex: {
+    "${PLUGIN_ROOT}": "${CODEX_PLUGIN_ROOT}",
+    "${PROJECT_DIR}": "${CODEX_PROJECT_DIR}",
   },
 };
 
@@ -120,6 +155,47 @@ const cursorMarketplace = {
   ],
 };
 
+// Codex plugin root, nested inside the marketplace dir so the whole Codex
+// footprint is one hidden folder. Manifest at <root>/.codex-plugin/plugin.json;
+// skills/ and .mcp.json sit alongside it at the plugin root.
+const CODEX_PLUGIN_DIR = `.agents/plugins/${cfg.name}`;
+
+const codexPlugin = {
+  ...commonMeta,
+  skills: "./skills/",
+  mcpServers: "./.mcp.json",
+  interface: {
+    displayName: cfg.displayName,
+    category: "commerce",
+  },
+};
+
+// Codex repo marketplace, read from $REPO_ROOT/.agents/plugins/marketplace.json
+// (a path Codex hardcodes for both install and auto-discovery). The plugin
+// source.path is a SUBDIR rather than the repo root ("./") — root paths are
+// rejected by openai/codex#17066. Once that ships, set path to "./", drop the
+// nested copy, and let Codex share the root skills/ like every other vendor.
+const codexMarketplace = {
+  name: cfg.marketplace.name,
+  interface: {
+    displayName: cfg.marketplace.name,
+    description: cfg.marketplace.description,
+  },
+  plugins: [
+    {
+      name: cfg.name,
+      source: {
+        source: "local",
+        path: `./${CODEX_PLUGIN_DIR}`,
+      },
+      policy: {
+        installation: "AVAILABLE",
+      },
+      category: "commerce",
+    },
+  ],
+};
+
 // ---------------------------------------------------------------------------
 // Emit.
 // ---------------------------------------------------------------------------
@@ -135,6 +211,13 @@ console.log("\nCursor:");
 writeJSON(".cursor-plugin/plugin.json", cursorPlugin);
 writeJSON(".cursor-plugin/marketplace.json", cursorMarketplace);
 writeJSON(".cursor-plugin/mcp.json", mcpFor("cursor"));
+
+console.log("\nCodex:");
+writeJSON(".agents/plugins/marketplace.json", codexMarketplace);
+writeJSON(`${CODEX_PLUGIN_DIR}/.codex-plugin/plugin.json`, codexPlugin);
+writeJSON(`${CODEX_PLUGIN_DIR}/.mcp.json`, mcpFor("codex"));
+// Codex needs skills inside its plugin root; copy them from the shared root dir.
+copyDir("skills", `${CODEX_PLUGIN_DIR}/skills`);
 
 console.log(
   "\nVS Code Copilot (auto-detects Claude format — no extra files):",

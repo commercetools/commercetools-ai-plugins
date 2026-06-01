@@ -111,6 +111,9 @@ const generated = [
   ".cursor-plugin/plugin.json",
   ".cursor-plugin/marketplace.json",
   ".cursor-plugin/mcp.json",
+  ".agents/plugins/marketplace.json",
+  ".agents/plugins/commercetools/.codex-plugin/plugin.json",
+  ".agents/plugins/commercetools/.mcp.json",
   "skills.sh.json",
 ];
 for (const rel of generated) {
@@ -129,6 +132,40 @@ for (const rel of generated) {
     else ok(rel);
   } catch (e) {
     fail(`${rel} invalid JSON: ${e.message}`);
+  }
+}
+
+// ---- Codex skills copy in sync with root skills/ --------------------------
+// Codex can't share the root skills/ (openai/codex#17066), so build.mjs copies
+// them into its nested plugin dir. Guard against a stale copy (the CI
+// uncommitted-changes gate also catches this, but this gives a clear local error).
+const CODEX_SKILLS_DIR = ".agents/plugins/commercetools/skills";
+console.log(`\nValidating ${CODEX_SKILLS_DIR}/ is in sync with skills/`);
+const slugsIn = (rel) => {
+  const dir = path.join(ROOT, rel);
+  if (!fs.existsSync(dir)) return null;
+  return new Set(
+    fs
+      .readdirSync(dir)
+      .filter((name) => fs.statSync(path.join(dir, name)).isDirectory()),
+  );
+};
+const rootSlugs = slugsIn("skills");
+const codexSlugs = slugsIn(CODEX_SKILLS_DIR);
+if (rootSlugs === null) {
+  ok("(no skills directory — nothing to mirror)");
+} else if (codexSlugs === null) {
+  fail(`${CODEX_SKILLS_DIR}/ missing — run 'npm run build'`);
+} else {
+  const missing = [...rootSlugs].filter((s) => !codexSlugs.has(s));
+  const extra = [...codexSlugs].filter((s) => !rootSlugs.has(s));
+  if (missing.length || extra.length) {
+    fail(
+      `${CODEX_SKILLS_DIR}/ out of sync with skills/ (run 'npm run build') — ` +
+        `missing: [${missing.join(", ")}], extra: [${extra.join(", ")}]`,
+    );
+  } else {
+    ok(`${CODEX_SKILLS_DIR}/ matches skills/`);
   }
 }
 

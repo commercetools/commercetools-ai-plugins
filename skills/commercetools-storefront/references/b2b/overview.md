@@ -41,7 +41,7 @@ Load the `commercetools-storefront` skill for these references:
 
 | Task | Reference |
 |------|-----------|
-| Scaffold the app, Tailwind v4, next-intl routing, locale proxy | Run `/setup-project` |
+| Scaffold the app, Tailwind v4, next-intl routing, locale proxy | Run `/commercetools-nextjs-setup-project` |
 | commercetools SDK singleton, JWT sessions, BFF architecture | [ct-client.md](../core/ct-client.md) |
 | Shared auth base: commercetools login, Route Handler, SWR hook, logout | [customer-auth.md](../core/customer-auth.md) |
 | Add a new country / currency / locale (`COUNTRY_CONFIG`) | [add-country.md](../core/add-country.md) |
@@ -86,8 +86,8 @@ Load the `commercetools-storefront` skill for these references:
 |------|-----------|
 | Superuser role — view all store carts, switch carts, merchant-origin carts | [superuser.md](./optional/superuser.md) |
 | Personal wishlists (project-level, not as-associate) | [wishlists.md](./shopping-lists.md) |
-| Deploy to Vercel | Run `/deploy-vercel` — checks credentials, verifies vercel.json, guides project import and env var setup |
-| Deploy to netlify | Run `/deploy-netlify` — checks credentials, runs provisioning script, guides repo connection |
+| Deploy to Vercel | Run `/deploy-vercel` — checks commercetools credentials, then hands off to Vercel's official agent skill |
+| Deploy to Netlify | Run `/deploy-netlify` — checks commercetools credentials, then hands off to Netlify's official agent skill |
 
 
 ## Priority Tiers (B2B-specific additions)
@@ -96,7 +96,7 @@ Load the `commercetools-storefront` skill for these references:
 
 ### CRITICAL
 
-- **Next.js version** — Always use `next@^16`. Never write `"next": "15.x"` in `package.json`. Next.js 15.x has known security vulnerabilities and is unsupported. For new projects, run `/setup-project` which pins the correct version automatically.
+- **Next.js version** — Always use `next@^16`. Never write `"next": "15.x"` in `package.json`. Next.js 15.x has known security vulnerabilities and is unsupported. For new projects, run `/commercetools-nextjs-setup-project` which pins the correct version automatically.
 - **NextIntl version** — Always use `next-intl@^4` compatible with `next@^16`. Never write `"next-intl": "3.x"` in `package.json`.
 - **as-associate chain** — ALL B2B writes (cart, order, quote, approval, BU) go through `apiRoot.asAssociate().*`. Never use project-level `apiRoot.*` for user-facing mutations.
 - **Session B2B fields** — `businessUnitKey` + `storeKey` + `distributionChannelId` + `supplyChannelId` + `productSelectionId` are always written together from `getStoreChannelData(storeKey)`.

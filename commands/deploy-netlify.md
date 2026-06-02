@@ -1,21 +1,21 @@
 ---
-description: Deploy the B2C storefront to Netlify — checks credentials, runs the provisioning script, and guides repository connection.
+description: Deploy the storefront to Netlify — verifies commercetools credentials, then hands off to Netlify's official agent skill to perform the deploy.
 ---
 
-You are deploying the B2C storefront to Netlify. Follow each step in order.
+You are deploying the storefront to Netlify. Your job here is to get the **commercetools credentials** right, then hand the actual deploy off to **Netlify's official agent skill** — do not run deploy commands yourself.
 
 ## Step 1 — Credential safety check
 
 Before anything else, verify the user understands the credential rule:
 
-**The storefront must use the Frontend B2C API client, NOT the admin/tools client.**
+**The storefront must use the Frontend API client, NOT the admin/tools client.**
 
 Check whether `site/.env` exists. If it does, scan it for signs of an admin-scope client:
-- `manage_project` in the scopes → STOP. Tell the user this is an admin client and must not be deployed. They need to create a new **Frontend B2C** API client in commercetools Merchant Center (Settings → Developer settings → API clients → Create new, use the **Mobile & single-page application** template, then add `manage_payments` and `manage_orders`).
+- `manage_project` in the scopes → STOP. Tell the user this is an admin client and must not be deployed. They need to create a new **Frontend** API client in commercetools Merchant Center (Settings → Developer settings → API clients → Create new, use the **Mobile & single-page application** template, then add `manage_payments` and `manage_orders`).
 - `manage_my_*` scopes → incorrect scope, stop.
-- File missing → remind them to create `site/.env` with the Frontend B2C or B2B client credentials before deploying.
+- File missing → remind them to create `site/.env` with the Frontend client credentials before deploying.
 
-Example: The least scope set for `site/.env` for B2C:
+Example: The minimum scope set for `site/.env` for B2C:
 ```
 CTP_SCOPES=manage_order_edits:key view_sessions:key view_product_selections:key view_shipping_methods:key manage_shopping_lists:key view_discount_codes:key manage_customers:key view_types:key manage_sessions:key manage_orders:key view_standalone_prices:key view_tax_categories:key view_published_products:key view_cart_discounts:key create_anonymous_token:key view_project_settings:key view_products:key view_categories:key
 ```
@@ -28,54 +28,32 @@ openssl rand -base64 48
 ```
 Paste the output as `SESSION_SECRET` in `site/.env` before continuing.
 
-## Step 3 — Generate a Netlify personal access token
+## Step 3 — Environment variables the deploy must set
 
-Instruct the user to:
-1. Go to Netlify → user avatar → User settings → Applications → Personal access tokens
-2. Create a new token with a meaningful name (e.g. `b2c-storefront-deploy`)
-3. Copy the token — it is shown only once
+These are the commercetools env vars the Netlify deploy needs (all from `site/.env`, the storefront client — never the admin `tools/.env`):
 
-## Step 4 — Run the provisioning script
+| Variable | Source |
+|---|---|
+| `CTP_PROJECT_KEY` | `site/.env` |
+| `CTP_CLIENT_ID` | `site/.env` |
+| `CTP_CLIENT_SECRET` | `site/.env` |
+| `CTP_AUTH_URL` | `site/.env` |
+| `CTP_API_URL` | `site/.env` |
+| `CTP_SCOPES` | `site/.env` (storefront scopes, not admin) |
+| `SESSION_SECRET` | The value from Step 2 |
 
-```bash
-node tools/netlify-setup.mjs
+## Step 4 — Hand off to Netlify's agent skill
+
+Install and use Netlify's official agent skills (the `netlify-deploy` skill) to perform the deploy. In Claude Code:
+
+```
+/plugin marketplace add netlify/context-and-tools
+/plugin install netlify-skills@netlify-context-and-tools
 ```
 
-The script will prompt for:
-1. **Netlify personal access token** — paste the token from Step 3
-2. **Site name** — must be globally unique on Netlify (e.g. `acme-b2c-storefront`)
-3. **commercetools credentials** — paste values from `site/.env` (the storefront client, not tools)
-
-The script creates the Netlify site and sets all environment variables. It outputs the site URL and dashboard link — show these to the user.
-
-## Step 5 — Connect the Git repository
-
-Instruct the user to:
-1. Open the new site in the Netlify dashboard (URL from the script output)
-2. Go to **Site settings → Build & deploy → Link repository**
-3. Authorise GitHub/GitLab and select the repo
-4. Netlify reads `netlify.toml` at the repo root — confirm it contains:
-   ```toml
-   [build]
-     base    = "site"
-     command = "npm run build"
-     publish = ".next"
-
-   [build.environment]
-     NODE_VERSION = "22"
-   ```
-   If `netlify.toml` is missing, create it with the content above.
-5. Trigger the first deploy: **Deploys → Trigger deploy → Deploy site**
-
-## Step 6 — Verify
-
-Tell the user to:
-- Wait for the deploy to finish (watch the deploy log in the Netlify dashboard)
-- Open the site URL — confirm the homepage loads and products are visible
-- If products don't appear, check **Functions log** in the Netlify dashboard for commercetools API errors (usually wrong scope or wrong region URL)
+See [netlify/context-and-tools](https://github.com/netlify/context-and-tools) for usage. Let the `netlify-deploy` skill handle site linking, environment variables (from the table above), and the deploy itself.
 
 ## Final reminders
 
 - `site/app/api/health/route.ts` must NOT exist in production — delete it if present
 - The admin `tools/.env` credentials must never be set as Netlify environment variables
-- Re-deploy is automatic on every push to the linked branch after the repository is connected

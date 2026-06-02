@@ -4,9 +4,9 @@
       "title": "commercetools-skills",
       "description": "Official commercetools skills bundled in the commercetools plugin.",
       "skills": [
-        "commercetools-checkout",
         "commercetools-platform",
-        "commercetools-storefront"
+        "commercetools-storefront",
+        "commercetools-checkout"
       ]
     }
   ]

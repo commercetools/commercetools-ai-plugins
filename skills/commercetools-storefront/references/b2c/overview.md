@@ -34,7 +34,7 @@ Load the `commercetools-storefront` skill for these references:
 
 | Task | Reference |
 |------|-----------|
-| Scaffold the app, Tailwind v4, next-intl routing, locale proxy | Run `/setup-project` |
+| Scaffold the app, Tailwind v4, next-intl routing, locale proxy | Run `/commercetools-nextjs-setup-project` |
 | commercetools SDK singleton, JWT sessions, BFF architecture | [ct-client.md](../core/ct-client.md) |
 | Shared auth base: commercetools login, Route Handler, SWR hook, logout | [customer-auth.md](../core/customer-auth.md) |
 | Add a new country / currency / locale (`COUNTRY_CONFIG`) | [add-country.md](../core/add-country.md) |
@@ -71,8 +71,8 @@ These features have their own skills with focused trigger descriptions. Load the
 | Buy Online Pick Up In Store — channel API, per-store inventory | [bopis.md](./optional/bopis.md) |
 | Product bundles — parent/child cart items, cascade updates | [bundles.md](./optional/bundles.md) |
 | Product discounts, cart discounts, discount codes, promotion banners | [promotions.md](./optional/promotions.md) |
-| Deploy to Vercel | Run `/deploy-vercel` — checks credentials, verifies vercel.json, guides project import and env var setup |
-| Deploy to Netlify | Run `/deploy-netlify` — checks credentials, runs provisioning script, guides repo connection |
+| Deploy to Vercel | Run `/deploy-vercel` — checks commercetools credentials, then hands off to Vercel's official agent skill |
+| Deploy to Netlify | Run `/deploy-netlify` — checks commercetools credentials, then hands off to Netlify's official agent skill |
 
 
 ## Priority Tiers (B2C-specific additions)
@@ -81,7 +81,7 @@ These features have their own skills with focused trigger descriptions. Load the
 
 ### CRITICAL
 
-- **Next.js version** — Always use `next@^16`. Never write `"next": "15.x"` in `package.json`. Next.js 15.x has known security vulnerabilities and is unsupported. For new projects, run `/setup-project` which pins the correct version automatically.
+- **Next.js version** — Always use `next@^16`. Never write `"next": "15.x"` in `package.json`. Next.js 15.x has known security vulnerabilities and is unsupported. For new projects, run `/commercetools-nextjs-setup-project` which pins the correct version automatically.
 - **NextIntl version** — Always use `next-intl@^4` compatible with `next@^16`. Never write `"next-intl": "3.x"` in `package.json`.
 
 ### HIGH

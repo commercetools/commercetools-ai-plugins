@@ -1,8 +1,8 @@
 ---
-description: Deploy the storefront to Vercel — checks credentials, verifies vercel.json, guides project import, sets environment variables, and confirms first deploy.
+description: Deploy the storefront to Vercel — verifies commercetools credentials, then hands off to Vercel's official agent skill to perform the deploy.
 ---
 
-You are deploying the storefront to Vercel. Follow each step in order.
+You are deploying the storefront to Vercel. Your job here is to get the **commercetools credentials** right, then hand the actual deploy off to **Vercel's official agent skill** — do not run deploy commands yourself.
 
 ## Step 1 — Credential safety check
 
@@ -28,66 +28,31 @@ openssl rand -base64 48
 ```
 Paste the output as `SESSION_SECRET` in `site/.env` before continuing.
 
-## Step 3 — Verify vercel.json
+## Step 3 — Environment variables the deploy must set
 
-Check that `vercel.json` exists at the repo root (next to `site/`, not inside it). If it is missing, create it:
+These are the commercetools env vars the Vercel deploy needs `site/.env`:
 
-```json
-{
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "installCommand": "npm install",
-  "framework": "nextjs"
-}
+| Variable | Source |
+|---|---|
+| `CTP_PROJECT_KEY` | `site/.env` |
+| `CTP_CLIENT_ID` | `site/.env` |
+| `CTP_CLIENT_SECRET` | `site/.env` |
+| `CTP_AUTH_URL` | `site/.env` |
+| `CTP_API_URL` | `site/.env` |
+| `CTP_SCOPES` | `site/.env` (storefront scopes, not admin) |
+| `SESSION_SECRET` | The value from Step 2 |
+
+## Step 4 — Hand off to Vercel's agent skill
+
+Install and use Vercel's official agent skill to perform the deploy:
+
+```
+npx skills add vercel-labs/agent-skills
 ```
 
-## Step 4 — Import the project in Vercel
-
-Instruct the user to:
-1. Open vercel.com → **Add New → Project**
-2. Click **Import Git Repository** and select the repo
-3. Vercel auto-detects the `vercel.json` — confirm these settings in the import wizard:
-   - **Root Directory:** `site`
-   - **Framework Preset:** Next.js
-   - **Build Command:** `npm run build`
-   - **Output Directory:** `.next`
-   - **Node.js Version:** 22.x
-4. Do **not** click Deploy yet — proceed to Step 5 to set env vars first
-
-## Step 5 — Set environment variables
-
-In the Vercel import wizard (Environment Variables section), add all of these before deploying:
-
-| Variable | Value |
-|---|---|
-| `CTP_PROJECT_KEY` | From `site/.env` |
-| `CTP_CLIENT_ID` | From `site/.env` |
-| `CTP_CLIENT_SECRET` | From `site/.env` |
-| `CTP_AUTH_URL` | From `site/.env` |
-| `CTP_API_URL` | From `site/.env` |
-| `CTP_SCOPES` | From `site/.env` (storefront scopes, not admin) |
-| `SESSION_SECRET` | The value generated in Step 2 |
-
-Set all variables for **Production**, **Preview**, and **Development** environments.
-
-## Step 6 — Deploy
-
-Click **Deploy** in the Vercel dashboard. The first deploy starts automatically.
-
-Watch the build log. If the build fails:
-- Confirm environment variables are set correctly
-- Confirm `vercel.json` is at the repo root (not inside `site/`)
-- Check **Function Logs** in the Vercel dashboard for commercetools API errors
-
-## Step 7 — Verify
-
-Tell the user to:
-- Wait for the deploy to finish
-- Open the site URL — confirm the homepage loads and products are visible
-- If products don't appear, check **Function Logs** in the Vercel dashboard for commercetools API errors (usually wrong scope or wrong region URL)
+See the [README](https://github.com/vercel-labs/agent-skills) for the available skills and usage. Let the Vercel skill handle project linking, environment variables (from the table above), and the deploy itself.
 
 ## Final reminders
 
 - `site/app/api/health/route.ts` must NOT exist in production — delete it if present
 - The admin `tools/.env` credentials must never be set as Vercel environment variables
-- Re-deploy is automatic on every push to the linked branch after the repository is connected

@@ -40,7 +40,7 @@ Production patterns for commercetools storefronts on Next.js 16, NextIntl v4, Ty
 
 | Task | Reference |
 |------|-----------|
-| Scaffold the app, Tailwind v4, next-intl routing, locale proxy, folder structure | Run `/setup-project` |
+| Scaffold the app, Tailwind v4, next-intl routing, locale proxy, folder structure | Run `/commercetools-nextjs-setup-project` |
 | commercetools SDK singleton, JWT sessions, BFF Route Handler shape | [core/ct-client.md](./references/core/ct-client.md) |
 | Shared auth patterns: commercetools login endpoint, Route Handler structure, SWR hook, logout | [core/customer-auth.md](./references/core/customer-auth.md) |
 | Add a new country / currency / locale — `COUNTRY_CONFIG` flat structure | [core/add-country.md](./references/core/add-country.md) |
@@ -60,8 +60,8 @@ Production patterns for commercetools storefronts on Next.js 16, NextIntl v4, Ty
 |------|-----------|
 | Recurring prices — mapper, PDP gate, selector component, add-to-cart with recurrenceInfo | [core/recurring-prices.md](./references/core/optional/recurring-prices.md) |
 | Recurring orders — scoping, state transitions, post-checkout creation, recurrence policies | [core/recurring-orders.md](./references/core/optional/recurring-orders.md) |
-| Deploy to Vercel | Run `/deploy-vercel` — checks credentials, verifies vercel.json, guides project import and env var setup |
-| Deploy to netlify | Run `/deploy-netlify` — checks credentials, runs provisioning script, guides repo connection |
+| Deploy to Vercel | Run `/deploy-vercel` — checks commercetools credentials, then hands off to Vercel's official agent skill |
+| Deploy to Netlify | Run `/deploy-netlify` — checks commercetools credentials, then hands off to Netlify's official agent skill |
 
 ### B2C Storefront (`references/b2c/`)
 

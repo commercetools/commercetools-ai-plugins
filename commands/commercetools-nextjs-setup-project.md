@@ -1,5 +1,5 @@
 ---
-description: Scaffold a new Next.js (>16) + commercetools storefront — installs dependencies, configures Tailwind v4, wires next-intl locale routing, creates directory structure, and writes shared types/utils. Run as /setup-project.
+description: Scaffold a new Next.js (>16) + commercetools storefront — installs dependencies, configures Tailwind v4, wires next-intl locale routing, creates directory structure, and writes shared types/utils. Run as /commercetools-nextjs-setup-project.
 ---
 
 You are bootstrapping a new Next.js + commercetools storefront from scratch. Execute every step in order. Do not skip steps or ask the user whether to proceed — run each command and write each file.

@@ -236,9 +236,21 @@ console.log("  reads .claude-plugin/plugin.json + .claude-plugin/mcp.json");
 // can't drift from the actual repo contents.
 // ---------------------------------------------------------------------------
 
+// Skills listed here are pinned to the top in this exact order. Anything not
+// listed falls back to alphabetical ordering after the pinned ones.
+const SKILL_ORDER = [
+  "commercetools-platform",
+  "commercetools-storefront"
+  // add more slugs here to pin their position
+];
+
 const discoverSkillSlugs = () => {
   const dir = path.join(ROOT, "skills");
   if (!fs.existsSync(dir)) return [];
+  const rank = (name) => {
+    const i = SKILL_ORDER.indexOf(name);
+    return i === -1 ? Infinity : i;
+  };
   return fs
     .readdirSync(dir)
     .filter((name) => {
@@ -247,10 +259,9 @@ const discoverSkillSlugs = () => {
         fs.statSync(p).isDirectory() && fs.existsSync(path.join(p, "SKILL.md"))
       );
     })
-    // Sort alphabetically so the generated skills.sh.json has stable ordering
-    // regardless of filesystem readdir order. Using localeCompare for a clear,
-    // deterministic comparison.
-    .sort((a, b) => a.localeCompare(b, "en"));
+    // Pinned skills first (in SKILL_ORDER order), then everything else
+    // alphabetically. localeCompare keeps the fallback deterministic.
+    .sort((a, b) => rank(a) - rank(b) || a.localeCompare(b, "en"));
 };
 
 const skillsShConfig = {

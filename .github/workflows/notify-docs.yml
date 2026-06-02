@@ -1,0 +1,37 @@
+name: Notify docs repo
+
+# Fires a `repository_dispatch` event (`event_type: skills-updated`) at
+# `commercetools/commercetools-docs` whenever `main` is updated here, so the
+# docs repo's `sync-skills.yml` workflow can pull the latest skills.
+# See: https://github.com/commercetools/commercetools-docs/issues/9513
+
+on:
+  push:
+    branches: [main, test/notify-docs]
+
+jobs:
+  dispatch:
+    name: Dispatch skills-updated
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Generate GitHub token (via CT SDKs App)
+        id: generate_github_token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.CT_SDKS_APP_ID }}
+          private-key: ${{ secrets.CT_SDKS_APP_PEM }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Send repository_dispatch to commercetools-docs
+        uses: peter-evans/repository-dispatch@4.0.1
+        with:
+          token: ${{ steps.generate_github_token.outputs.token }}
+          repository: commercetools/commercetools-docs
+          event-type: skills-updated
+          client-payload: |
+            {
+              "source_repo": "${{ github.repository }}",
+              "sha": "${{ github.sha }}",
+              "ref": "${{ github.ref }}"
+            }

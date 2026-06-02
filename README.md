@@ -5,7 +5,7 @@
 The official commercetools Plugins gives **Claude Code**, **Cursor**, **VS Code Copilot**, **OpenAI Codex**, or other coding agents access to:
 
 🔌 **commercetools Knowledge MCP** — live up to date documentation search, GraphQL & OpenAPI schema lookup, query validation, and developer best practices. Public endpoint, no API key needed. [--> Read the docs!](https://docs.commercetools.com/sdk/mcp/knowledge-mcp)
- 
+
 📚 **commercetools Skills** — smoke tested playbooks the agent reaches for to build commercetools solutions. [--> Read the docs!](https://docs.commercetools.com/docs/build-with-ai)
 
 🧑‍🏫 **Subagents** — specialized task (sub)agents your agent can delegate standard procedures to. [--> Read the source!](./agents/)
@@ -21,11 +21,7 @@ The official commercetools Plugins gives **Claude Code**, **Cursor**, **VS Code 
 | **VS Code Copilot** | Command Palette → *Chat: Install Plugin From Source* → `https://github.com/commercetools/commercetools-ai-plugins` |
 | **OpenAI Codex** | Terminal: `codex plugin marketplace add commercetools/commercetools-ai-plugins && codex plugin add commercetools@commercetools` (or install via `/plugins`) |
 
----
-
-## What you get
-
-🔌 **`commercetools-knowledge` MCP server** — live documentation search, GraphQL & OpenAPI schema lookup, query validation, and developer best practices. Public endpoint, no API key needed.
+The bundled `commercetools-knowledge` MCP endpoint is publicly accessible and does not require an API key. Depending on the host tool, you may still need to trust the plugin source, enable the plugin, or reload the tool after installation.
 
 # Partial installations
 
@@ -49,3 +45,15 @@ After installing, ask your agent:
 
 The agent will reach for the bundled MCP server, query the live docs, and respond with the right API call — with the right field names, the right scope, and the right caveats.
 
+## Support
+
+For support, installation issues, or questions about these plugins and skills, visit:
+https://support.commercetools.com
+
+## License
+
+**Skills & Text**: All Markdown (.md) text is licensed under [Creative Commons BY 4.0](LICENSE). You may freely use, share, and adapt it, provided you give clear attribution to commercetools and indicate if changes were made.
+
+**Code Snippets**: All code, both markdown embedded as well as in its own files, is licensed under [MIT](LICENSE-MIT). 
+
+**Brand Assets**: All rights reserved on the commercetools logo, name, and related trademarks. 

@@ -40,6 +40,8 @@ const copyDir = (srcRel, destRel) => {
 };
 
 const cfg = config;
+const logoPath = typeof cfg.branding?.logo === "string" ? cfg.branding.logo : null;
+const codexLogoPath = logoPath ? `./${logoPath.replace(/^\.?\//, "")}` : null;
 
 // ---------------------------------------------------------------------------
 // MCP server config: produce per-vendor variants.
@@ -138,6 +140,7 @@ const claudeMarketplace = {
 
 const cursorPlugin = {
   ...commonMeta,
+  ...(logoPath ? { logo: logoPath } : {}),
   mcpServers: "./.cursor-plugin/mcp.json",
 };
 
@@ -151,6 +154,7 @@ const cursorMarketplace = {
       source: "./",
       description: cfg.description,
       version: cfg.version,
+      ...(logoPath ? { logo: logoPath } : {}),
     },
   ],
 };
@@ -167,6 +171,7 @@ const codexPlugin = {
   interface: {
     displayName: cfg.displayName,
     category: "commerce",
+    ...(codexLogoPath ? { logo: codexLogoPath } : {}),
   },
 };
 
@@ -218,6 +223,8 @@ writeJSON(`${CODEX_PLUGIN_DIR}/.codex-plugin/plugin.json`, codexPlugin);
 writeJSON(`${CODEX_PLUGIN_DIR}/.mcp.json`, mcpFor("codex"));
 // Codex needs skills inside its plugin root; copy them from the shared root dir.
 copyDir("skills", `${CODEX_PLUGIN_DIR}/skills`);
+// Codex install-surface assets must also live inside the generated plugin root.
+copyDir("assets", `${CODEX_PLUGIN_DIR}/assets`);
 
 console.log(
   "\nVS Code Copilot (auto-detects Claude format — no extra files):",

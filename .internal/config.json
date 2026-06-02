@@ -11,8 +11,11 @@
   },
   "homepage": "https://commercetools.com",
   "repository": "https://github.com/commercetools/commercetools-ai-plugins",
-  "license": "MIT",
+  "license": "Dual: CC BY 4.0 / MIT",
   "keywords": ["commercetools", "commerce", "ecommerce"],
+  "branding": {
+    "logo": "assets/commercetools-symbol.svg"
+  },
   "marketplace": {
     "name": "commercetools",
     "description": "Official commercetools plugins for AI coding agents.",

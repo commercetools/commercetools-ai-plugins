@@ -115,7 +115,7 @@ CTP_SCOPES=manage_order_edits:your-project-key view_sessions:your-project-key vi
 | Australia (GCP) | `https://auth.australia-southeast1.gcp.commercetools.com` |
 
 **Required API client scopes** (Merchant Center → Settings → Developer Settings):
-Use the **Mobile & single-page application** template, then manually add `manage_payments` and `manage_orders`.
+Use the **Frontend B2C** template (or Frontend B2B), then make sure `manage_sessions` and `manage_orders` are included.
 
 ---
 

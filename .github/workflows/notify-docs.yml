@@ -22,6 +22,7 @@ jobs:
           client-id: ${{ secrets.CT_SDKS_APP_ID }}
           private-key: ${{ secrets.CT_SDKS_APP_PEM }}
           owner: ${{ github.repository_owner }}
+          repositories: commercetools/commercetools-docs
 
       - name: Send repository_dispatch to commercetools-docs
         uses: peter-evans/repository-dispatch@v4

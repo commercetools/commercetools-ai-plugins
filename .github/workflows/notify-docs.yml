@@ -19,7 +19,7 @@ jobs:
         id: generate_github_token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ secrets.CT_SDKS_APP_ID }}
+          client-id: ${{ secrets.CT_SDKS_APP_ID }}
           private-key: ${{ secrets.CT_SDKS_APP_PEM }}
           owner: ${{ github.repository_owner }}
 

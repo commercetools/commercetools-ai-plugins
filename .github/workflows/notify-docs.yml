@@ -7,7 +7,7 @@ name: Notify docs repo
 
 on:
   push:
-    branches: [main, test/notify-docs]
+    branches: [main]
 
 jobs:
   dispatch:

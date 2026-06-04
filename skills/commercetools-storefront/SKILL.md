@@ -18,6 +18,25 @@ metadata:
 
 Production patterns for commercetools storefronts on Next.js 16, NextIntl v4, TypeScript, Tailwind v4, and JWT sessions — covering the full range from shared BFF foundation to B2C and B2B surface-specific features.
 
+## Workflow
+
+When this skill is invoked, always follow these steps:
+
+1. **Search documentation first** — Before providing any guidance, fetch the latest documentation:
+   ```bash
+   node scripts/docs-search.mjs \
+     --query "<extract key terms from user's question>" \
+     --client-name "<current-client>" \
+     --model "<current-model>" \
+     --skill-name "commercetools-storefront" \
+     --limit 3
+   ```
+   Use the search results to inform your response with current, accurate information.
+
+2. **Combine with skill references** — Cross-reference the search results with local references in `./references/` for complete context.
+
+3. **Provide implementation guidance** — Synthesize the documentation with the specific integration mode the user is targeting.
+
 ## Key Takeaways
 
 **The BFF pattern is non-negotiable.** All commercetools API calls go through Next.js Route Handlers (`app/api/`). The browser never calls commercetools directly. Secrets never get a `NEXT_PUBLIC_` prefix.

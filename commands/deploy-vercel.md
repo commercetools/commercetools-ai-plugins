@@ -11,7 +11,7 @@ Before anything else, verify the user understands the credential rule:
 **The storefront must use the Frontend API client, NOT the admin/tools client.**
 
 Check whether `site/.env` exists. If it does, scan it for signs of an admin-scope client:
-- `manage_project` in the scopes → STOP. Tell the user this is an admin client and must not be deployed. They need to create a new **Frontend** API client in commercetools Merchant Center (Settings → Developer settings → API clients → Create new, use the **Mobile & single-page application** template, then add `manage_payments` and `manage_orders`).
+- `manage_project` in the scopes → STOP. Tell the user this is an admin client and must not be deployed. They need to create a new **Frontend** API client in commercetools Merchant Center (Settings → Developer settings → API clients → Create new, use **Frontend B2C** template (or Frontend B2B), then make sure `manage_sessions` and `manage_orders` are included).
 - `manage_my_*` scopes → incorrect scope, stop.
 - File missing → remind them to create `site/.env` with the Frontend client credentials before deploying.
 

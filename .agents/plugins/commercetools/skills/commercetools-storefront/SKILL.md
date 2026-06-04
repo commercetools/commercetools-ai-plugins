@@ -2,7 +2,7 @@
 name: commercetools-storefront
 description: Production patterns for building customer-facing storefronts on commercetools with Next.js 16, NextIntl v4, TypeScript, Tailwind v4, and JWT sessions. Covers B2C (anonymous carts, customer auth, BOPIS, bundles, promotions, CSR impersonation) and B2B (business units, as-associate API, quotes, approval workflows, store-scoped pricing, purchase lists, recurring orders). Includes BFF architecture, JWT session handling, ct SDK client setup, parallel fetching, and deployment patterns common to both. Use for PDP, PLP, cart, checkout flow, customer login, search/facets, locale handling, and any B2B- or B2C-specific feature.
 when_to_use:
-  - "Implementing a storefromt on Next.js with commercetools"
+  - "Implementing a storefront on Next.js with commercetools"
   - "Building B2C storefront with features like anonymous carts, customer auth, BOPIS, bundles, promotions, or CSR impersonation"
   - "Building B2B storefront with features like quotes, approval workflows, store-scoped pricing, purchase lists, or recurring orders"
 metadata:

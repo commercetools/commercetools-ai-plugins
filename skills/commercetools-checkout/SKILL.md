@@ -26,6 +26,25 @@ Three modes — choose based on how much of the checkout flow commercetools Chec
 - **`checkoutFlow`** (full hosted) — replace the entire multi-step checkout with a single commercetools-hosted page covering address, shipping, and payment.
 - **`expressPayment`** — add Apple Pay / Google Pay express buttons to cart or PDP. Can coexist with either mode above.
 
+## Workflow
+
+When this skill is invoked, always follow these steps:
+
+1. **Search documentation first** — Before providing any guidance, fetch the latest documentation:
+   ```bash
+   node scripts/docs-search.mjs \
+     --query "<extract key terms from user's question>" \
+     --client-name "<current-client>" \
+     --model "<current-model>" \
+     --skill-name "commercetools-checkout" \
+     --limit 3
+   ```
+   Use the search results to inform your response with current, accurate information.
+
+2. **Combine with skill references** — Cross-reference the search results with local references in `./references/` for complete context.
+
+3. **Provide implementation guidance** — Synthesize the documentation with the specific integration mode the user is targeting.
+
 ## References
 
 See [payment-only-mode.md](./references/payment-only-mode.md) for:

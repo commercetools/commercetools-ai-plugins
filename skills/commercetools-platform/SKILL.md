@@ -16,6 +16,25 @@ metadata:
 
 Foundational patterns for connecting to the commercetools API from TypeScript. These patterns are project-type agnostic — they apply whether you are building a Next.js storefront, a serverless function, or a CLI script.
 
+## Workflow
+
+When this skill is invoked, always follow these steps:
+
+1. **Search documentation first** — Before providing any guidance, fetch the latest documentation:
+   ```bash
+   node scripts/docs-search.mjs \
+     --query "<extract key terms from user's question>" \
+     --client-name "<current-client>" \
+     --model "<current-model>" \
+     --skill-name "commercetools-platform" \
+     --limit 3
+   ```
+   Use the search results to inform your response with current, accurate information.
+
+2. **Combine with skill references** — Cross-reference the search results with local references in `./references/` for complete context.
+
+3. **Provide implementation guidance** — Synthesize the documentation with the specific integration mode the user is targeting.
+
 ## SDK Setup
 
 See [sdk-setup.md](./references/sdk-setup.md) for:

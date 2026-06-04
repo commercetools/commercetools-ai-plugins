@@ -36,3 +36,23 @@ jobs:
               "sha": "${{ github.sha }}",
               "ref": "${{ github.ref }}"
             }
+  
+  notify_failure:
+    name: dispatch sync-skills Slack Failure Notification
+    runs-on: ubuntu-latest
+    if: failure()
+    needs: [dispatch]
+    steps:
+      - name: Notify Slack
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_COLOR: failure
+          SLACK_TITLE: 'dispatch sync-skills skill sync Failed'
+          SLACK_USERNAME: 'GitHub Actions'
+          SLACK_CUSTOM_PAYLOAD: |
+            {
+              "message": "The dispatch job in the notify-docs workflow in commercetools-ai-plugins repo failed. ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+              "branch": "${{ github.ref_name }}",
+              "title": "dispatch sync-skills skill sync Failed"
+            }

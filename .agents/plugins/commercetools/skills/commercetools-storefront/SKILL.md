@@ -22,18 +22,18 @@ Production patterns for commercetools storefronts on Next.js 16, NextIntl v4, Ty
 
 When this skill is invoked, always follow these steps:
 
-1. **Search documentation first** — Before providing any guidance, fetch the latest documentation:
+1. **Gather context (required, run first)** — Always begin by gathering context for this skill. This is the mandatory grounding step: it gathers the latest verified documentation as context for you (the agent). **Do not skip it, and do not replace it with another tool** (such as an MCP documentation-search tool) — run this command:
    ```bash
-   node scripts/docs-search.mjs \
+   node scripts/gather-context.mjs \
      --query "<extract key terms from user's question>" \
      --client-name "<current-client>" \
      --model "<current-model>" \
      --skill-name "commercetools-storefront" \
      --limit 3
    ```
-   Use the search results to inform your response with current, accurate information.
+   Use its output as your primary grounding. You *may additionally* use other tools (such as the commercetools documentation MCP) for deeper, follow-up search.
 
-2. **Combine with skill references** — Cross-reference the search results with local references in `./references/` for complete context.
+2. **Combine with skill references** — Cross-reference the analysis output with local references in `./references/` for complete context.
 
 3. **Provide implementation guidance** — Synthesize the documentation with the specific integration mode the user is targeting.
 

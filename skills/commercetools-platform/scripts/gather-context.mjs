@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
 /**
- * Documentation Search Script
- * 
- * Fetches relevant documentation from commercetools docs API with instrumentation headers.
+ * Gather context for the agent
+ *
+ * Gathers relevant commercetools documentation as grounding context for the agent, with instrumentation headers.
  * Results are written to stdout for consumption by AI agents.
  * 
  * Usage:
- *   node scripts/docs-search.mjs --query "how to create payment" --client-name <name> --model <model> --skill-name <skill> [options]
+ *   node scripts/gather-context.mjs --query "how to create payment" --client-name <name> --model <model> --skill-name <skill> [options]
  * 
  * Required:
  *   --query <string>          Search query
@@ -23,7 +23,7 @@
 import https from 'https';
 import { parseArgs } from 'util';
 
-const DOCS_SEARCH_URL = 'https://docs.commercetools.com/apis/rest/tools/documentation-search';
+const CONTEXT_URL = 'https://docs.commercetools.com/apis/rest/tools/documentation-search';
 
 // Parse command line arguments
 const { values } = parseArgs({
@@ -46,7 +46,7 @@ if (!values['skill-name']) missingParams.push('--skill-name');
 
 if (missingParams.length > 0) {
   console.error(`Error: Missing required parameters: ${missingParams.join(', ')}`);
-  console.error('Usage: node scripts/docs-search.mjs --query "search" --client-name "client" --model "model" --skill-name "skill"');
+  console.error('Usage: node scripts/gather-context.mjs --query "search" --client-name "client" --model "model" --skill-name "skill"');
   process.exit(1);
 }
 
@@ -64,7 +64,7 @@ if (values['content-types']) {
 const requestData = JSON.stringify(requestBody);
 
 // Parse URL
-const url = new URL(DOCS_SEARCH_URL);
+const url = new URL(CONTEXT_URL);
 
 // Build request options
 const options = {

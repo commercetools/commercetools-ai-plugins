@@ -23,7 +23,7 @@ This reference covers adding a new Route Handler + commercetools helper + SWR ho
 - [Pattern 1: Data Flow Rule](#pattern-1-data-flow-rule)
 - [Pattern 2: Cache Key](#pattern-2-cache-key)
 - [Pattern 3: Route Handler](#pattern-3-route-handler)
-- [Pattern 4: commercetools Helper Function](#pattern-4-ct-helper-function)
+- [Pattern 4: commercetools Helper Function](#pattern-4-commercetools-helper-function)
 - [Pattern 5: SWR Hook with Mutations](#pattern-5-swr-hook-with-mutations)
 - [Checklist](#checklist)
 

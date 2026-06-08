@@ -19,7 +19,7 @@ metadata:
 
 ## Table of Contents
 - [Pattern 1: Server vs SWR Decision](#pattern-1-server-vs-swr-decision)
-- [Pattern 2: commercetools Type Boundary](#pattern-2-ct-type-boundary)
+- [Pattern 2: commercetools Type Boundary](#pattern-2-commercetools-type-boundary)
 - [Pattern 3: BFF API Route Shape](#pattern-3-bff-api-route-shape)
 - [Pattern 4: Version Conflict](#pattern-4-version-conflict)
 - [Pattern 5: Server-Side Caching](#pattern-5-server-side-caching)

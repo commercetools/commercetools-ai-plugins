@@ -21,7 +21,7 @@ Shopping lists let customers save products for later. In B2C they are personal (
 
 ## Table of Contents
 - [Pattern 1: The Two API Chains](#pattern-1-the-two-api-chains)
-- [Pattern 2: commercetools Helper Functions](#pattern-2-ct-helper-functions)
+- [Pattern 2: commercetools Helper Functions](#pattern-2-commercetools-helper-functions)
 - [Pattern 3: Route Handlers](#pattern-3-route-handlers)
 - [Pattern 4: SWR Hook](#pattern-4-swr-hook)
 - [Pattern 5: Mapper](#pattern-5-mapper)

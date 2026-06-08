@@ -25,7 +25,7 @@ This reference covers `ProductApi` session injection, how `distributionChannelId
 - [Pattern 2: Price Injection via buildProjectionParams](#pattern-2-price-injection-via-buildprojectionparams)
 - [Pattern 3: Store-Scoped Category Filtering](#pattern-3-store-scoped-category-filtering)
 - [Pattern 4: Availability via supplyChannelId](#pattern-4-availability-via-supplychannelid)
-- [Pattern 5: Facet Retry on commercetools Error](#pattern-5-facet-retry-on-ct-error)
+- [Pattern 5: Facet Retry on commercetools Error](#pattern-5-facet-retry-on-commercetools-error)
 - [Checklist](#checklist)
 
 ---

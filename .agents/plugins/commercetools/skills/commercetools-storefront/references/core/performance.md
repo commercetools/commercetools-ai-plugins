@@ -20,7 +20,7 @@ This reference covers parallel data fetching, `unstable_cache` for stable data, 
 
 ## Table of Contents
 - [Pattern 1: Parallel Fetching in Server Components](#pattern-1-parallel-fetching-in-server-components)
-- [Pattern 2: unstable_cache for Stable commercetools Data](#pattern-2-unstable_cache-for-stable-ct-data)
+- [Pattern 2: unstable_cache for Stable commercetools Data](#pattern-2-unstable_cache-for-stable-commercetools-data)
 - [Pattern 3: SWR Fallback Injection from the Server](#pattern-3-swr-fallback-injection-from-the-server)
 - [Pattern 4: Image Optimization](#pattern-4-image-optimization) → see [image-config.md](./image-config.md)
 - [Pattern 5: N+1 Anti-Patterns to Avoid](#pattern-5-n1-anti-patterns-to-avoid)

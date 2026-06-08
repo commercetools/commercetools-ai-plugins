@@ -25,7 +25,7 @@ This reference covers the commercetools SDK singleton, environment setup, JWT se
 - [Pattern 2: Environment Variables](#pattern-2-environment-variables)
 - [Pattern 3: JWT Session Management](#pattern-3-jwt-session-management)
 - [Pattern 4: BFF Route Handler Shape](#pattern-4-bff-route-handler-shape)
-- [Pattern 5: commercetools Helper Function Shape](#pattern-5-ct-helper-function-shape)
+- [Pattern 5: commercetools Helper Function Shape](#pattern-5-commercetools-helper-function-shape)
 - [Pattern 6: Connection Health Check](#pattern-6-connection-health-check)
 - [Checklist](#checklist)
 

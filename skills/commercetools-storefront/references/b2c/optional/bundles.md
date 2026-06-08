@@ -55,7 +55,7 @@ Bundles are a parent line item with child line items linked by a commercetools c
 Bundles are implemented as a parent line item with child line items linked by a `parentKey` custom field. All cart operations cascade from parent to children.
 
 ## Table of Contents
-- [Pattern 1: commercetools Setup](#pattern-1-ct-setup)
+- [Pattern 1: commercetools Setup](#pattern-1-commercetools-setup)
 - [Pattern 2: CartLineItem Extension](#pattern-2-cartlineitem-extension)
 - [Pattern 3: Cart Operations](#pattern-3-cart-operations)
 - [Pattern 4: cart-mapper.ts](#pattern-4-cart-mapperts)

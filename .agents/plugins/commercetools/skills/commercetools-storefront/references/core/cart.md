@@ -21,7 +21,7 @@ metadata:
 This reference covers commercetools cart creation, all Route Handlers, `useCartSWR`, `CartContext`, the mini-cart drawer, and the full cart page.
 
 ## Table of Contents
-- [Pattern 1: commercetools Cart Helper Functions](#pattern-1-ct-cart-helper-functions)
+- [Pattern 1: commercetools Cart Helper Functions](#pattern-1-commercetools-cart-helper-functions)
 - [Pattern 2: Cart Route Handlers](#pattern-2-cart-route-handlers)
 - [Pattern 3: Cart SWR Hook](#pattern-3-cart-swr-hook)
 - [Pattern 4: CartContext](#pattern-4-cartcontext)

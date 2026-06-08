@@ -55,7 +55,7 @@ CSR agents authenticate with their own credentials, then impersonate a customer.
 CSR agents log in with their own credentials, then impersonate a customer. The session holds both identities. Price overrides are gated behind a `csrId` check.
 
 ## Table of Contents
-- [Pattern 1: commercetools Setup](#pattern-1-ct-setup)
+- [Pattern 1: commercetools Setup](#pattern-1-commercetools-setup)
 - [Pattern 2: Session Extension](#pattern-2-session-extension)
 - [Pattern 3: Login Flow](#pattern-3-login-flow)
 - [Pattern 4: Price Override](#pattern-4-price-override)

@@ -20,7 +20,7 @@ metadata:
 This reference covers the shared patterns: the correct commercetools login endpoint, Route Handler structure, SWR hook for account data, and logout cache-clearing. Domain-specific auth patterns (B2C anonymous cart merge; B2B BU auto-selection and channel resolution) are documented in the respective skill's `customer-auth.md`.
 
 ## Table of Contents
-- [Pattern 1: commercetools Login Endpoint](#pattern-1-ct-login-endpoint)
+- [Pattern 1: commercetools Login Endpoint](#pattern-1-commercetools-login-endpoint)
 - [Pattern 2: Route Handler Structure](#pattern-2-route-handler-structure)
 - [Pattern 3: useAccount SWR Hook](#pattern-3-useaccount-swr-hook)
 - [Pattern 4: Logout — Session and SWR Cache Clearing](#pattern-4-logout--session-and-swr-cache-clearing)

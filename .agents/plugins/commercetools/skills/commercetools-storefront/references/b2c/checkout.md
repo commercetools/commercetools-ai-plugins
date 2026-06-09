@@ -30,17 +30,17 @@ Saved addresses are display-only in the selector — editing or adding a new add
 ## Order Placement Sequence
 
 ```
-addresses (shipping + billing) → shipping method → payment (commercetools checkout SDK) → confirmation
+addresses (shipping + billing) → shipping method → payment (Checkout SDK) → confirmation
 ```
 
 1. **Addresses step** — shipping and billing addresses persisted to cart in real time
 2. **Shipping step** — user selects a method
-3. **Payment step** — commercetools checkout frontend SDK mounts, handles payment capture and order placement
+3. **Payment step** — Checkout frontend SDK mounts, handles payment capture and order placement
 4. **Confirmation** — SDK signals completion → clear `cartId` from session → redirect to `/checkout/confirmation?orderId=<id>`
 
-Order placement is handled entirely by the commercetools checkout frontend SDK on the payment step. Do not implement a separate `POST /api/checkout` route for order creation.
+Order placement is handled entirely by the Checkout frontend SDK on the payment step. Do not implement a separate `POST /api/checkout` route for order creation.
 
-> **Reference:** See the [commercetools checkout frontend SDK](../../../commercetools-checkout/references/payment-only-mode.md) implementation skill for SDK setup and the order-completion event handler.
+> **Reference:** See the [Checkout frontend SDK](../../../commercetools-checkout/references/payment-only-mode.md) implementation skill for SDK setup and the order-completion event handler.
 
 ---
 
@@ -51,5 +51,5 @@ Order placement is handled entirely by the commercetools checkout frontend SDK o
 - [ ] Saved address list shown as selectable options; manual entry also allowed
 - [ ] Address changes debounced to `PATCH /api/cart` (inherited from shared)
 - [ ] Shipping method filtered by session currency (inherited from shared)
-- [ ] Order placement driven by commercetools checkout frontend SDK — no custom order route
+- [ ] Order placement driven by Checkout frontend SDK — no custom order route
 - [ ] `cartId` cleared from session after SDK order completion event

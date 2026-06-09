@@ -37,17 +37,17 @@ The address step reads saved addresses from the active business unit, not from t
 ### Order Placement Sequence
 
 ```
-addresses (shipping + billing) → shipping method → payment (commercetools checkout SDK) → confirmation
+addresses (shipping + billing) → shipping method → payment (Checkout SDK) → confirmation
 ```
 
 1. **Addresses step** — shipping and billing addresses persisted to cart when moving to the next step. All cart writes use the as-associate chain — see the [reference](./cart.md).
 2. **Shipping step** — user selects a method with `shippingMethodId`
-3. **Payment step** — commercetools checkout frontend SDK mounts and handles payment capture and order placement. If a PO Number payment method is configured in the commercetools checkout frontend SDK, it will appear automatically — no custom PO Number field is needed in the checkout form.
+3. **Payment step** — Checkout frontend SDK mounts and handles payment capture and order placement. If a PO Number payment method is configured in the Checkout frontend SDK, it will appear automatically — no custom PO Number field is needed in the checkout form.
 4. **Confirmation** — SDK signals completion → clear `cartId` from session → redirect to `/checkout/confirmation?orderId=<id>`
 
-Order placement is handled entirely by the commercetools checkout frontend SDK. Do not implement a separate `POST /api/checkout` route for order creation.
+Order placement is handled entirely by the Checkout frontend SDK. Do not implement a separate `POST /api/checkout` route for order creation.
 
-> **Reference:** See the [commercetools checkout frontend SDK](../../../commercetools-checkout/references/payment-only-mode.md) implementation skill for SDK setup and the order-completion event handler.
+> **Reference:** See the [Checkout frontend SDK](../../../commercetools-checkout/references/payment-only-mode.md) implementation skill for SDK setup and the order-completion event handler.
 
 ### BU + Store Validation
 
@@ -102,8 +102,8 @@ After submission, the quote progresses through seller review and negotiation. Se
 - [ ] Address step reads BU addresses, auto-selects `defaultShippingAddressId` / `defaultBillingAddressId`
 - [ ] All cart writes in checkout use the as-associate chain
 - [ ] `session.businessUnitKey` and `session.storeKey` validated before rendering checkout
-- [ ] Order placement driven by commercetools checkout frontend SDK — no custom order route for cart checkout
-- [ ] PO Number not added manually — relies on commercetools checkout SDK configuration if needed
+- [ ] Order placement driven by Checkout frontend SDK — no custom order route for cart checkout
+- [ ] PO Number not added manually — relies on Checkout SDK configuration if needed
 - [ ] Confirmation page handles `order.orderState === 'Open'` (approval pending) gracefully
 - [ ] Cart page shows **Request a Quote** button below the Checkout button
 - [ ] Quote request flow: addresses and shipping use the same BU patterns as Flow 1

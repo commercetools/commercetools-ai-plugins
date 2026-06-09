@@ -4,7 +4,7 @@ description: Multi-step checkout structure, address step, shipping method select
 when_to_use:
   - "Building the checkout flow"
   - "Implementing shipping method selection"
-  - "Integrating the payment step with commercetools checkout SDK"
+  - "Integrating the payment step with Checkout SDK"
   - "Handling order confirmation pages"
 metadata:
   contentType: REFERENCE
@@ -17,13 +17,13 @@ metadata:
 
 **Impact: HIGH — The checkout route is the revenue path. A failed order placement or stale cart version drops the conversion entirely.**
 
-This reference covers the shared checkout structure used by both B2C and B2B storefronts: the multi-step page shell, shipping method selection, payment via the commercetools checkout frontend SDK, and the confirmation page. Address step details and order placement are storefront-specific — see the relevant extension file.
+This reference covers the shared checkout structure used by both B2C and B2B storefronts: the multi-step page shell, shipping method selection, payment via the Checkout frontend SDK, and the confirmation page. Address step details and order placement are storefront-specific — see the relevant extension file.
 
 ## Table of Contents
 - [Pattern 1: Multi-Step Checkout Page Structure](#pattern-1-multi-step-checkout-page-structure)
 - [Pattern 2: Address Step](#pattern-2-address-step)
 - [Pattern 3: Shipping Method Selection](#pattern-3-shipping-method-selection)
-- [Pattern 4: Payment Step — commercetools Checkout Frontend SDK](#pattern-4-payment-step--commercetools-checkout-frontend-sdk)
+- [Pattern 4: Payment Step — Checkout Frontend SDK](#pattern-4-payment-step--commercetools-checkout-frontend-sdk)
 - [Pattern 5: Confirmation Page](#pattern-5-confirmation-page)
 - [Checklist](#checklist)
 
@@ -121,11 +121,11 @@ When the user selects a method, `PATCH /api/cart` with `shippingMethodId` and up
 
 ---
 
-## Pattern 4: Payment Step — commercetools Checkout Frontend SDK
+## Pattern 4: Payment Step — Checkout Frontend SDK
 
-The payment step is handled entirely by the commercetools checkout frontend SDK, which renders the full payment UI and drives order placement.
+The payment step is handled entirely by the Checkout frontend SDK, which renders the full payment UI and drives order placement.
 
-> **Reference:** See the [commercetools checkout frontend SDK](../../../commercetools-checkout/references/payment-only-mode.md) implementation skill for full setup, component mounting, and event handling.
+> **Reference:** See the [Checkout frontend SDK](../../../commercetools-checkout/references/payment-only-mode.md) implementation skill for full setup, component mounting, and event handling.
 
 Key rules:
 - Do not implement a custom payment form — mount the SDK component and let it manage the flow.
@@ -169,6 +169,6 @@ Both flows (cart checkout and quote checkout) redirect to `/checkout/confirmatio
 - [ ] Step skip guards redirect back if prerequisites are not met
 - [ ] `GET /api/shipping-methods` filters by session currency
 - [ ] Address changes debounced to update cart address method
-- [ ] Payment step mounts the commercetools checkout frontend SDK — no custom payment form
+- [ ] Payment step mounts the Checkout frontend SDK — no custom payment form
 - [ ] `cartId` cleared from session after the SDK signals order completion
 - [ ] Confirmation page is a Server Component that fetches order by ID from commercetools

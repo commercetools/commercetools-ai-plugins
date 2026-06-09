@@ -15,7 +15,7 @@ metadata:
 
 # Next.js + commercetools B2C Storefront
 
-Production-tested patterns for building a B2C storefront on commercetools with Next.js 16, TypeScript, Tailwind v4, and JWT sessions. Derived from the b2c-starter-kit — a working production storefront.
+Production-tested patterns for building a B2C storefront on commercetools with Next.js 16, TypeScript, Tailwind v4, and JWT sessions. 
 
 > **Shared foundation:** BFF architecture, JWT session setup, commercetools SDK singleton, project scaffold, `COUNTRY_CONFIG`, performance patterns, image config, Vercel deployment, and the shared auth base are in the `commercetools-storefront` skill. Load that skill alongside this one when starting a new project.
 

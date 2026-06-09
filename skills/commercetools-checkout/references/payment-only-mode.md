@@ -1,10 +1,10 @@
 ---
 name: payment-only-mode
-description: Implementation guide for integrating the commercetools Checkout Browser SDK with payment-only mode (paymentFlow), full hosted checkout (checkoutFlow), and express payment buttons.
+description: Implementation guide for integrating the Checkout Browser SDK with payment-only mode (paymentFlow), full hosted checkout (checkoutFlow), and express payment buttons.
 when_to_use:
-  - "Integrating the commercetools Checkout product into a headless or hosted storefront"
+  - "Integrating the Checkout into a headless or hosted storefront"
   - "Replacing only the payment step while keeping existing address and shipping flows"
-  - "Setting up Stripe, Adyen, Mollie, or other PSP connectors via commercetools Checkout Applications"
+  - "Setting up Stripe, Adyen, Mollie, or other PSP connectors via Checkout Applications"
   - "Implementing order creation via commercetools Sessions API and handling post-payment confirmation"
 metadata:
   contentType: REFERENCE
@@ -15,9 +15,9 @@ metadata:
     - sdk
 ---
 
-# commercetools Checkout Integration
+# Checkout Integration
 
-Adds payment processing via the [commercetools Checkout Browser SDK](https://docs.commercetools.com/checkout/browser-sdk).
+Adds payment processing via the [Checkout Browser SDK](https://docs.commercetools.com/checkout/browser-sdk).
 
 ---
 
@@ -27,7 +27,7 @@ Adds payment processing via the [commercetools Checkout Browser SDK](https://doc
 
 1. **Which checkout mode?**
    - `paymentFlow` — payment-only: keep existing address/shipping steps, replace only `StepPayment.tsx` with the commercetools widget. Least invasive.
-   - `checkoutFlow` — full page: replace the entire multi-step checkout with a single commercetools-hosted checkout page (addresses, shipping, and payment all handled by commercetools Checkout).
+   - `checkoutFlow` — full page: replace the entire multi-step checkout with a single commercetools-hosted checkout page (addresses, shipping, and payment all handled by Checkout).
    - `expressPayment` — express buttons: add Apple Pay / Google Pay buttons to the cart or PDP. Can coexist with either of the above.
 
 2. **Which PSP (Payment Service Provider)?**
@@ -38,9 +38,9 @@ Adds payment processing via the [commercetools Checkout Browser SDK](https://doc
 ## Architecture Overview
 
 ```
-Browser (SDK)  →  commercetools Checkout service  →  PSP
+Browser (SDK)  →  Checkout service  →  PSP
                        ↑
-      /api/checkout/session  (creates commercetools Checkout Session from cart)
+      /api/checkout/session  (creates Checkout Session from cart)
                        ↑
       commercetools Sessions API  (POST https://session.{region}.commercetools.com/{projectKey}/sessions)
 ```
@@ -54,7 +54,7 @@ The storefront creates a **Checkout Session** (server-side, via a new API route)
 ### 0a. Add environment variables to `site/.env`
 
 ```bash
-# The key of your commercetools Checkout Application
+# The key of your Checkout Application
 CTP_CHECKOUT_APP_KEY=storefront-checkout
 ```
 
@@ -182,19 +182,19 @@ export default function StepPayment() {
 
 In Checkout page, the payment step should render the PaymentStep.tsx
 
-> **Note**: With `paymentFlow`, commercetools Checkout handles the payment AND the **order is created by commercetools** automatically when payment succeeds (via the `paymentReturnUrl` configured in the Application). 
+> **Note**: With `paymentFlow`, Checkout handles the payment AND the **order is created by commercetools** automatically when payment succeeds (via the `paymentReturnUrl` configured in the Application). 
 
 ---
 
-## Step 3 — Order confirmation after commercetools Checkout
+## Step 3 — Order confirmation after Checkout
 
-commercetools Checkout navigates the browser to `paymentReturnUrl` after a successful payment, appending `?orderId=<id>` (or `?orderNumber=<n>`). Update the confirmation page to read these params:
+Checkout navigates the browser to `paymentReturnUrl` after a successful payment, appending `?orderId=<id>` (or `?orderNumber=<n>`). Update the confirmation page to read these params:
 
 ---
 
 ## Step 5 — Styling
 
-Optional: Override commercetools Checkout widget styles via the `styles` option (CSS custom properties):
+Optional: Override Checkout widget styles via the `styles` option (CSS custom properties):
 
 ```typescript
 checkoutFlow({
@@ -208,7 +208,7 @@ checkoutFlow({
 });
 ```
 
-Available CSS variables are listed in the commercetools Checkout theming docs.
+Available CSS variables are listed in the Checkout theming docs.
 
 ---
 
@@ -216,7 +216,7 @@ Available CSS variables are listed in the commercetools Checkout theming docs.
 
 | Variable | Secret? | Purpose |
 |---|---|---|
-| `CTP_CHECKOUT_APP_KEY` | No | **New** — key of the commercetools Checkout Application |
+| `CTP_CHECKOUT_APP_KEY` | No | **New** — key of the Checkout Application |
 
 
 No `CT_REGION`, `NEXT_PUBLIC_CT_PROJECT_KEY`, or `NEXT_PUBLIC_CT_REGION` variables are needed. The session API derives the region from `CTP_API_URL` and returns `{ sessionId, projectKey, region }` to the browser.

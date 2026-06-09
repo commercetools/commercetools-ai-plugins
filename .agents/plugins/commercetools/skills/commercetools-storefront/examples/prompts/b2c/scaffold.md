@@ -9,7 +9,7 @@ Generate a complete production ready B2C storefront connected to commercetools.
 3. product-listing + facets
 4. product-detail
 5. cart
-6. checkout: create complete integration with paymentflow of commercetools checkout but keep the application key as const
+6. checkout: create complete integration with paymentflow of Checkout but keep the application key as const
 7. customer authentication and registration
 8. search page + facets
 9. wishlist

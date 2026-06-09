@@ -2,8 +2,8 @@
 .DS_Store
 *.log
 
-# Defense in depth: node_modules should only exist under .internal/, but
-# guard against tools creating one at root anyway.
+# Defense in depth: this repo ships no Node project, but guard against tools
+# creating a node_modules anyway.
 node_modules/
 
 # Secrets (defense in depth — keep at root in case anything lands here)

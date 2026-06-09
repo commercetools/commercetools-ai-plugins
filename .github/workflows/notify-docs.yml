@@ -1,13 +1,22 @@
 name: Notify docs repo
 
 # Fires a `repository_dispatch` event (`event_type: skills-updated`) at
-# `commercetools/commercetools-docs` whenever `main` is updated here, so the
-# docs repo's `sync-skills.yml` workflow can pull the latest skills.
-# See: https://github.com/commercetools/commercetools-docs/issues/9513
+# `commercetools/commercetools-docs` whenever published content on `main`
+# changes here, so the docs repo's `sync-skills.yml` workflow can pull the
+# latest skills. Edits to README/LICENSE/.github do not trigger it.
 
 on:
   push:
     branches: [main]
+    # Only fire on published content. Keep this list mirrored with the dev repo
+    # public-release.yml `add-paths` (the source of truth for what gets synced).
+    paths:
+      - skills/**
+      - commands/**
+      - .claude-plugin/**
+      - .cursor-plugin/**
+      - .agents/**
+      - skills.sh.json
 
 jobs:
   dispatch:

@@ -4,7 +4,6 @@ name: Notify docs repo
 # `commercetools/commercetools-docs` whenever published content on `main`
 # changes here, so the docs repo's `sync-skills.yml` workflow can pull the
 # latest skills. Edits to README/LICENSE/.github do not trigger it.
-# See: https://github.com/commercetools/commercetools-docs/issues/9513
 
 on:
   push:

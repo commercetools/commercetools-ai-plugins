@@ -47,7 +47,7 @@ Return `AttributeDefinition[]` directly from the SDK — it already contains eve
 to derive both the facet expression shape and the postFilter field paths, so no parallel
 intermediate type is needed.
 
-Cache this result aggressively (at least one hour) with `unstable_cache` from `next/cache`.
+Cache this result aggressively (at least one hour) with the framework's server-side cache-with-TTL (Next.js example: `unstable_cache` from `next/cache`).
 Product type schemas change rarely; the savings on every search call are meaningful.
 
 ---
@@ -155,18 +155,19 @@ When any filter changes, reset `offset` to 0 — otherwise users land mid-pagina
 
 ## Client-side filter panel
 
-The filter panel is a `'use client'` component that receives `facets` and `searchRequest` as
-serializable props from the server page. It:
+The filter panel is a client component that receives `facets` and `searchRequest` as
+serializable props from the server-rendered page. It:
 
-1. Reads `f_*` URL params with `useSearchParams` to reconstruct current selections
+1. Reads `f_*` URL params from the framework's query-param API (Next.js: `useSearchParams`) to reconstruct current selections
 2. Builds a name→expression lookup from `searchRequest.facets` to know each facet's kind
 3. Iterates the response facets, skipping any with no non-zero buckets (nothing to show)
 4. Dispatches to a `DistinctFacet` or `RangeFacet` component based on the request expression kind
 5. Shows an `ActiveFilters` strip at the top when any selections are active
-6. Updates the URL with `router.push` on every selection change, preserving unrelated params
+6. Updates the URL via the framework's client navigation on every selection change, preserving unrelated params
 
-Wrap the panel in a `<Suspense>` boundary on the server page — it reads `useSearchParams`
-which requires Suspense in Next.js App Router.
+If the framework requires a boundary around client query-param access during server rendering, wrap the
+panel accordingly on the server page.
+> Find the adapter's `concept-mapping.md` for concrete route boundary implementation.
 
 ---
 

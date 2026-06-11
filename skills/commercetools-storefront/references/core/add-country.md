@@ -37,14 +37,14 @@ All locale data derives from one `COUNTRY_CONFIG` object. Update it once, then a
 currency: 'EUR'
 // In checkout.ts:
 country: 'DE'
-// In Header.tsx:
+// In the header component:
 const locales = ['en-US', 'de-DE'];
 ```
 
-**CORRECT — add to `COUNTRY_CONFIG` in `lib/utils.ts` only:**
+**CORRECT — add to `COUNTRY_CONFIG` in `<server>/utils` only:**
 
 ```typescript
-// site/lib/utils.ts
+// <root-dir>/<server>/utils
 export const COUNTRY_CONFIG: Record<string, CountryConfig> = {
   'en-US': {
     locale:    'en-US',       // BCP-47 — used as COUNTRY_CONFIG key, URL segment, and in commercetools API calls
@@ -78,30 +78,11 @@ The `locale` value is used directly in commercetools search queries (`language: 
 
 ## Pattern 2: Routing Update
 
-**INCORRECT:** hardcoding the locales array instead of deriving it from `COUNTRY_CONFIG`.
+The active-locale list the framework's i18n/locale routing uses must **derive from `COUNTRY_CONFIG` keys**, never be hardcoded — otherwise it drifts every time a country is added. In practice this is `Object.keys(COUNTRY_CONFIG)` fed into the routing configuration, with a default locale (e.g. `en-US`).
 
-```typescript
-// BAD — must be manually updated every time a country is added
-export const routing = defineRouting({
-  locales: ['en-US', 'de-DE', 'fr-FR'],
-  defaultLocale: 'en-US',
-});
-```
-
-**CORRECT — derive `locales` from `COUNTRY_CONFIG` keys so routing stays in sync automatically:**
-
-```typescript
-// site/i18n/routing.ts
-import { defineRouting } from 'next-intl/routing';
-import { COUNTRY_CONFIG } from '@/lib/utils';
-
-export const routing = defineRouting({
-  locales: Object.keys(COUNTRY_CONFIG) as [string, ...string[]],
-  defaultLocale: 'en-US',
-});
-```
-
-> Adding a new entry to `COUNTRY_CONFIG` is all that's needed — the `locales` array updates automatically. The COUNTRY_CONFIG key is the BCP-47 locale (e.g. `fr-FR`), which is the same format commercetools uses for API calls. The URL segment matches the key exactly: `/fr-FR/`, `/de-DE/`.
+1. Update the Merchant center by adding the new country, language and currency from **Settings** > **Project settings** 
+2. Update and add a new entry to `COUNTRY_CONFIG` is all that's needed — the locale list updates automatically. The COUNTRY_CONFIG key is the BCP-47 locale (e.g. `fr-FR`), the same format commercetools uses for API calls, and the URL segment matches the key exactly: `/fr-FR/`, `/de-DE/`. 
+> The routing wiring itself is framework-specific — find the adapter's `project-layout.md`.
 
 ---
 
@@ -110,7 +91,7 @@ export const routing = defineRouting({
 **INCORRECT:** reusing an existing locale file or naming it incorrectly.
 
 ```
-// BAD — wrong filename, won't be picked up by next-intl
+// BAD — wrong filename, won't be picked up by the framework's i18n loader
 messages/fr.json
 messages/fr-fr.json
 messages/FR.json
@@ -120,13 +101,13 @@ messages/FR.json
 
 ```bash
 # Copy the closest existing locale as a starting point
-cp site/messages/de-DE.json site/messages/fr-FR.json
+cp <root-dir>/messages/de-DE.json <root-dir>/messages/fr-FR.json
 ```
 
 Then translate all values in `fr-FR.json`. The filename **must** exactly match the COUNTRY_CONFIG key (e.g. `fr-FR.json` for the `'fr-FR'` entry).
 
 ```json
-// site/messages/fr-FR.json (excerpt)
+// <root-dir>/messages/fr-FR.json (excerpt)
 {
   "common": {
     "addToCart": "Ajouter au panier",
@@ -141,8 +122,8 @@ Then translate all values in `fr-FR.json`. The filename **must** exactly match t
 ```
 
 ## Checklist
-- [ ] New entry added to `COUNTRY_CONFIG` in `site/lib/utils.ts` with `locale`, `currency`, `country`, `label`
-- [ ] BCP-47 locale added to `locales` array in `site/i18n/routing.ts`
-- [ ] `site/messages/<BCP-47>.json` created with all translation keys
+- [ ] New entry added to `COUNTRY_CONFIG` in `<root-dir>/<server>/utils` with `locale`, `currency`, `country`, `label`
+- [ ] Locale list in the framework's routing config derives from `COUNTRY_CONFIG` keys (not hardcoded) — Adapter's `project-layout.md`
+- [ ] `<root-dir>/messages/<BCP-47>.json` created with all translation keys
 - [ ] commercetools Merchant Center: prices defined for the new currency in the product catalogue
 - [ ] commercetools Merchant Center: shipping zones/methods set up for the new country

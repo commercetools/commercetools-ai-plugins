@@ -1,6 +1,6 @@
 ---
 name: cart
-description: Cart creation, Route Handlers, SWR hooks, CartContext, mini-cart drawer, and handling commercetools concurrency conflicts (409 errors).
+description: Cart creation, server endpoints, client-state hooks, cart provider, mini-cart drawer, and handling commercetools concurrency conflicts (409 errors).
 when_to_use:
   - "Implementing cart CRUD operations"
   - "Handling version conflicts and concurrent modifications"
@@ -18,13 +18,13 @@ metadata:
 
 **Impact: CRITICAL — Cart version conflicts (409) and stale `cartId` are the most common production bugs. Every write path must re-fetch version and retry.**
 
-This reference covers commercetools cart creation, all Route Handlers, `useCartSWR`, `CartContext`, the mini-cart drawer, and the full cart page.
+This reference covers commercetools cart creation, all server endpoints, the cart client-state hook, the cart provider, the mini-cart drawer, and the full cart page.
 
 ## Table of Contents
 - [Pattern 1: commercetools Cart Helper Functions](#pattern-1-commercetools-cart-helper-functions)
-- [Pattern 2: Cart Route Handlers](#pattern-2-cart-route-handlers)
-- [Pattern 3: Cart SWR Hook](#pattern-3-cart-swr-hook)
-- [Pattern 4: CartContext](#pattern-4-cartcontext)
+- [Pattern 2: Cart Server Endpoints](#pattern-2-cart-server-endpoints)
+- [Pattern 3: Cart Client State Hook](#pattern-3-cart-client-state-hook)
+- [Pattern 4: Cart Provider](#pattern-4-cart-provider)
 - [Pattern 5: Mini-Cart Drawer](#pattern-5-mini-cart-drawer)
 - [Checklist](#checklist)
 
@@ -32,7 +32,7 @@ This reference covers commercetools cart creation, all Route Handlers, `useCartS
 
 ## Pattern 1: commercetools Cart Helper Functions
 
-`lib/ct/cart.ts` (key functions):
+`<server>/ct/cart` (key functions):
 
 - getCart: get current user's active cart by ID or Key.
 - create a new cart: this function should create a new cart for anonymous or logged in customer for current country/currency.
@@ -55,167 +55,52 @@ export async function exampleFunction(cartId: string) {
 
 ---
 
-## Pattern 2: Cart Route Handlers
+## Pattern 2: Cart Server Endpoints
 
-Based on the usage, the Helper functions might be used from hooks. So we need api routes to reflect them
+The cart helpers are called from client hooks, so the storefront exposes cart endpoints that mirror them. The **cart GET endpoint** is where the important session hygiene lives:
 
-### Example: Main cart route (GET/POST/PATCH)
+- If the session has no `cartId`, return `{ cart: null }`.
+- Otherwise load the cart via `getCart(session.cartId)` and:
+  - If the cart is **not `Active`** (e.g. `Ordered`, `Merged`), clear `cartId` from the session and return `{ cart: null }` — the client should see an empty cart.
+  - If `getCart` **throws** (cart not found in commercetools), clear the stale `cartId` from the session and return `{ cart: null }`.
+  - Otherwise return `{ cart }`.
 
-```typescript
-// app/api/cart/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { getSession, getLocale, createSessionToken, setSessionCookie } from '@/lib/session';
-import { getCart, ... } from '@/lib/ct/cart';
+The **cart POST endpoint** creates a cart on demand. Mutation endpoints (add/remove line item, change quantity, discount) each wrap the matching `<server>/ct/cart` helper. Each endpoint that touches the session also writes the updated session back on the way out.
 
-export async function GET() {
-  const session = await getSession();
-  if (!session.cartId) return NextResponse.json({ cart: null });
-  try {
-    const cart = await getCart(session.cartId);
-    // Discard non-Active carts (Ordered, Merged) — client should see empty cart
-    if (cart.cartState && cart.cartState !== 'Active') {
-      const token = await createSessionToken({ ...session, cartId: undefined });
-      const resp = NextResponse.json({ cart: null });
-      return setSessionCookie(resp, token);
-    }
-    return NextResponse.json({ cart });
-  } catch {
-    // Cart not found in commercetools — clear stale cartId from session
-    const token = await createSessionToken({ ...session, cartId: undefined });
-    const resp = NextResponse.json({ cart: null });
-    return setSessionCookie(resp, token);
-  }
-}
-
-export async function POST() {
-  // create cart
-}
-
-```
+> Example **Next.js shape:** these cart server endpoints (using `NextResponse` + `setSessionCookie`) follow the standard BFF endpoint shell — find adapter's `data-loading.md`.
 
 ---
 
-## Pattern 3: Cart SWR Hook
+## Pattern 3: Cart Client State Hook
 
-**INCORRECT:** Calling `fetch('/api/cart')` directly in a component.
+**INCORRECT:** Calling `fetch('/<api>/cart')` directly in a component.
 
-**CORRECT — `useCartSWR` + `useCartMutations` in `hooks/useCartSWR.ts`:**
+**CORRECT — a cart read hook + a cart mutations module:**
 
-```typescript
-// types.ts
+- A **cart read hook** is keyed by `KEY_CART` and reads the cart from the cart endpoint (`GET /<api>/cart`). The fetcher returns `null` when the response is not ok — it never throws. Unlike other reads, this hook **does** revalidate on focus, so the cart stays fresh when the user returns from another tab. It accepts an optional server-fetched cart to seed the cache (eliminating the first-render loading state).
+- A **cart mutations module** exposes all cart writes (add/remove line item, change quantity, discount). Each write calls the matching endpoint and then updates `KEY_CART` directly from the API response body **without a refetch** — always prefer this over a blind revalidation, which costs a second round-trip.
 
-export interface Cart {
-...
-}
-// hooks/useCartSWR.ts
-'use client';
+The app `Cart` type is declared in the shared types module and imported by the hook — never imported from `@commercetools/platform-sdk`.
 
-import useSWR, { useSWRConfig } from 'swr';
-import { KEY_CART } from '@/lib/cache-keys';
-import { Cart } from '@/types'
+> Find the stack's `concept-mapping.md` for concrete state and cache implementation.
 
-
-async function cartFetcher(): Promise<Cart | null> {
-  const res = await fetch('/api/cart');
-  if (!res.ok) return null;
-  const data = await res.json();
-  return data.cart ?? null;
-}
-
-export function useCartSWR(fallback?: Cart | null) {
-  return useSWR<Cart | null>(KEY_CART, cartFetcher, {
-    fallbackData: fallback ?? undefined,
-    revalidateOnFocus: true,
-  });
-}
-
-export function useCartMutations() {
-  const { mutate } = useSWRConfig();
-
-  // all methods to modify a cart
-
-  return { ... };
-}
-```
-
-> **`mutate(KEY_CART, data.cart, { revalidate: false })`** — updates the SWR cache directly from the API response body without triggering a second fetch. Always prefer this over `mutate(KEY_CART)` (which refetches).
 
 ---
 
-## Pattern 4: CartContext
+## Pattern 4: Cart Provider
 
-```typescript
-// context/CartContext.tsx
-'use client';
+A **cart provider** is a client component that wraps the app and exposes a single cart context to the tree. It:
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
-import { useCartSWR, useCartMutations, type Cart } from '@/hooks/useCartSWR';
+- reads the cart via the cart client-state hook (seeded with a server-fetched `initialCart`) and re-exposes `cart` + `isLoading`;
+- owns the mini-cart open/close flag (`showMiniCart`, `openMiniCart`, `closeMiniCart`) in local client state;
+- exposes an `addToCart(productId, variantId, quantity?)` convenience that calls the mutations module's `addItem` and then opens the mini-cart;
+- re-exposes the full cart mutations module as `mutateCart`;
+- provides a `useCartContext()` accessor that throws if used outside the provider.
 
-interface CartContextValue {
-  cart: Cart | null | undefined;
-  isLoading: boolean;
-  showMiniCart: boolean;
-  openMiniCart: () => void;
-  closeMiniCart: () => void;
-  addToCart: (productId: string, variantId: number, quantity?: number) => Promise<void>;
-  mutateCart: ReturnType<typeof useCartMutations>;
-}
+Wrap the app with the cart provider at the root (locale) layout. Fetch `initialCart` server-side when `session.cartId` exists (`getCart(session.cartId).catch(() => null)`) and pass it to the provider to eliminate the client-side loading state.
 
-const CartContext = createContext<CartContextValue | null>(null);
 
-export function CartProvider({ children, initialCart }: { children: ReactNode; initialCart?: Cart | null }) {
-  const [showMiniCart, setShowMiniCart] = useState(false);
-  const { data: cart, isLoading } = useCartSWR(initialCart);
-  const mutations = useCartMutations();
-
-  const addToCart = useCallback(async (productId: string, variantId: number, quantity = 1) => {
-    await mutations.addItem(productId, variantId, quantity);
-    setShowMiniCart(true);
-  }, [mutations]);
-
-  return (
-    <CartContext.Provider value={{ cart, isLoading, showMiniCart, openMiniCart: () => setShowMiniCart(true), closeMiniCart: () => setShowMiniCart(false), addToCart, mutateCart: mutations }}>
-      {children}
-    </CartContext.Provider>
-  );
-}
-
-export function useCartContext() {
-  const ctx = useContext(CartContext);
-  if (!ctx) throw new Error('useCartContext must be inside CartProvider');
-  return ctx;
-}
-```
-
-Add `CartProvider` to `app/[locale]/layout.tsx`. Pass `initialCart` fetched server-side to eliminate the client-side loading state:
-
-```typescript
-// app/[locale]/layout.tsx (Server Component)
-import { getSession } from '@/lib/session';
-import { getCart } from '@/lib/ct/cart';
-import { CartProvider } from '@/context/CartContext';
-
-export default async function LocaleLayout({ children }: Props) {
-  const session = await getSession();
-  const initialCart = session.cartId
-    ? await getCart(session.cartId).catch(() => null)
-    : null;
-
-  return (
-    <html lang={locale}>
-      <body>
-        <NextIntlClientProvider messages={messages}>
-          <CartProvider initialCart={initialCart}>
-            <Header />
-            {children}
-            <MiniCart />
-          </CartProvider>
-        </NextIntlClientProvider>
-      </body>
-    </html>
-  );
-}
-```
+> Find the stack's `data-loading.md` for concrete layout-level hydration pattern implementation.
 
 ---
 
@@ -237,11 +122,11 @@ See full implementation in the `cart` greenfield skill. Key points:
 
 ## Checklist
 
-- [ ] `lib/ct/cart.ts` creates carts with `shippingMode: 'Single'`
-- [ ] `GET /api/cart` discards non-Active carts and clears `cartId` from session
-- [ ] `POST /api/cart/items` creates cart on demand if `cartId` is absent
-- [ ] `useCartMutations` updates SWR cache from response body — no extra refetch
-- [ ] `CartProvider` wraps the locale layout with `initialCart` from server
-- [ ] `KEY_CART` from `lib/cache-keys.ts` is the single SWR key for cart data
+- [ ] `<server>/ct/cart` creates carts with `shippingMode: 'Single'`
+- [ ] The cart GET endpoint discards non-Active carts and clears `cartId` from session
+- [ ] The add-item endpoint creates a cart on demand if `cartId` is absent
+- [ ] The cart mutations module updates the client state-manager/cache from the response body — no extra refetch
+- [ ] The cart provider wraps the app at the root layout with `initialCart` from the server
+- [ ] `KEY_CART` from `<server>/cache-keys` is the single client state-manager/cache key for cart data
 
 **Next:** [checkout-page.md](./checkout-page.md)

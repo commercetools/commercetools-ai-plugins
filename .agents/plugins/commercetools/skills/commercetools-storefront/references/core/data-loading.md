@@ -1,9 +1,9 @@
 ---
 name: data-loading
-description: Server vs SWR decision matrix, commercetools type boundaries, BFF route shape, version conflict, and server-side caching patterns.
+description: Server-rendered vs client-fetched decision matrix, commercetools type boundaries, BFF endpoint shape, version conflict, and server-side caching patterns.
 when_to_use:
   - "Deciding between server-side and client-side data fetching"
-  - "Designing API route handlers"
+  - "Designing server endpoints"
   - "Mapping commercetools types to application types"
   - "Implementing cache strategies"
 metadata:
@@ -15,10 +15,10 @@ metadata:
 
 # Data Loading
 
-**Impact: HIGH — Calling commercetools from a Client Component or importing `lib/ct/*` in a hook are the most common violations. commercetools types must never reach a component — map them at the commercetools layer.**
+**Impact: HIGH — Calling commercetools from a Client Component or importing `<server>/ct/*` in a hook are the most common violations. commercetools types must never reach a component — map them at the commercetools layer.**
 
 ## Table of Contents
-- [Pattern 1: Server vs SWR Decision](#pattern-1-server-vs-swr-decision)
+- [Pattern 1: Server-rendered vs Client-fetched Decision](#pattern-1-server-rendered-vs-client-fetched-decision)
 - [Pattern 2: commercetools Type Boundary](#pattern-2-commercetools-type-boundary)
 - [Pattern 3: BFF API Route Shape](#pattern-3-bff-api-route-shape)
 - [Pattern 4: Version Conflict](#pattern-4-version-conflict)
@@ -27,56 +27,59 @@ metadata:
 
 ---
 
-## Pattern 1: Server vs SWR Decision
+## Pattern 1: Server-rendered vs Client-fetched Decision
 
-Use async Server Components for first-paint data — no spinner, no hydration delay, SEO-friendly. Use SWR only for data that changes after user interaction.
+This is the core data-loading decision and it is framework-agnostic. Use a **server-rendered load** for first-paint data — no spinner, no hydration delay, SEO-friendly. Use **client-fetched** data (client state) only for data that changes after user interaction.
 
 | Data | Pattern | Reason |
 |---|---|---|
-| Initial product list | Server Component | First paint, SEO, no spinner |
-| Category tree | Server Component + TTL cache | Stable, needs SSR |
-| Cart | SWR (`useCartSWR`) | Changes after add/remove actions |
-| Account / orders | SWR | Changes after login |
-| Search results | Server Component (via URL params) | SEO, shareable URLs |
+| Initial product list | Server-rendered | First paint, SEO, no spinner |
+| Category tree | Server-rendered + TTL cache | Stable, needs SSR |
+| Cart | Client-fetched (client state) | Changes after add/remove actions |
+| Account / orders | Client-fetched (client state) | Changes after login |
+| Search results | Server-rendered (via URL params) | SEO, shareable URLs |
 
 Rules:
-- All page components are `async` by default — no `'use client'` unless the page needs browser APIs
-- Always `await params` — it's a Promise in Next.js 15+
-- Call `notFound()` for missing required resources
+- Server-rendered pages fetch on the server and call `<server>/ct/*` directly — no client-side bundle unless the page needs browser APIs
 - Pass `session` to commercetools functions rather than calling `getSession()` inside each function
+- Return a not-found response for missing required resources
+
+> Find adapter's `data-loading.md` file for implementation of this decision (async Server Component vs SWR hook → Route Handler)
 
 ---
 
 ## Pattern 2: commercetools Type Boundary
 
-commercetools responses must be mapped to app types before leaving `lib/ct/`. Components import from `@/lib/types` — never from `@commercetools/platform-sdk`.
+commercetools responses must be mapped to app types before leaving `<server>/ct/`. Components import from `<server>/types` — never from `@commercetools/platform-sdk`.
 
-Mappers live in `lib/mappers/`. Each file maps one commercetools resource to one app type:
+Mappers live in `<server>/mappers/`. Each file maps one commercetools resource to one app type:
 
 | File | Maps |
 |---|---|
-| `lib/mappers/product.ts` | `ProductProjection` → `Product` |
-| `lib/mappers/category.ts` | commercetools `Category` → app `Category` |
-| `lib/mappers/cart.ts` | commercetools `Cart` → app `Cart` |
-| `lib/mappers/order.ts` | commercetools `Order` → app `Order` |
-| `lib/mappers/line-item.ts` | commercetools `LineItem` → app `LineItem` |
-| `lib/mappers/customer.ts` | commercetools `Customer` → app `Account` |
-| `lib/mappers/money.ts` | commercetools `TypedMoney` → app `Money` |
-| `lib/mappers/facet.ts` | commercetools facet results → `FacetResult[]` |
+| `<server>/mappers/product` | `ProductProjection` → `Product` |
+| `<server>/mappers/category` | commercetools `Category` → app `Category` |
+| `<server>/mappers/cart` | commercetools `Cart` → app `Cart` |
+| `<server>/mappers/order` | commercetools `Order` → app `Order` |
+| `<server>/mappers/line-item` | commercetools `LineItem` → app `LineItem` |
+| `<server>/mappers/customer` | commercetools `Customer` → app `Account` |
+| `<server>/mappers/money` | commercetools `TypedMoney` → app `Money` |
+| `<server>/mappers/facet` | commercetools facet results → `FacetResult[]` |
 
-`getLocalizedString(field, locale)` resolves `LocalizedString` to a plain string — falls back to default locale then first available. Call it only inside `lib/ct/` or `lib/mappers/`, never in components.
+`getLocalizedString(field, locale)` resolves `LocalizedString` to a plain string — falls back to default locale then first available. Call it only inside `<server>/ct/` or `<server>/mappers/`, never in components.
 
 ---
 
-## Pattern 3: BFF API Route Shape
+## Pattern 3: BFF Server Endpoint Shape
 
-Route handlers have exactly three responsibilities — no more:
+A server endpoint (your framework's request handler) has exactly three responsibilities — no more:
 
 1. Validate session
-2. Call `lib/ct/<namespace>.ts` — never the commercetools SDK directly
+2. Call `<server>/ct/<namespace>.ts` — never the commercetools SDK directly
 3. Return JSON with the correct status
 
-Never put raw SDK calls in a route handler. Never call `fetch('/api/*')` directly in a component — put it in `hooks/*Api.ts`.
+Never put raw SDK calls in a server endpoint. Never call the endpoint (`fetch('/<api>/*')`) directly in a component — put it in a client data hook (`hooks/*Api.ts`).
+
+> The concrete login server endpoint follows the BFF endpoint shell, find it in  `data-loading.md` of the adapter's.
 
 ---
 
@@ -84,35 +87,27 @@ Never put raw SDK calls in a route handler. Never call `fetch('/api/*')` directl
 
 commercetools uses optimistic locking — every cart mutation needs the current `version`. When two requests arrive simultaneously one will be rejected with `409 ConcurrentModification`. Re-fetch the entity's version before the action.
 
-The refetch logic belongs in `lib/ct/<entity>.ts` (or a route-handler-level helper), not scattered across components. 
-For example when updating cart fetch the cart version using the refetch logic in `lib/ct/cart.ts` and use it in the cart update.
+The refetch logic belongs in `<server>/ct/<entity>.ts` (or a route-handler-level helper), not scattered across components. 
+For example when updating cart fetch the cart version using the refetch logic in `<server>/ct/cart` and use it in the cart update.
 
 ---
 
 ## Pattern 5: Server-Side Caching
 
-Use `unstable_cache` for stable, rarely-changing public data (category tree, project config). It is shared across all requests on the same server — **never cache per-user or per-session data here**.
+Cache stable, rarely-changing public data (category tree, project config) with your framework's server-side cache-with-TTL primitive. Such a cache is shared across all requests — **never cache per-user or per-session data this way**; use client state (client-side) or a direct per-request `<server>/ct/*` call for user-specific data.
 
-```typescript
-export const getCategoryTree = unstable_cache(
-  fetchCategoryTree,
-  ['category-tree'],
-  { revalidate: 60 }
-);
-```
-
-Prefer `unstable_cache` over module-level variables — module-level caches reset on cold starts and are not shared across serverless instances.
+Prefer a real cache primitive over module-level variables — module-level caches reset on cold starts and are not shared across serverless instances.
 
 ---
 
 ## Checklist
 
-- [ ] `lib/ct/` never imported in `'use client'` files — import types from `@/lib/types`
-- [ ] commercetools responses mapped to app types inside `lib/ct/<namespace>.ts` via mappers
-- [ ] `getLocalizedString` called only in `lib/ct/` or `lib/mappers/`
-- [ ] Components import from `@/lib/types` — never from `@commercetools/platform-sdk`
+- [ ] `<server>/ct/` never imported in client components — import types from `<server>/types`
+- [ ] commercetools responses mapped to app types inside `<server>/ct/<namespace>.ts` via mappers
+- [ ] `getLocalizedString` called only in `<server>/ct/` or `<server>/mappers/`
+- [ ] Components import from `<server>/types` — never from `@commercetools/platform-sdk`
 - [ ] All independent server-side fetches use `Promise.all`
-- [ ] API routes have exactly 3 responsibilities: validate session, call `lib/ct/`, return JSON
-- [ ] `fetch('/api/*')` calls live in `hooks/*Api.ts`, not in components
-- [ ] Avoid Cart version conflict by refetch — logic lives in `lib/ct/cart.ts`
-- [ ] Stable public data cached with `unstable_cache` — never per-user data
+- [ ] Server endpoints have exactly 3 responsibilities: validate session, call `<server>/ct/`, return JSON
+- [ ] Endpoint calls (`fetch('/<api>/*')`) live in client data hooks (`hooks/*Api.ts`), not in components
+- [ ] Avoid Cart version conflict by refetch — logic lives in `<server>/ct/cart`
+- [ ] Stable public data cached with the framework's server-side cache-with-TTL — never per-user data

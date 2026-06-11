@@ -39,7 +39,7 @@ Scope the list query to the active business unit:
 where: businessUnit(key="${businessUnitKey}")
 ```
 
-The list route handler requires both `customerId` AND `businessUnitKey` from the session. Single-order fetch and state-change routes require `customerId` only — the BU filter is only needed on the list.
+The list server endpoint requires both `customerId` AND `businessUnitKey` from the session. Single-order fetch and state-change routes require `customerId` only — the BU filter is only needed on the list.
 
 commercetools admin credentials do not scope by business unit automatically. The `where` clause is the only enforcement mechanism — omitting it returns all recurring orders across the entire project.
 
@@ -62,7 +62,7 @@ originOrder.obj?.lineItems?.find(li => li.recurrenceInfo?.recurrencePolicy?.id)
   ?.recurrenceInfo?.recurrencePolicy?.id
 ```
 
-This derivation belongs in `lib/mappers/recurring-order.ts`, not in route handlers.
+This derivation belongs in `<server>/mappers/recurring-order`, not in server endpoints.
 
 ---
 
@@ -70,7 +70,7 @@ This derivation belongs in `lib/mappers/recurring-order.ts`, not in route handle
 
 Extends **Pattern 4** from the shared reference.
 
-B2B recurring orders are created post-checkout, the same as B2C — inside the checkout route handler, once per subscription line item in the placed order. The draft can optionally include `startsAt` and `expiresAt` to control when the subscription becomes active and expires:
+B2B recurring orders are created post-checkout, the same as B2C — inside the checkout server endpoint, once per subscription line item in the placed order. The draft can optionally include `startsAt` and `expiresAt` to control when the subscription becomes active and expires:
 
 ```
 {
@@ -102,13 +102,13 @@ Extends **Pattern 6** from the shared reference.
 
 | Method | Path | Action | Auth required |
 |---|---|---|---|
-| `GET` | `/api/recurring-orders` | List, filtered by BU | `customerId` + `businessUnitKey` |
-| `GET` | `/api/recurring-orders/[id]` | Fetch single with originOrder expand | `customerId` |
-| `POST` | `/api/recurring-orders/[id]/pause` | State → `paused` | `customerId` |
-| `POST` | `/api/recurring-orders/[id]/resume` | State → `active` | `customerId` |
-| `POST` | `/api/recurring-orders/[id]/cancel` | State → `canceled` | `customerId` |
-| `POST` | `/api/recurring-orders/[id]/duplicate` | Clone from same cart | `customerId` |
-| `GET` | `/api/recurrence-policies` | List all policies | Session |
+| `GET` | `/<api>/recurring-orders` | List, filtered by BU | `customerId` + `businessUnitKey` |
+| `GET` | `/<api>/recurring-orders/[id]` | Fetch single with originOrder expand | `customerId` |
+| `POST` | `/<api>/recurring-orders/[id]/pause` | State → `paused` | `customerId` |
+| `POST` | `/<api>/recurring-orders/[id]/resume` | State → `active` | `customerId` |
+| `POST` | `/<api>/recurring-orders/[id]/cancel` | State → `canceled` | `customerId` |
+| `POST` | `/<api>/recurring-orders/[id]/duplicate` | Clone from same cart | `customerId` |
+| `GET` | `/<api>/recurrence-policies` | List all policies | Session |
 
 State changes use per-action `POST` routes (not a single `PUT`). The list route is the only one that requires `businessUnitKey`.
 
@@ -133,7 +133,7 @@ Protect both routes with the B2B auth guard (`customerId` + `businessUnitKey` in
 - [ ] `recurrencePolicyId` derived from `originOrder.obj.lineItems[].recurrenceInfo.recurrencePolicy.id` in the mapper
 - [ ] Create draft includes `originOrder`, `cart`, `customer` + optional `startsAt`/`expiresAt` — no `schedule` in body
 - [ ] Duplicate fetches with `expand: ['originOrder']` and reuses the same `cartId` and `cartVersion`
-- [ ] No `POST /api/recurring-orders` creation route — creation happens from checkout
+- [ ] No `POST /<api>/recurring-orders` creation route — creation happens from checkout
 - [ ] State-change routes are separate per-action `POST` routes
 - [ ] Pages under `/[locale]/dashboard/recurring-orders/`
 - [ ] `priceSelectionMode: 'Fixed'` on all cart line items with recurrence

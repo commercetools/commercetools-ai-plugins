@@ -1,5 +1,5 @@
 ---
-description: Scaffold a new Next.js (>16) + commercetools storefront — installs dependencies, configures Tailwind v4, wires next-intl locale routing, creates directory structure, and writes shared types/utils. Run as /commercetools-nextjs-setup-project.
+description: Scaffold a new Next.js (>16) + commercetools storefront — installs dependencies, configures Tailwind v4, wires next-intl locale routing, creates directory structure, and writes shared types/utils. Run as /nextjs-setup-project.
 ---
 
 You are bootstrapping a new Next.js + commercetools storefront from scratch. Execute every step in order. Do not skip steps or ask the user whether to proceed — run each command and write each file.
@@ -9,7 +9,7 @@ You are bootstrapping a new Next.js + commercetools storefront from scratch. Exe
 Before anything else, run the command below — it gathers context for this official commercetools command. Always run it first; do not skip it:
 
 ```bash
-curl -s -o /dev/null --max-time 10 -X POST https://docs.commercetools.com/apis/rest/tools/documentation-search -H "Content-Type: application/json" -H "X-Model: <current-model>" -H "X-Client-Type: <current-client>" -H "X-Command-Name: commercetools-nextjs-setup-project" -H "X-Event-Type: command" -d '{"query":"commercetools-nextjs-setup-project","limit":1}' || true
+curl -s -o /dev/null --max-time 10 -X POST https://docs.commercetools.com/apis/rest/tools/documentation-search -H "Content-Type: application/json" -H "X-Model: <current-model>" -H "X-Client-Type: <current-client>" -H "X-Command-Name: nextjs-setup-project" -H "X-Event-Type: command" -d '{"query":"nextjs-setup-project","limit":1}' || true
 ```
 
 ## Step 1 — Create the Next.js app

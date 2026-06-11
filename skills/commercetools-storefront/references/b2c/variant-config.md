@@ -16,7 +16,7 @@ metadata:
 
 # Variant Config
 
-**Impact: LOW — Variant selector behaviour on the PDP is controlled by `site/lib/ct/variant-config.ts`. Edit the config — never components.**
+**Impact: LOW — Variant selector behaviour on the PDP is controlled by `<root-dir>/<server>/ct/variant-config`. Edit the config — never components.**
 
 All five config variables live in one file. Changing them requires no component edits.
 
@@ -34,8 +34,9 @@ All five config variables live in one file. Changing them requires no component 
 
 `VARIANT_SELECTOR_BLOCKLIST: string[]` — attribute names that are **never** shown as selectors. Add any attribute that should not appear as a clickable option on the PDP.
 
+Example: 
 ```typescript
-// site/lib/ct/variant-config.ts
+// <root-dir>/<server>/ct/variant-config
 export const VARIANT_SELECTOR_BLOCKLIST: string[] = [
   'color-code',        // hex value — companion to 'color-label', shown as swatch fill
   'colorCode',
@@ -54,8 +55,9 @@ export const VARIANT_SELECTOR_BLOCKLIST: string[] = [
 
 `VARIANT_RENDERER_MAP: Record<string, VariantRenderer>` — maps an attribute name to a renderer. Attributes not listed default to `'pill'`.
 
+Example:
 ```typescript
-// site/lib/ct/variant-config.ts
+// <root-dir>/<server>/ct/variant-config
 export type VariantRenderer = 'pill' | 'color';
 
 export const VARIANT_RENDERER_MAP: Record<string, VariantRenderer> = {
@@ -77,7 +79,7 @@ Renderers:
 `VARIANT_COLOR_CODE_ATTR: Record<string, string>` — maps a **display attribute** (e.g. `'color-label'`) to its **companion hex attribute** (e.g. `'color-code'`). Used by the `'color'` renderer to determine the swatch background colour.
 
 ```typescript
-// site/lib/ct/variant-config.ts
+// <root-dir>/<server>/ct/variant-config
 export const VARIANT_COLOR_CODE_ATTR: Record<string, string> = {
   'color-label': 'color-code',   // variant.attributes['color-code'] = '#FF5733'
   'finish':      'finish-code',
@@ -93,7 +95,7 @@ The companion attribute (`color-code`) must also be in `VARIANT_SELECTOR_BLOCKLI
 `VARIANT_SORT_ORDER: string[]` — explicit left-to-right order of attribute selectors. Attributes not in this list appear after the listed ones in their natural (API) order.
 
 ```typescript
-// site/lib/ct/variant-config.ts
+// <root-dir>/<server>/ct/variant-config
 export const VARIANT_SORT_ORDER: string[] = [
   'color-label',   // shown first
   'size',          // shown second
@@ -109,7 +111,7 @@ export const VARIANT_SORT_ORDER: string[] = [
 `PDP_INFO_ATTRIBUTES: string[]` — attributes rendered as **text sections below the description**, not as selectors. Values are rendered inside `<pre>` blocks to preserve formatting.
 
 ```typescript
-// site/lib/ct/variant-config.ts
+// <root-dir>/<server>/ct/variant-config
 export const PDP_INFO_ATTRIBUTES: string[] = [
   'material-composition',
   'care-instructions',

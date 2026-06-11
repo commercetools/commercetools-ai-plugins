@@ -16,7 +16,7 @@ metadata:
 
 # Product Detail Page — B2C
 
-The core PDP patterns — route structure, Server Component fetch, variant URL strategy, components, metadata, and attribute labels — are in [product-detail.md](../core/product-detail.md).
+The core PDP patterns — route structure, server-rendered fetch, variant URL strategy, components, metadata, and attribute labels — are in [product-detail.md](../core/product-detail.md).
 
 **Attribute labels** fetch `getAttributeLabels(bcp47)` in parallel with the product and pass the result to any component that renders product attributes.
 

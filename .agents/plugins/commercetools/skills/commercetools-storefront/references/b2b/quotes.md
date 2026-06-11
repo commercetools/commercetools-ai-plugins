@@ -1,6 +1,6 @@
 ---
 name: quotes
-description: B2B quotes dashboard — CT data model for QuoteRequest/StagedQuote/Quote, unified list with thread grouping per BU, as-associate API constraint, status labels, and SWR hooks.
+description: B2B quotes dashboard — CT data model for QuoteRequest/StagedQuote/Quote, unified list with thread grouping per BU, as-associate API constraint, status labels, and client state hooks.
 when_to_use:
   - "Building the quotes list or dashboard page"
   - "Displaying quote activity grouped by negotiation thread"
@@ -17,14 +17,14 @@ metadata:
 
 **Impact: HIGH — `Quote.sellerComment` is a per-round snapshot; `StagedQuote.sellerComment` is the latest-only mutable value. Always use `Quote.sellerComment` when displaying individual rounds in a thread.**
 
-This reference covers the CT quote data model, as-associate API constraint, unified list display with thread grouping, status labels, and SWR hooks. For buyer actions (accept, decline, renegotiate) see [quote-actions.md](./quote-actions.md). For how a quote request is submitted from the cart see [checkout.md](./checkout.md).
+This reference covers the CT quote data model, as-associate API constraint, unified list display with thread grouping, status labels, and client state hooks. For buyer actions (accept, decline, renegotiate) see [quote-actions.md](./quote-actions.md). For how a quote request is submitted from the cart see [checkout.md](./checkout.md).
 
 ## Table of Contents
 - [Pattern 1: CT Data Model — Three Resources](#pattern-1-ct-data-model--three-resources)
 - [Pattern 2: as-associate API Constraint](#pattern-2-as-associate-api-constraint)
 - [Pattern 3: Unified List — Thread Grouping](#pattern-3-unified-list--thread-grouping)
 - [Pattern 4: Status Labels](#pattern-4-status-labels)
-- [Pattern 5: SWR Hooks](#pattern-5-swr-hooks)
+- [Pattern 5: Client State Hooks](#pattern-5-client-state-hooks)
 - [Checklist](#checklist)
 
 ---
@@ -84,7 +84,7 @@ The dashboard shows **one row per negotiation thread**, not one row per `Quote` 
 
 All comment text must use `whitespace-pre-wrap` to preserve line breaks.
 
-On the detail page, fetch the full thread by querying all `Quote` objects with the same `stagedQuote.id`. Defer this fetch until `stagedQuote.id` is known (pass `null` to the SWR hook to skip until available).
+On the detail page, fetch the full thread by querying all `Quote` objects with the same `stagedQuote.id`. Defer this fetch until `stagedQuote.id` is known (pass an empty/null key to the client-state hook to skip until available).
 
 ---
 
@@ -105,18 +105,21 @@ Map the entity state to a user-facing display label:
 
 ---
 
-## Pattern 5: SWR Hooks
+## Pattern 5: Client State Hooks
 
 | Hook | Returns |
 |---|---|
 | `useQuotes()` | Paginated list of quotes for the active BU |
-| `useQuote(id)` | Single quote detail; pass `null` to skip |
-| `useQuoteThread(stagedQuoteId)` | All rounds sharing the same `stagedQuote.id`; pass `null` to skip |
+| `useQuote(id)` | Single quote detail; pass an empty/null key to skip |
+| `useQuoteThread(stagedQuoteId)` | All rounds sharing the same `stagedQuote.id`; pass an empty/null key to skip |
 | `useQuotesByQuoteRequest(qrId)` | Quotes linked to a specific quote request |
 | `useQuoteRequests()` | Paginated list of quote requests for the active BU |
-| `useQuoteRequest(id)` | Single quote request detail; pass `null` to skip |
+| `useQuoteRequest(id)` | Single quote request detail; pass an empty/null key to skip |
 
-All hooks scope the SWR cache key to `[KEY, businessUnitKey]` so data is isolated per BU. Pass `null` as the key to defer fetching until the required ID is available.
+All hooks scope the client state-manager/cache key to `[KEY, businessUnitKey]` so data is isolated per BU. Pass an empty/null key to defer fetching until the required ID is available.
+
+> Find the stack's `concept-mapping.md` for concrete client-state and cache implementation.
+
 
 ---
 
@@ -127,5 +130,5 @@ All hooks scope the SWR cache key to `[KEY, businessUnitKey]` so data is isolate
 - [ ] All quote API calls via as-associate chain
 - [ ] Dashboard groups quotes by `stagedQuote.id` — one row per thread
 - [ ] Thread state driven by most recent `Quote.quoteState`; falls back to `QuoteRequest.quoteRequestState`
-- [ ] SWR hooks use `[KEY, businessUnitKey]` tuple for cache isolation
+- [ ] Client-state hooks use `[KEY, businessUnitKey]` tuple for cache isolation
 - [ ] Actions (accept, decline, renegotiate) handled by [quote-actions.md](./quote-actions.md)

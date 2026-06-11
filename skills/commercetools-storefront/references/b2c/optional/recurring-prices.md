@@ -39,7 +39,7 @@ In B2C there is no required login gate — anonymous users can also see subscrip
 
 Extends **Pattern 5** from the shared reference.
 
-B2C cart operations use the project-level `apiRoot.carts()` — not the as-associate chain. The `recurrenceInfo` field on `CartAddLineItemAction` is a commercetools extension not yet in the SDK type. Cast the entire action at the call site in `lib/ct/cart.ts`:
+B2C cart operations use the project-level `apiRoot.carts()` — not the as-associate chain. The `recurrenceInfo` field on `CartAddLineItemAction` is a commercetools extension not yet in the SDK type. Cast the entire action at the call site in `<server>/ct/cart`:
 
 ```typescript
 const action = {

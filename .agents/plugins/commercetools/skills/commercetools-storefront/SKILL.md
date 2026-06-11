@@ -1,22 +1,40 @@
 ---
 name: commercetools-storefront
-description: Production patterns for building customer-facing storefronts on commercetools with Next.js 16, NextIntl v4, TypeScript, Tailwind v4, and JWT sessions. Covers B2C (anonymous carts, customer auth, BOPIS, bundles, promotions, CSR impersonation) and B2B (business units, as-associate API, quotes, approval workflows, store-scoped pricing, purchase lists, recurring orders). Includes BFF architecture, JWT session handling, ct SDK client setup, parallel fetching, and deployment patterns common to both. Use for PDP, PLP, cart, checkout flow, customer login, search/facets, locale handling, and any B2B- or B2C-specific feature.
+description: Production patterns for building customer-facing storefronts on commercetools - the full B2C and B2B domain feature set. Patterns are stated as decisions plus commercetools-exact code; framework-specific implementation. Assumes a server tier exists to host the BFF. Use for PDP, PLP, cart, checkout flow, customer login, search/facets, locale handling, and any B2B- or B2C-specific feature.
 when_to_use:
-  - "Implementing a storefront on Next.js with commercetools"
-  - "Building B2C storefront with features like anonymous carts, customer auth, BOPIS, bundles, promotions, or CSR impersonation"
-  - "Building B2B storefront with features like quotes, approval workflows, store-scoped pricing, purchase lists, or recurring orders"
+  - "Implementing a commercetools storefront (BFF, sessions, carts, checkout, B2C/B2B features) regardless of frontend framework"
+  - "Adding a new feature to an existing commercetools storefront"
+  - "Building a B2C storefront: anonymous carts, customer auth, BOPIS, bundles, promotions, or CSR impersonation"
+  - "Building a B2B storefront: quotes, approval workflows, store-scoped pricing, purchase lists, or recurring orders"
+  - "Deciding server-rendered vs client-fetched data loading, designing the commercetools type boundary, or the as-associate API chain"
 metadata:
   contentType: SKILL
   area:
     - b2b
     - b2c
     - storefront
-    - nextjs
 ---
 
-# Next.js + commercetools Storefront
+# commercetools Storefront (framework-agnostic)
 
-Production patterns for commercetools storefronts on Next.js 16, NextIntl v4, TypeScript, Tailwind v4, and JWT sessions — covering the full range from shared BFF foundation to B2C and B2B surface-specific features.
+Production patterns for commercetools storefronts — covering the full range from the shared BFF foundation to B2C and B2B surface-specific features. The patterns here are framework-neutral: each is stated as a decision plus commercetools-exact code. Your frontend framework supplies the implementation primitives (file layout, render and routing primitives, the cookie read/write binding).
+
+> **Architecture assumption — a server tier exists.** These patterns assume your storefront runs on a stack with a server-side tier (SSR / server components / a standalone BFF service) that can hold secrets and proxy commercetools. The BFF and secret rules below are non-negotiable and depend on this. They are designed SSR-first. For a specific framework, use its stack adapter under `references/stack/` — e.g. the **[Next.js stack](./references/stack/nextjs/overview.md)** — which maps each concept here to that framework's primitives and owns all file-layout and render-primitive details.
+
+> **Reference implementation.** Where a code example shows a file path or a render primitive, it uses the Next.js App Router as the reference implementation. The framework-neutral rule is always in the surrounding prose; the adapter pins the exact primitive.
+
+**Path & state conventions.**
+
+Each reference implementation follows these conventions for paths and state management. The conventions are not technically required, but they are widely used in production storefronts and make it easier to navigate the codebase and onboard new developers. Find the `concept-mapping.md` in your stack adapter for the exact primitives used.
+> | Convention | Meaning |
+> | --- | --- |
+> | `<server>/` | Your server-side code root; each stack pins the actual directory (Example Next.js: `lib/`) |
+> | `<api>/` | the client-facing API surface the browser calls and routes |
+> | `<server>/ct/*` | The commercetools helper modules |
+> | `<server>/ct/client` | The `apiRoot` singleton |
+> | `<server>/types` | The app type-mapping root (the boundary types) |
+> | `<server>/mappers/` | The commercetools→app mappers |
+> | **Client state** | Your framework's client-side state-management / cache layer (the specific library is a stack choice) — use it for mutable per-user data |
 
 ## Workflow
 
@@ -39,37 +57,57 @@ When this skill is invoked, always follow these steps:
 
 ## Key Takeaways
 
-**The BFF pattern is non-negotiable.** All commercetools API calls go through Next.js Route Handlers (`app/api/`). The browser never calls commercetools directly. Secrets never get a `NEXT_PUBLIC_` prefix.
+**The BFF pattern is non-negotiable.** All commercetools API calls go through a server endpoint (BFF). The browser never calls commercetools directly. Secrets are never exposed to the client bundle (no public env prefix). *(This requires a server tier — see the architecture assumption above.)*
 
-**Sessions are JWT HTTP-only cookies.** Session data is signed with `jose` (HS256), stored in a single `your-store-session` cookie, and read/written only in server-side code. `SESSION_SECRET` must be at least 32 characters and is never hardcoded.
+**Sessions are server-managed.** The BFF owns session state and is the only tier that reads or writes it. How it's stored is a stack choice — a signed token in an HTTP-only cookie (stateless BFF), or a server-side session store keyed by an opaque cookie (stateful BFF). Either way the client never holds session secrets or raw commercetools credentials — only an opaque reference. Any session-signing secret must be strong and is never hardcoded or exposed to the client.
 
-**Server Components for catalog data, SWR hooks for mutable user state.** Category pages and PDPs are async Server Components that call `lib/ct/*` directly. Cart, account, and user-specific data use SWR hooks → Route Handlers → commercetools SDK.
+**Server-rendered loads for catalog data; client state for mutable user state.** Catalog/immutable data (category pages, PDPs) is loaded on the server, calling `<server>/ct/*` directly. Cart, account, and user-specific data are loaded into client-side state management → server endpoint → commercetools SDK.
 
-**commercetools login endpoint.** Always use `apiRoot.login().post()` — `apiRoot.customers().login()` does not exist in commercetools SDK v2.
 
-**`lib/ct/*` is server-only.** Never import from any `'use client'` file. Import types from `lib/types.ts`.
+**`<server>/ct/*` is server-only.** Never import it from a client component. Import types from the app type-mapping root (`<server>/types`).
 
-**Every B2B operation uses the as-associate API chain.** Cart reads, cart writes, orders, quotes, approval flows — all go through `apiRoot.asAssociate().withAssociateIdValue({ associateId }).inBusinessUnitKeyWithBusinessUnitKeyValue({ businessUnitKey }).*`. commercetools enforces associate permissions server-side.
+
+---
+
+## Decision Steps
+
+Build a storefront in this order — each step maps to a section of the Reference Index below:
+
+1. **Choose your stack (if exists).** Pick the adapter under `references/stack/<name>/` for your frontend. It owns file layout, render/routing primitives, the session mechanism, the client-state library, and deploy.
+2. **Implement the shared foundation.** Wire the BFF boundary, sessions, commercetools client, type boundary, cart, and data-loading — `references/core/`.
+3. **Add optional core features.** Layer in cross-cutting extras (e.g. recurring prices/orders) as needed — `references/core/optional/`.
+4. **Choose B2C or B2B.** Load the matching surface for its domain features and rules — `references/b2c/` or `references/b2b/`.
+5. **Add optional surface features.** Layer in surface-specific extras .
 
 ---
 
 ## Reference Index
 
+### Stacks
+
+Pick the adapter for your frontend stack. Each stack folder under `references/stack/<name>/` maps the framework-neutral patterns in this skill onto that stack's primitives and owns its file layout, render primitives, and deploy.
+
+| Stack | Reference | Commands |
+|-------|-----------|----------|
+| **Next.js 16** (App Router) + next-intl v4 + Tailwind v4 | [stack/nextjs/overview.md](./references/stack/nextjs/overview.md) | `/nextjs-setup-project`, `/nextjs-deploy-vercel`, `/nextjs-deploy-netlify`, `/nextjs-add-locale` |
+| **Nuxt 4** (Vue, SSR) + Nitro + @nuxtjs/i18n v10 + nuxt-auth-utils + Pinia + Tailwind v4 | [stack/nuxtjs/overview.md](./references/stack/nuxtjs/overview.md) | `/nuxtjs-setup-project` |
+
+
 ### Shared Foundation (`references/core/`)
 
 | Task | Reference |
 |------|-----------|
-| Scaffold the app, Tailwind v4, next-intl routing, locale proxy, folder structure | Run `/commercetools-nextjs-setup-project` |
-| commercetools SDK singleton, JWT sessions, BFF Route Handler shape | [core/ct-client.md](./references/core/ct-client.md) |
-| Shared auth patterns: commercetools login endpoint, Route Handler structure, SWR hook, logout | [core/customer-auth.md](./references/core/customer-auth.md) |
+| Scaffold a new project (deps, styling, locale routing, folder structure) | Framework-specific - see the adapter's `overview.md` |
+| commercetools SDK singleton, server-managed sessions, BFF boundary | [core/ct-client.md](./references/core/ct-client.md) |
+| Shared auth patterns: commercetools login endpoint, server endpoint structure, client state hook, logout | [core/customer-auth.md](./references/core/customer-auth.md) |
 | Add a new country / currency / locale — `COUNTRY_CONFIG` flat structure | [core/add-country.md](./references/core/add-country.md) |
-| Parallel fetching, `unstable_cache`, SWR prefetch, N+1 avoidance | [core/performance.md](./references/core/performance.md) |
+| Parallel fetching, server-side TTL caching, client-cache hydration, N+1 avoidance | [core/performance.md](./references/core/performance.md) |
 | Product image URL transforms (CDN, Imgix, Cloudinary) | [core/image-config.md](./references/core/image-config.md) |
-| Cart CRUD, CartContext, SWR hook, mini-cart drawer | [core/cart.md](./references/core/cart.md) |
+| Cart CRUD, cart state/context, client state hook, mini-cart drawer | [core/cart.md](./references/core/cart.md) |
 | Full-text search, facet config, URL state, renderers | [core/search-facets.md](./references/core/search-facets.md) |
-| Add a new BFF endpoint + SWR hook (the 3-layer pattern) | [core/add-api.md](./references/core/add-api.md) |
+| Add a new BFF endpoint + client state hook (the 3-layer pattern) | [core/add-api.md](./references/core/add-api.md) |
 | Add a new standalone or CMS-driven page | [core/add-page.md](./references/core/add-page.md) |
-| Server vs SWR decisions, mappers, BFF shape, 409 retry | [core/data-loading.md](./references/core/data-loading.md) |
+| Server-rendered vs client-fetched decisions, mappers, BFF shape, 409 retry | [core/data-loading.md](./references/core/data-loading.md) |
 | Checkout page flow, step routing, order placement | [core/checkout-page.md](./references/core/checkout-page.md) |
 | PDP route, variant selectors, shared product detail patterns | [core/product-detail.md](./references/core/product-detail.md) |
 | Shopping lists (wishlist, saved items) | [core/shopping-lists.md](./references/core/shopping-lists.md) |
@@ -120,13 +158,13 @@ When this skill is invoked, always follow these steps:
 | Cart checkout and "Request a Quote" submission, BU addresses, order placement | [b2b/checkout.md](./references/b2b/checkout.md) |
 | Login endpoint, BU auto-select, session fields written at login | [b2b/customer-auth.md](./references/b2b/customer-auth.md) |
 | RBAC — all permission strings, usePermissions, UI gating patterns | [b2b/permissions.md](./references/b2b/permissions.md) |
-| Quotes dashboard — CT data model, unified thread list per BU, status labels, SWR hooks | [b2b/quotes.md](./references/b2b/quotes.md) |
+| Quotes dashboard — CT data model, unified thread list per BU, status labels, client state hooks | [b2b/quotes.md](./references/b2b/quotes.md) |
 | Quote buyer actions — accept & place order, decline, renegotiate, state guards | [b2b/quote-actions.md](./references/b2b/quote-actions.md) |
 | Approval rules, approval flows, predicate builder, tier model | [b2b/approval-workflows.md](./references/b2b/approval-workflows.md) |
 | Dashboard shell, stat widgets, pages, sidebar nav items | [b2b/dashboard.md](./references/b2b/dashboard.md) |
 | Purchase lists (commercetools ShoppingList via as-associate, BU-scoped) | [b2b/purchase-lists.md](./references/b2b/shopping-lists.md) |
-| Add a new B2B BFF endpoint + SWR hook | [b2b/add-api.md](./references/b2b/add-api.md) |
-| B2B data loading — server vs SWR, mappers, BFF shape | [b2b/data-loading.md](./references/b2b/data-loading.md) |
+| Add a new B2B BFF endpoint + client state hook | [b2b/add-api.md](./references/b2b/add-api.md) |
+| B2B data loading — server-rendered vs client-fetched, mappers, BFF shape | [b2b/data-loading.md](./references/b2b/data-loading.md) |
 | B2B variant selector configuration | [b2b/variant-config.md](./references/b2b/variant-config.md) |
 
 ### B2B Optional Features (`references/b2b/optional/`)
@@ -137,42 +175,33 @@ When this skill is invoked, always follow these steps:
 | Recurring prices — recurrencePrices[] array, as-associate add-to-cart, PDP gate | [b2b/recurring-prices.md](./references/b2b/optional/recurring-prices.md) |
 | Recurring orders — BU scoping, cart expand, create-from-cart, duplicate, dashboard | [b2b/recurring-orders.md](./references/b2b/optional/recurring-orders.md) |
 
-### Next.js Framework Patterns (`references/next-best-practices/`)
-
-| Task | Reference |
-|------|-----------|
-| `next/image` usage, `unoptimized: true`, image-config transforms, LCP priority | [next-best-practices/image.md](./references/next-best-practices/image.md) |
-| Static & dynamic metadata, `generateMetadata`, OG images, `cache()` deduplication | [next-best-practices/metadata.md](./references/next-best-practices/metadata.md) |
-| Server vs Client Component boundary, event handler rules | [next-best-practices/server-components.md](./references/next-best-practices/server-components.md) |
-| `error.tsx`, `not-found.tsx`, `redirect()` and `notFound()` gotchas, `unstable_rethrow` | [next-best-practices/error-handling.md](./references/next-best-practices/error-handling.md) |
-
 ---
 
 ## Priority Tiers
 
 ### CRITICAL
 
-- **Next.js version** — Always use `next@^16`. Never write `"next": "15.x"`. Next.js 15.x has known security vulnerabilities.
-- **NextIntl version** — Always use `next-intl@^4` compatible with `next@^16`.
-- **BFF architecture** — `lib/ct/*` is server-only. Zero commercetools SDK imports in any `'use client'` file.
-- **Session secrets** — `SESSION_SECRET` and `CTP_CLIENT_SECRET` are server-only env vars, never hardcoded or `NEXT_PUBLIC_`.
+- **BFF architecture** — `<server>/ct/*` is server-only. Zero commercetools SDK imports in any client component. (Requires a server tier — see the architecture assumption.)
+- **Session & client secrets** — the commercetools client secret and any session-signing secret are server-only env vars, never hardcoded and never exposed to the client bundle (no public env prefix).
 - **commercetools login endpoint** — `apiRoot.login().post()`, never `apiRoot.customers().login()`.
 - **B2B: as-associate chain** — ALL B2B writes (cart, order, quote, approval, BU) go through `apiRoot.asAssociate().*`. Never use project-level `apiRoot.*` for user-facing B2B mutations.
 - **B2B: session B2B fields** — `businessUnitKey` + `storeKey` + `distributionChannelId` + `supplyChannelId` + `productSelectionId` are always written together from `getStoreChannelData(storeKey)`.
 - **B2B: three-field locale atomicity** — `locale`, `currency`, `country` must all be updated together. Reset `cartId` on locale/currency change.
 
+> Framework-version gates, find `overview.md` of your stack.
+
 ### HIGH
 
-- **Parallel fetching** — `Promise.all` for independent fetches in Server Components. No request waterfalls.
-- **Type safety** — Frontend components import types from `lib/types.ts`, never from `lib/ct/*`.
-- **commercetools type boundary** — Map commercetools SDK responses to app types in `lib/mappers/` before they leave `lib/ct/`.
-- **SWR cache invalidation** — Mutate relevant cache keys after login, logout, and order placement.
-- **B2B: BU key in SWR cache keys** — all dashboard hooks use `[KEY, businessUnitKey]` tuple keys.
+- **Parallel fetching** — `Promise.all` for independent fetches in server-rendered loads. No request waterfalls.
+- **Type safety** — Frontend components import types from the app type-mapping root (`<server>/types`), never from `<server>/ct/*`.
+- **commercetools type boundary** — Map commercetools SDK responses to app types in `<server>/mappers/` before they leave `<server>/ct/`.
+- **Client state invalidation** — invalidate/refresh the relevant client state after login, logout, and order placement.
+- **B2B: BU key in client state-manager/cache keys** — all dashboard state is keyed by `businessUnitKey` (e.g. a `[KEY, businessUnitKey]` tuple) so it refreshes on BU switch.
 
 ### MEDIUM
 
 - **Product Search API** — Use `apiRoot.products().search()`, never the deprecated `productProjections().search()`. See the `commercetools-platform` skill → [product-search.md](../commercetools-platform/references/product-search.md).
-- **`unstable_cache`** — Wrap rarely-changing commercetools data with a TTL. Never use it for per-user or per-session data.
+- **Server-side TTL cache** — Wrap rarely-changing commercetools data in the framework's server-side cache-with-TTL. Never use it for per-user or per-session data. (Next.js: `unstable_cache` — see the adapter.)
 
 ---
 
@@ -180,19 +209,18 @@ When this skill is invoked, always follow these steps:
 
 | Anti-pattern | Correct approach |
 |---|---|
-| `import { apiRoot } from '@/lib/ct/client'` in a `'use client'` file | Use a SWR hook → Route Handler → `lib/ct/` |
-| `fetch('/api/*')` directly in a component | Encapsulate in a hook in `hooks/` |
-| `new ClientBuilder()` inside a page or Route Handler | Singleton `apiRoot` in `lib/ct/client.ts` |
+| Importing `<server>/ct/client` (`apiRoot`) in a client component | Use a client state hook → server endpoint → `<server>/ct/` |
+| Calling the endpoint (`fetch('/<api>/*')`) directly in a component | Encapsulate it in a client data/state module |
+| `new ClientBuilder()` inside a page or server endpoint | Singleton `apiRoot` in `<server>/ct/client` |
 | Raw `fetch()` to commercetools REST endpoints | Always use `apiRoot` — the SDK manages OAuth tokens and refresh |
-| `NEXT_PUBLIC_CTP_CLIENT_SECRET=...` | Server-only env var, no `NEXT_PUBLIC_` prefix |
+| Exposing a commercetools secret to the client bundle (public env prefix) | Server-only env var, no public prefix |
 | `product.name['en-US']` (hardcoded locale key) | `getLocalizedString(product.name, locale)` |
 | `(centAmount / 100).toFixed(2)` | `formatMoney(centAmount, currencyCode, locale)` |
 | Sequential `await` for independent fetches | `Promise.all([fetchA(), fetchB()])` |
 | `apiRoot.customers().login()` | `apiRoot.login().post()` |
-| commercetools SDK types in components | Types from `lib/types.ts`; mapped in `lib/mappers/` |
-| `next-intl` < 4 or `next` ≤ 16 | Use `next@>16` and `next-intl@^4` |
-| `import Link from 'next/link'` in a page component | `import { Link } from '@/i18n/routing'` |
+| commercetools SDK types in components | Types from `<server>/types`; mapped in `<server>/mappers/` |
 | B2B: `apiRoot.carts().post(...)` for a logged-in user | `asAssociate().withAssociateIdValue(...).inBusinessUnitKey(...).carts().post(...)` |
-| B2B: `useSWR(KEY_ORDERS, ...)` without BU key | `useSWR([KEY_ORDERS, businessUnitKey], ...)` |
+| B2B: BU-scoped client state not keyed by BU | Key the state entry by `businessUnitKey` (e.g. `[KEY_ORDERS, businessUnitKey]`) |
 | B2B: `StagedQuote.sellerComment` for per-round display | `Quote.sellerComment` — the snapshot at quote creation time |
 | B2B: `apiRoot.shoppingLists()` for purchase lists | `asAssociate().*.shoppingLists()` — BU-scoped, permission-enforced |
+

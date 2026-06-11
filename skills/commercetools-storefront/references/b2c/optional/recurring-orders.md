@@ -39,7 +39,7 @@ Scope recurring order list fetches to the authenticated customer:
 where: customer(id="${customerId}")
 ```
 
-All route handlers validate `customerId` from the session. Always read `customerId` from `getSession()` on the server — never trust a client-supplied ID.
+All server endpoints validate `customerId` from the session. Always read `customerId` from `getSession()` on the server — never trust a client-supplied ID.
 
 ---
 
@@ -63,7 +63,7 @@ Normalise the next-order date at the API layer before returning to the client: m
 
 Extends **Pattern 4** from the shared reference.
 
-B2C recurring orders are created inside the checkout route handler immediately after the order is placed. For each line item in the placed order that has `recurrenceInfo.recurrencePolicy` set, fetch the policy by ID and create one `RecurringOrder`.
+B2C recurring orders are created inside the checkout server endpoint immediately after the order is placed. For each line item in the placed order that has `recurrenceInfo.recurrencePolicy` set, fetch the policy by ID and create one `RecurringOrder`.
 
 **Draft shape** — note that `originOrder`, `nextOrderAt`, and top-level `schedule` are commercetools extension fields not in `RecurringOrderDraft`. Cast the entire body as `unknown`:
 
@@ -101,7 +101,7 @@ action: 'setSchedule'
 recurrencePolicy: { id: recurrencePolicyId }   // or pass a raw schedule object
 ```
 
-Both go through the same single `PUT /api/account/subscriptions/[id]` endpoint, dispatched on an `action` field in the request body.
+Both go through the same single `PUT /<api>/account/subscriptions/[id]` endpoint, dispatched on an `action` field in the request body.
 
 ---
 
@@ -111,11 +111,11 @@ Extends **Pattern 6** from the shared reference.
 
 | Method | Path | Action | Auth |
 |---|---|---|---|
-| `GET` | `/api/account/subscriptions` | List customer's recurring orders | `customerId` |
-| `GET` | `/api/account/subscriptions/[id]` | Single with `originOrder` expand | `customerId` |
-| `PUT` | `/api/account/subscriptions/[id]` | All state actions (pause/resume/cancel/skip/setSchedule) | `customerId` |
-| `GET` | `/api/recurrence-policies` | List all policies | Session |
-| `POST` | `/api/cart/items` | Add line item; `recurrencePolicyId` optional | `customerId` |
+| `GET` | `/<api>/account/subscriptions` | List customer's recurring orders | `customerId` |
+| `GET` | `/<api>/account/subscriptions/[id]` | Single with `originOrder` expand | `customerId` |
+| `PUT` | `/<api>/account/subscriptions/[id]` | All state actions (pause/resume/cancel/skip/setSchedule) | `customerId` |
+| `GET` | `/<api>/recurrence-policies` | List all policies | Session |
+| `POST` | `/<api>/cart/items` | Add line item; `recurrencePolicyId` optional | `customerId` |
 
 State changes use a **single `PUT` endpoint** — not per-action routes. The `action` field in the request body dispatches to the correct commercetools update action. There is no separate `POST` creation route for subscriptions — creation happens post checkout..
 
@@ -135,7 +135,7 @@ Protect both routes with a customer auth guard — unauthenticated requests redi
 ## Checklist
 
 - [ ] List `where` clause uses `customer(id="${customerId}")` — not BU scoping
-- [ ] All route handlers validate `customerId` only — no `businessUnitKey`
+- [ ] All server endpoints validate `customerId` only — no `businessUnitKey`
 - [ ] `customerId` always read from `getSession()` — never from request body or query params
 - [ ] Always `expand: ['originOrder']` — not `cart`
 - [ ] Fall back to `originOrder?.obj?.lineItems` when top-level `lineItems` is empty

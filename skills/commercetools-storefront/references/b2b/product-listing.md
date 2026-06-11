@@ -39,23 +39,10 @@ This reference covers `ProductApi` session injection, how `distributionChannelId
 const results = await searchProducts({ query: searchTerm, locale: 'en-US' });
 ```
 
-**CORRECT — always pass `session` to `searchProducts()`:**
+**CORRECT — always pass `session` to `searchProducts()`.** The server endpoint that backs product search reads the request body and the current `session`, then hands both to `searchProducts(body, session)`. `searchProducts` reads `businessUnitKey`, `storeKey`, `distributionChannelId`, `supplyChannelId`, and `accountGroupIds` from the session internally — it is a thin wrapper over `ProductApi`:
 
 ```typescript
-// app/api/products/route.ts
-export async function POST(request: NextRequest) {
-  const session = await getSession();
-  const body = await request.json();
-
-  // searchProducts reads businessUnitKey, storeKey, distributionChannelId,
-  // supplyChannelId, accountGroupIds from session internally
-  const results = await searchProducts(body, session);
-  return NextResponse.json(results);
-}
-```
-
-```typescript
-// lib/ct/products.ts — thin wrapper over ProductApi
+// <server>/ct/products — thin wrapper over ProductApi
 export async function searchProducts(
   query: ProductQuery,
   session?: Partial<SessionData>
@@ -66,6 +53,8 @@ export async function searchProducts(
 ```
 
 > `ProductApi` reads all B2B fields from the session automatically. The caller passes the full session and `ProductApi` injects the appropriate commercetools parameters.
+
+> Find the stack's `data-loading.md` for concrete server endpoint patterns.
 
 ---
 
@@ -84,7 +73,7 @@ productProjectionParameters: {
 **CORRECT — `ProductApi.buildProjectionParams()` injects all B2B scoping parameters:**
 
 ```typescript
-// lib/ct/product-api.ts (key excerpt)
+// <server>/ct/product-api (key excerpt)
 private buildProjectionParams(
   locale: Locale,
   distributionChannelId?: string,
@@ -131,7 +120,7 @@ const categories = await getCategories();
 **CORRECT — `ProductApi.queryCategories` uses the store's product selection to filter:**
 
 ```typescript
-// lib/ct/product-api.ts (key excerpt)
+// <server>/ct/product-api (key excerpt)
 async queryCategories(categoryQuery: CategoryQuery) {
   const storeKey = categoryQuery.storeKey ?? this.session.storeKey;
   if (storeKey) {
@@ -182,7 +171,7 @@ const inStock = product.variants[0].availability?.isOnStock;
 **CORRECT — pass `supplyChannelId` to the product mapper:**
 
 ```typescript
-// lib/ct/product-api.ts (in query method)
+// <server>/ct/product-api (in query method)
 const items = searchResults.map((r) =>
   mapProduct(
     r.productProjection!,
@@ -192,7 +181,7 @@ const items = searchResults.map((r) =>
   )
 );
 
-// lib/mappers/product.ts
+// <server>/mappers/product
 export function mapProduct(
   projection: ProductProjection,
   matchingVariantIds: Set<number> | null,
@@ -230,29 +219,19 @@ export function mapProduct(
 const results = await searchProducts({ facetConfigurations });
 ```
 
-**CORRECT — `POST /api/products` retries without facets on commercetools error:**
+**CORRECT — the product-search endpoint retries without facets on commercetools error.** Wrap the `searchProducts` call so that a first failure retries once with facets stripped — products always render even if facets fail — and only a second failure surfaces as a 500:
 
 ```typescript
-// app/api/products/route.ts
-export async function POST(request: NextRequest) {
-  const session = await getSession();
-  const body = await request.json();
-
-  try {
-    const results = await searchProducts(body, session);
-    return NextResponse.json(results);
-  } catch (error) {
-    // Retry without facets — products always render even if facets fail
-    console.warn('Product search failed with facets, retrying without:', error);
-    try {
-      const results = await searchProducts({ ...body, facetConfigurations: [] }, session);
-      return NextResponse.json(results);
-    } catch (fallbackError) {
-      return NextResponse.json({ error: 'Product search failed' }, { status: 500 });
-    }
-  }
+try {
+  return await searchProducts(body, session);
+} catch (error) {
+  // Retry without facets — products always render even if facets fail
+  console.warn('Product search failed with facets, retrying without:', error);
+  return await searchProducts({ ...body, facetConfigurations: [] }, session);
+  // a second failure here surfaces as a generic "Product search failed"
 }
 ```
+> Find the stack's `data-loading.md` for concrete server endpoint implementation patterns.
 
 ---
 

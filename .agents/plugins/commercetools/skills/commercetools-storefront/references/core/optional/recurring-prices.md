@@ -45,7 +45,7 @@ The mapped `Price` type in app code should expose `recurrencePolicy?: { id: stri
 
 ## Pattern 2: BFF Mapper
 
-Extract the recurring price signal in the product mapper (`lib/mappers/product.ts`), not in route handlers or components. The mapper is the single place that reads from the commercetools SDK response. By the time a `Price` object reaches the UI, it should already have `recurrencePolicy` normalised to `{ id: string } | undefined`.
+Extract the recurring price signal in the product mapper (`<server>/mappers/product`), not in server endpoints or components. The mapper is the single place that reads from the commercetools SDK response. By the time a `Price` object reaches the UI, it should already have `recurrencePolicy` normalised to `{ id: string } | undefined`.
 
 The mapped `Price` interface must include:
 
@@ -110,7 +110,6 @@ recurrenceInfo: {
 
 `priceSelectionMode: 'Fixed'` tells commercetools to use the specific recurring price for this policy, not to run dynamic pricing.
 
-This field is a commercetools extension not in the `CartAddLineItemAction` SDK type. Cast the action at the call site in `lib/ct/cart.ts` — not in route handlers or components.
 
 ---
 
@@ -120,6 +119,8 @@ This field is a commercetools extension not in the `CartAddLineItemAction` SDK t
 
 **Policy display labels:** use a `formatInterval(policy.schedule)` helper to convert `{ intervalUnit: 'Months', value: 2 }` into "Every 2 months". Handle both singular and plural variants of `intervalUnit` (e.g. `'month'` and `'months'`) — commercetools data uses both forms inconsistently.
 
-**SWR deduplication for policies:** two hooks typically exist — one returning `Map<id, label>` for inline display in cart items and mini cart, and one returning the full `RecurrencePolicy[]` for the selector. Both must share the same SWR cache key so only one HTTP request is made.
+**client state-manager/cache deduplication for policies:** two hooks typically exist — one returning `Map<id, label>` for inline display in cart items and mini cart, and one returning the full `RecurrencePolicy[]` for the selector. Both must share the same client state-manager/cache key so only one HTTP request is made.
+
+> Find the stack's `concept-mapping.md` for concrete implementation.
 
 **Do not add recurrencePrices to PRODUCT_PROJECTION_EXPANDS:** they come back automatically in product projections. Adding them to the expand list has no effect.

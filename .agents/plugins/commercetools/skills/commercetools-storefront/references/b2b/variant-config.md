@@ -16,7 +16,7 @@ metadata:
 
 # Variant Selector Configuration
 
-**The only file you normally need to edit is `lib/ct/variant-config.ts`.**
+**The only file you normally need to edit is `<server>/ct/variant-config`.**
 
 All variant selector behaviour on the PDP is controlled in this one file. No component changes needed for common adjustments.
 
@@ -25,7 +25,7 @@ All variant selector behaviour on the PDP is controlled in this one file. No com
 Attribute names to never render as variant selectors. Add any attribute here to prevent it from appearing as a selection option:
 
 ```typescript
-// lib/ct/variant-config.ts
+// <server>/ct/variant-config
 export const VARIANT_SELECTOR_BLOCKLIST: string[] = [
   'internal-code',   // just the attribute name, not 'variants.attributes.*'
 ];
@@ -112,7 +112,7 @@ Unavailable variants render as `<span>` (not `<Link>`) with `opacity-35 cursor-n
 `isAvailable` on each `VariantOption` comes from the `supplyChannelId` in session:
 
 ```typescript
-// In the variant options builder (lib/ct/product-api.ts or mapper)
+// In the variant options builder (<server>/ct/product-api or mapper)
 const channelStock = variant.availability?.channels?.[session.supplyChannelId];
 const isAvailable = channelStock ? channelStock.availableQuantity > 0 : true;
 ```

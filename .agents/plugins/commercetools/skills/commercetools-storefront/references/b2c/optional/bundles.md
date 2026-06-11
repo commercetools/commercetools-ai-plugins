@@ -26,7 +26,7 @@ Bundles are a parent line item with child line items linked by a commercetools c
 
 **Cascade all mutations in one `applyCartAction` call.** `changeLineItemQuantity` and `removeLineItem` must batch parent + all child actions together — not sequential calls that can race on the cart version.
 
-**`bundleItems()` runs in the SWR fetcher, not in components.** Apply grouping once in `cartFetcherWithBundles` inside `useCartSWR` so every component receives pre-grouped data. No grouping logic in components.
+**`bundleItems()` runs in the cart data fetcher, not in components.** Apply grouping once in the cart client state fetcher so every component receives pre-grouped data. No grouping logic in components.
 
 **`cartItemCount()` excludes children from the badge.** Filter `!i.parentKey` before summing quantities — children are display-only sub-rows.
 
@@ -36,7 +36,7 @@ Bundles are a parent line item with child line items linked by a commercetools c
 |---|---|
 | Adding children without a `parentKey` link | Parent gets UUID `key`; children get `custom.fields.parentKey` referencing it |
 | Removing parent without cascade | Find children by `parentKey === parent.key`, batch all removals in one action call |
-| Grouping in a component | Apply `bundleItems()` in `cartFetcher` — components receive pre-grouped data |
+| Grouping in a component | Apply `bundleItems()` in the cart data fetcher — components receive pre-grouped data |
 | Counting children in cart badge | `cartItemCount()` filters `!i.parentKey` before summing |
 | Sequential action calls for cascades | Batch all actions in a single `applyCartAction` to avoid 409 version conflicts |
 
@@ -44,7 +44,7 @@ Bundles are a parent line item with child line items linked by a commercetools c
 
 | Task | Reference |
 |---|---|
-| commercetools setup script, CartLineItem extension, cascade cart operations, cart-mapper, items route, bundle-utils, useCartSWR fetcher override, CartItem UI, BundleAddToCart component | [bundles.md](./bundles.md) |
+| commercetools setup script, CartLineItem extension, cascade cart operations, cart-mapper, items endpoint, bundle-utils, cart fetcher override, CartItem UI, BundleAddToCart component | [bundles.md](./bundles.md) |
 
 
 
@@ -59,9 +59,9 @@ Bundles are implemented as a parent line item with child line items linked by a 
 - [Pattern 2: CartLineItem Extension](#pattern-2-cartlineitem-extension)
 - [Pattern 3: Cart Operations](#pattern-3-cart-operations)
 - [Pattern 4: cart-mapper.ts](#pattern-4-cart-mapperts)
-- [Pattern 5: items/route.ts](#pattern-5-itemsroutets)
+- [Pattern 5: Add-to-Cart Endpoint](#pattern-5-add-to-cart-endpoint)
 - [Pattern 6: bundle-utils.ts](#pattern-6-bundle-utilsts)
-- [Pattern 7: useCartSWR](#pattern-7-usecartswr)
+- [Pattern 7: Cart Fetcher Override](#pattern-7-cart-fetcher-override)
 - [Pattern 8: UI](#pattern-8-ui)
 
 
@@ -84,7 +84,7 @@ In commercetools Merchant Center, add a bundle attribute to the product type:
 ## Pattern 2: CartLineItem Extension
 
 ```typescript
-// site/types/index.ts
+// <server>/types/index.ts
 export interface CartLineItem {
   id:              string;
   sku:             string;
@@ -113,7 +113,7 @@ await addLineItem(cartId, version, childSku, 1);
 **CORRECT — parent gets UUID key, children reference it via `custom.fields.parentKey`:**
 
 ```typescript
-// site/lib/ct/cart.ts
+// /<server>/ct/cart
 import { v4 as uuidv4 } from 'uuid';
 
 export async function addLineItem(
@@ -201,7 +201,7 @@ export async function removeLineItem(cart: Cart, lineItemId: string) {
 Surface `key` and `parentKey` from the commercetools line item:
 
 ```typescript
-// site/lib/mappers/cart-mapper.ts
+// /<server>/mappers/cart-mapper
 function mapLineItem(ctItem: CtLineItem): CartLineItem {
   return {
     id:         ctItem.id,
@@ -218,32 +218,23 @@ function mapLineItem(ctItem: CtLineItem): CartLineItem {
 ```
 
 
-## Pattern 5: items/route.ts
+## Pattern 5: Add-to-Cart Endpoint
 
-```typescript
-// site/app/api/cart/items/route.ts
-export async function POST(request: Request) {
-  const session = await getSession();
-  const { productId, variantId, quantity = 1, bundledSKUList } = await request.json();
+The add-to-cart server endpoint reads `{ productId, variantId, quantity, bundledSKUList }` from the request and the `cartId` from the session, then:
 
-  let cart = await getCart(session.cartId!);
-  const parentKey = bundledSKUList?.length ? uuidv4() : undefined;
+1. Loads the cart with `getCart(session.cartId)`.
+2. Generates a `parentKey` (a UUID via `uuidv4()`) only when `bundledSKUList` is non-empty.
+3. Adds the parent with `addLineItem(cart.id, cart.version, productId, variantId, quantity, parentKey)`.
+4. When a `parentKey` and bundled SKUs exist, adds the children with `addBundledLineItems(cart.id, cart.version, parentKey, bundledSKUList)`.
+5. Returns the updated cart.
 
-  cart = await addLineItem(cart.id, cart.version, productId, variantId, quantity, parentKey);
-
-  if (parentKey && bundledSKUList?.length) {
-    cart = await addBundledLineItems(cart.id, cart.version, parentKey, bundledSKUList);
-  }
-
-  return NextResponse.json({ cart });
-}
-```
+> Find the stack's `data-loading.md` for concrete server endpoints pattern implementation.
 
 
 ## Pattern 6: bundle-utils.ts
 
 ```typescript
-// site/lib/bundle-utils.ts
+// <server/utils/bundle-utils.ts
 
 /**
  * Groups children under their parent line item.
@@ -268,96 +259,30 @@ export function cartItemCount(items: CartLineItem[]): number {
 ```
 
 
-## Pattern 7: useCartSWR
+## Pattern 7: Cart Fetcher Override
 
-Apply `bundleItems` in the cart fetcher so all components receive pre-grouped data:
+Apply `bundleItems` in the cart data fetcher so all components receive pre-grouped data. The cart client state hook (cache key `KEY_CART`) fetches `GET /<api>/cart` and, before returning, maps the response line items through `bundleItems(...)`:
 
-```typescript
-// site/hooks/useCartSWR.ts  (extends the base hook)
-import { bundleItems } from '@/lib/bundle-utils';
-import { KEY_CART } from '@/lib/cache-keys';
-
-async function cartFetcherWithBundles(): Promise<Cart | null> {
-  const res = await fetch('/api/cart');
-  if (!res.ok) return null;
-  const data = await res.json();
-  if (!data.cart) return null;
-  return { ...data.cart, lineItems: bundleItems(data.cart.lineItems ?? []) };
-}
-
-export function useCartSWR(fallback?: Cart | null) {
-  return useSWR<Cart | null>(KEY_CART, cartFetcherWithBundles, {
-    fallbackData: fallback ?? undefined,
-    revalidateOnFocus: true,
-  });
-}
 ```
+return { ...data.cart, lineItems: bundleItems(data.cart.lineItems ?? []) };
+```
+
+Import `bundleItems` from `<server>/bundle-utils` and `KEY_CART` from `<server>/cache-keys`. The hook can accept server-fetched data as its initial value and refetch on focus.
+
+> Find the stack's `concept-mapping.md` for concrete client-state and cache implementation.
 
 
 ## Pattern 8: UI
 
 **CartItem — render bundled children as sub-rows:**
 
-```typescript
-// site/components/cart/CartItem.tsx
-import Image from 'next/image';
+The cart line-item component renders the main row (thumbnail via the framework's image primitive, `item.name`, `formatMoney(item.price)`), then maps `item.bundledItems?` into indented sub-rows showing each child's name (e.g. `+ {child.name}`). Children are display-only.
 
-export default function CartItem({ item }: { item: CartLineItem }) {
-  return (
-    <div>
-      {/* Main item row */}
-      <div className="flex items-center gap-4">
-        {item.imageUrl && (
-          <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded">
-            <Image src={item.imageUrl} alt={item.name} fill className="object-cover" sizes="64px" />
-          </div>
-        )}
-        <div>
-          <p className="font-medium">{item.name}</p>
-          <p className="text-sm text-gray-500">{formatMoney(item.price)}</p>
-        </div>
-      </div>
 
-      {/* Bundled children */}
-      {item.bundledItems?.map((child) => (
-        <div key={child.id} className="ml-8 mt-1 flex items-center gap-2 text-sm text-gray-600">
-          <span>+ {child.name}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-```
+**BundleAddToCart** — passes `bundledSKUList` to the add-to-cart endpoint:
 
-**BundleAddToCart** — passes `bundledSKUList` to the API:
+A client component that takes `productId`, `variantId`, and `bundledSKUs`. On click it calls the cart context's `addToCart(productId, variantId, 1, { bundledSKUList: bundledSKUs })` (managing a local loading flag) — `addToCart` POSTs to the add-to-cart endpoint and opens the mini-cart, with `bundledSKUList` passed as extra data the extended endpoint picks up. No direct fetch in the component.
 
-```typescript
-// site/components/pdp/BundleAddToCart.tsx
-'use client';
-import { useState } from 'react';
-import { useCartContext } from '@/context/CartContext';
-import Button from '@/components/ui/Button';
-
-export default function BundleAddToCart({
-  productId, variantId, bundledSKUs,
-}: { productId: string; variantId: number; bundledSKUs: string[] }) {
-  const [loading, setLoading] = useState(false);
-  const { addToCart } = useCartContext();
-
-  const handleAdd = async () => {
-    setLoading(true);
-    try {
-      // addToCart handles POST /api/cart/items and opens mini-cart
-      // bundledSKUList is passed as extra data picked up by the extended route handler
-      await addToCart(productId, variantId, 1, { bundledSKUList: bundledSKUs });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return <Button variant="primary" isLoading={loading} onClick={handleAdd}>Add Bundle to Cart</Button>;
-}
-```
 
 
 ## Checklist
@@ -367,8 +292,8 @@ export default function BundleAddToCart({
 - [ ] `addBundledLineItems` creates children with `custom.fields.parentKey`
 - [ ] `changeLineItemQuantity` and `removeLineItem` cascade to children by matching `parentKey`
 - [ ] `cart-mapper.ts` maps `ctItem.key` and `ctItem.custom.fields.parentKey`
-- [ ] `items/route.ts` generates UUID parent key and calls `addBundledLineItems`
+- [ ] The add-to-cart server endpoint generates a UUID parent key and calls `addBundledLineItems`
 - [ ] `bundleItems()` and `cartItemCount()` in `lib/bundle-utils.ts`
-- [ ] `bundleItems` applied in `cartFetcherWithBundles` inside `useCartSWR` override
-- [ ] `CartItem` renders `item.bundledItems` as sub-rows (uses `next/image`, not `<img>`)
-- [ ] `BundleAddToCart` uses `useCartContext().addToCart()` — no direct `fetch` in component
+- [ ] `bundleItems` applied in the cart data fetcher (cart client state hook override)
+- [ ] `CartItem` renders `item.bundledItems` as sub-rows (uses the framework's image primitive, not `<img>`)
+- [ ] `BundleAddToCart` uses the cart context's `addToCart()` — no direct `fetch` in component

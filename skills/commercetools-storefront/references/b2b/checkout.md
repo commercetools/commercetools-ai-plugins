@@ -45,7 +45,7 @@ addresses (shipping + billing) → shipping method → payment (Checkout SDK) �
 3. **Payment step** — Checkout frontend SDK mounts and handles payment capture and order placement. If a PO Number payment method is configured in the Checkout frontend SDK, it will appear automatically — no custom PO Number field is needed in the checkout form.
 4. **Confirmation** — SDK signals completion → clear `cartId` from session → redirect to `/checkout/confirmation?orderId=<id>`
 
-Order placement is handled entirely by the Checkout frontend SDK. Do not implement a separate `POST /api/checkout` route for order creation.
+Order placement is handled entirely by the Checkout frontend SDK. Do not implement a separate `POST /<api>/checkout` route for order creation.
 
 > **Reference:** See the [Checkout frontend SDK](../../../commercetools-checkout/references/payment-only-mode.md) implementation skill for SDK setup and the order-completion event handler.
 
@@ -90,7 +90,7 @@ After a successful submission, clear `cartId` from the session and redirect to:
 
 ### Confirmation Page
 
-`app/[locale]/checkout/quote-request-confirmation/page.tsx` reads `quoteRequestId` from the URL and fetches the quote request to display its details (line items, addresses, shipping method, comment, submission date).
+The quote-request confirmation view reads `quoteRequestId` from the URL query and fetches the quote request to display its details (line items, addresses, shipping method, comment, submission date).
 
 After submission, the quote progresses through seller review and negotiation. See [quotes.md](./quotes.md) for the dashboard view and [quote-actions.md](./quote-actions.md) for buyer acceptance, decline, and renegotiation.
 

@@ -16,13 +16,13 @@ metadata:
 
 # Product Detail Page — B2B
 
-This extends [product-detail.md](../core/product-detail.md) with B2B-specific concerns. Route structure, `notFound()`, parallel fetching, variant URL strategy, component list, metadata, and attribute labels follow the shared patterns.
+This extends [product-detail.md](../core/product-detail.md) with B2B-specific concerns. Route structure, the framework's not-found response, parallel fetching, variant URL strategy, component list, page metadata, and attribute labels follow the shared patterns.
 
 ## Data Fetching
 
 Use `Promise.all` as per the shared pattern. The helper you call (`getProductBySku` or `getProductById`) depends on your chosen route identifier. The critical B2B addition: always pass `session` to the product fetch — it carries the channel and store context required for correct pricing and availability.
 
-Apply the same to `generateMetadata` — pass `session` there too, or the SEO title and description may not match what the customer sees in their channel.
+Apply the same when building page metadata via the framework's page-metadata API — pass `session` there too, or the SEO title and description may not match what the customer sees in their channel.
 
 ## Session and Channel Scoping
 
@@ -70,7 +70,7 @@ Authenticated B2B users can add items to their Business Unit's shared shopping l
 ## Checklist
 
 - [ ] Pass `session` to product fetch — never call without it
-- [ ] Pass `session` in `generateMetadata` — ensures channel-scoped SEO content
+- [ ] Pass `session` when building page metadata (framework's page-metadata API) — ensures channel-scoped SEO content
 - [ ] Use `channelStock.availableQuantity` (not `isOnStock`) for availability
 - [ ] `supplyChannelId` comes from `session` — set during BU selection
 - [ ] Purchase list rendered only for authenticated users

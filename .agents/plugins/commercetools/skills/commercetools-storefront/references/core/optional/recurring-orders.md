@@ -5,7 +5,7 @@ when_to_use:
   - "Building a subscription management page (list, detail, pause, resume, cancel)"
   - "Creating recurring orders post-checkout for subscription line items"
   - "Fetching and displaying recurrence policies in a selector or order table"
-  - "Implementing SWR hooks and cache invalidation for subscription state"
+  - "Implementing client state hooks and cache invalidation for subscription state"
 metadata:
   contentType: REFERENCE
   area:
@@ -25,8 +25,8 @@ A `RecurringOrder` represents an active subscription. It references the originat
 - [Pattern 3: State Transitions](#pattern-3-state-transitions)
 - [Pattern 4: Creating a Recurring Order](#pattern-4-creating-a-recurring-order)
 - [Pattern 5: Recurrence Policies](#pattern-5-recurrence-policies)
-- [Pattern 6: API Routes](#pattern-6-api-routes)
-- [Pattern 7: SWR and Cache](#pattern-7-swr-and-cache)
+- [Pattern 6: Server Endpoints](#pattern-6-server-endpoints)
+- [Pattern 7: Client State and Cache](#pattern-7-client-state-and-cache)
 - [Tips and Tricks](#tips-and-tricks)
 
 ---
@@ -104,47 +104,47 @@ Policies are defined in commercetools — never hardcode schedule options in the
 apiRoot.recurrencePolicies().get({ queryArgs: { limit: 20 } })
 ```
 
-Two SWR hooks serve different consumers:
+Two client state hooks serve different consumers:
 
-- `useRecurrencePolicies()` — returns `Map<policyId, humanLabel>` for inline display in cart items and mini cart
-- `useRecurrencePoliciesList()` — returns the full `RecurrencePolicy[]` for the PDP selector and subscription pages
+- one returns `Map<policyId, humanLabel>` for inline display in cart items and mini cart
+- one returns the full `RecurrencePolicy[]` for the PDP selector and subscription pages
 
-Both hooks must share the same SWR cache key so only one HTTP request is made.
+Both hooks must share the same client state-manager/cache key so only one HTTP request is made.
 
 A `formatInterval(schedule)` helper converts `{ intervalUnit, value }` to a human label (e.g. "Every 2 months"). It must handle both singular (`'month'`) and plural (`'months'`) forms of `intervalUnit` — commercetools data uses both.
 
 ---
 
-## Pattern 6: API Routes
+## Pattern 6: Server Endpoints
 
-Standard route structure:
+Standard server-endpoint structure:
 
 | Method | Path | Action | Notes |
 |---|---|---|---|
-| `GET` | `/api/[prefix]` | List recurring orders | Scoped by owner; auth fields differ by context |
-| `GET` | `/api/[prefix]/[id]` | Fetch single order | Always `expand: ['originOrder']` |
-| `PUT` or `POST` | `/api/[prefix]/[id]` | State transitions | See context-specific for route style |
-| `GET` | `/api/recurrence-policies` | List all policies | No owner scoping needed |
+| `GET` | `/<api>/[prefix]` | List recurring orders | Scoped by owner; auth fields differ by context |
+| `GET` | `/<api>/[prefix]/[id]` | Fetch single order | Always `expand: ['originOrder']` |
+| `PUT` or `POST` | `/<api>/[prefix]/[id]` | State transitions | See context-specific for endpoint style |
+| `GET` | `/<api>/recurrence-policies` | List all policies | No owner scoping needed |
 
-There is no `POST /api/[prefix]` for creation — recurring orders are created from within the checkout route.
+There is no `POST /<api>/[prefix]` for creation — recurring orders are created from within the checkout server endpoint.
 
 ---
 
-## Pattern 7: SWR and Cache
+## Pattern 7: Client State and Cache
 
-Use SWR for recurring order data — it changes only on explicit user action (pause, resume, cancel).
+Use a client state cache for recurring order data — it changes only on explicit user action (pause, resume, cancel).
 
-After any state-change action, call `mutate` for both the list and the individual item so both the list view and the detail view reflect the change without a full page reload.
+After any state-change action, invalidate (or update from the response) both the list and the individual item so both the list view and the detail view reflect the change without a full page reload.
 
-The SWR key for the list should encode the ownership scope (include `customerId` or `businessUnitKey`) so the cache auto-invalidates when the user switches context.
+The client state-manager/cache key for the list should encode the ownership scope (include `customerId` or `businessUnitKey`) so the cache auto-invalidates when the user switches context.
+
+> Find the stack's `concept-mapping.md` for concrete state and cache implementation.
 
 ---
 
 ## Tips and Tricks
 
 **`canceled` not `cancelled`:** commercetools expects single-l. The UI may display "Cancelled" with double-l but the API value must be `'canceled'`. Sending `'cancelled'` causes a silent 400 or an unexpected state.
-
-**SDK type gaps for extension fields:** `originOrder` and `nextOrderAt` on `RecurringOrderDraft`, and `recurrenceInfo` on `CartAddLineItemAction`, are commercetools extension fields not yet in the generated SDK types. Cast the draft body as `unknown` at the call site in `lib/ct/`. Keep the cast as close to the commercetools API call as possible — not in route handlers or components.
 
 **`recurrencePolicyId` is not a first-class field:** `RecurringOrder` does not have a top-level `recurrencePolicyId`. Derive it by inspecting `originOrder.obj.lineItems` for `recurrenceInfo.recurrencePolicy.id`. This derivation belongs in the mapper.
 

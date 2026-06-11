@@ -16,7 +16,7 @@ metadata:
 
 # Quote Actions
 
-Navigate to `app/[locale]/checkout-quote/page.tsx` with `?quoteId=<id>` to initiate acceptance. Decline and renegotiate are triggered from the quote detail page.
+Acceptance is initiated from the quote-checkout view, reached with a `?quoteId=<id>` query parameter. Decline and renegotiate are triggered from the quote detail page.
 
 ## Table of Contents
 - [State Guard](#state-guard)

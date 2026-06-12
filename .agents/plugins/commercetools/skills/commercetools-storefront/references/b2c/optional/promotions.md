@@ -22,7 +22,7 @@ Three commercetools discount types each surface differently. Product Discounts c
 
 **Expand discount refs in search, or `discountName` is always undefined.** Add `masterVariant.price.discounted.discount` and `variants[*].price.discounted.discount` to `productProjectionParameters.expand`. The mapper then reads `ctPrice.discounted.discount.obj.name` to surface the name.
 
-**`DiscountCodeForm` already exists — import it, don't rewrite it.** It handles apply + remove + SWR `KEY_CART` invalidation via `POST /api/cart/discount` and `DELETE /api/cart/discount`. Just drop `<DiscountCodeForm />` where needed.
+**`DiscountCodeForm` already exists — import it, don't rewrite it.** It handles apply + remove + `KEY_CART` client state-manager/cache invalidation via the cart-discount server endpoint (apply and remove). Just drop `<DiscountCodeForm />` where needed.
 
 **Three types, three surfaces.** Product Discount → badge + strikethrough on ProductCard/PDP. Cart Discount → silently changes line item and cart totals (no explicit UI trigger). Discount Code → applied chip with remove button in cart.
 
@@ -34,7 +34,7 @@ Three commercetools discount types each surface differently. Product Discounts c
 |---|---|
 | No expand on discount refs in search | Add both `masterVariant` and `variants[*]` discount expand to search params |
 | Custom discount code fetch/form | Import `<DiscountCodeForm />` from `components/cart/` — it already handles everything |
-| Hardcoding discount name string | Map from expanded `ctPrice.discounted.discount.obj.name` in `lib/mappers/product.ts` |
+| Hardcoding discount name string | Map from expanded `ctPrice.discounted.discount.obj.name` in `<server>/mappers/product` |
 | Product Discount badge without expand | Name is `undefined` without the expand — always expand before mapping |
 
 ## Reference
@@ -86,7 +86,7 @@ const productProjectionParameters = {
 > See [product-search.md — Pattern 6: Discount Expansion](../../b2c/product-listing.md#pattern-6-discount-expansion) for the full explanation and mapper code.
 
 ```typescript
-// site/lib/ct/products.ts
+// /<server>/ct/products
 const productProjectionParameters = {
   body: {
     query: { ... },
@@ -101,7 +101,7 @@ const productProjectionParameters = {
 ```
 
 ```typescript
-// site/lib/mappers/product.ts
+// /<server>/mappers/product
 function mapPrice(ctPrice: CtPrice): Price {
   return {
     value:     mapMoney(ctPrice.value),
@@ -116,7 +116,7 @@ function mapPrice(ctPrice: CtPrice): Price {
 ```
 
 ```typescript
-// site/components/product/ProductCard.tsx
+// <root-dir>/components/product/ProductCard.tsx
 {product.price.discounted && (
   <>
     <span className="line-through text-gray-400">{formatMoney(product.price.value)}</span>
@@ -133,54 +133,30 @@ function mapPrice(ctPrice: CtPrice): Price {
 
 ## Pattern 3: Discount Code Form
 
-Already implemented — import `<DiscountCodeForm />` wherever needed. Do not write a custom fetch.
+Already implemented — import `<DiscountCodeForm />` wherever needed. Do not write a custom fetch. It reads and mutates the `KEY_CART` client state-manager/cache entry automatically, calling the cart-discount server endpoint to apply (`{ code }`) and remove (`{ code }`) codes.
 
-```typescript
-// site/components/cart/DiscountCodeForm.tsx  (already exists)
-// Reads and mutates KEY_CART automatically via useSWR.
-// POST /api/cart/discount  { code: string }
-// DELETE /api/cart/discount  { code: string }
-```
-
-Usage in cart page:
-
-```typescript
-import DiscountCodeForm from '@/components/cart/DiscountCodeForm';
-
-// Inside CartPage or CartDrawer:
-<DiscountCodeForm />
-```
+Usage in cart page — import the existing `DiscountCodeForm` and drop `<DiscountCodeForm />` inside the cart page or cart drawer.
 
 The form:
 - Shows an input for entering a code
-- On submit: calls `POST /api/cart/discount`, revalidates cart SWR key
-- Shows applied codes as chips with a remove button (calls `DELETE /api/cart/discount`)
+- On submit: calls the apply server endpoint, then revalidates the cart client state-manager/cache entry
+- Shows applied codes as chips with a remove button (calls the remove server endpoint)
 - Displays commercetools error messages (e.g. "Code not found", "Already applied")
 
-Route handlers (already exist):
+Server endpoints (already exist) — the cart-discount endpoint applies and removes codes. Both read `{ code }` from the request and call the commercetools cart update via `applyCartAction`, returning `mapCart(cart)`:
 
 ```typescript
-// site/app/api/cart/discount/route.ts
+// apply code
+const cart = await applyCartAction(session.cartId!, session.customerId, [
+  { action: 'addDiscountCode', code },
+]);
 
-// POST — apply code
-export async function POST(request: Request) {
-  const { code } = await request.json();
-  const cart = await applyCartAction(session.cartId!, session.customerId, [
-    { action: 'addDiscountCode', code },
-  ]);
-  return NextResponse.json(mapCart(cart));
-}
-
-// DELETE — remove code
-export async function DELETE(request: Request) {
-  const { code } = await request.json();
-  const cart = await applyCartAction(session.cartId!, session.customerId, [
-    { action: 'removeDiscountCode', discountCode: { typeId: 'discount-code', id: codeId } },
-  ]);
-  return NextResponse.json(mapCart(cart));
-}
+// remove code
+const cart = await applyCartAction(session.cartId!, session.customerId, [
+  { action: 'removeDiscountCode', discountCode: { typeId: 'discount-code', id: codeId } },
+]);
 ```
-
+> Find the stack's `data-loading.md` for concrete server endpoints pattern implementation.
 
 ## Pattern 4: Promotion Banner
 
@@ -189,7 +165,7 @@ Two options — choose one:
 **Option A: Static banner in `Header.tsx`:**
 
 ```typescript
-// site/components/layout/Header.tsx
+// <root-dir>/components/layout/Header.tsx
 export default function Header() {
   return (
     <>
@@ -206,7 +182,7 @@ export default function Header() {
 **Option B: CMS-driven via `content/message` section in `lib/layout.ts`:**
 
 ```typescript
-// site/lib/layout.ts  (inside getHomeSections)
+// <root-dir>/lib/layout.ts  (inside getHomeSections)
 {
   type: 'content/message',
   config: {
@@ -221,8 +197,8 @@ export default function Header() {
 ```
 
 ```typescript
-// site/components/home/MessageBanner.tsx
-import type { ItemProps } from '@/lib/layout';
+// <root-dir>/components/home/MessageBanner.tsx
+import type { ItemProps } from '<server>/layout';
 
 interface MessageBannerProps { text: string }
 
@@ -235,7 +211,7 @@ export default function MessageBanner({ config }: ItemProps<MessageBannerProps>)
 }
 ```
 
-Then register `'content/message': dynamic(() => import('../home/MessageBanner'))` in `Item.tsx`.
+Then register the `'content/message'` type → `MessageBanner` mapping in the section-renderer registry (`Item`), lazy-loading the component with the framework's dynamic-import primitive.
 
 
 ## Checklist

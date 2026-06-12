@@ -1,6 +1,6 @@
 ---
 name: wishlists
-description: B2C wishlists covering API chains, ownership checks, SWR hooks, header icon, heart icons on PDP/PLP, and wishlist pages.
+description: B2C wishlists covering API chains, ownership checks, client state hooks, header icon, heart icons on PDP/PLP, and wishlist pages.
 when_to_use:
   - "Implementing B2C wishlists"
   - "Building heart icon save-to-list functionality on PDP and PLP"
@@ -21,7 +21,7 @@ Start from the shared [shopping lists reference](../core/shopping-lists.md) and 
 ## Table of Contents
 - [B2C Extension: API Chain and Ownership](#b2c-extension-api-chain-and-ownership)
 - [B2C Extension: Create Draft](#b2c-extension-create-draft)
-- [B2C Extension: SWR Hook and Mutation](#b2c-extension-swr-hook-and-mutation)
+- [B2C Extension: Client State Hook and Mutation](#b2c-extension-client-state-hook-and-mutation)
 - [B2C Extension: UI — Header Icon](#b2c-extension-ui--header-icon)
 - [B2C Extension: UI — Heart Icon on PDP and PLP](#b2c-extension-ui--heart-icon-on-pdp-and-plp)
 - [B2C Extension: Pages](#b2c-extension-pages)
@@ -52,15 +52,18 @@ customer: { id: customerId, typeId: 'customer' }
 
 ---
 
-## B2C Extension: SWR Hook and Mutation
+## B2C Extension: Client State Hook and Mutation
 
 Extends **Pattern 4** from the shared reference.
 
-The SWR cache key uses `[KEY_WISHLISTS, customerId]`. The hook should only fire when `customerId` is available — pass `null` as the key when the customer is not yet resolved to avoid fetching as anonymous.
+The client state-manager/cache key uses `[KEY_WISHLISTS, customerId]`. The hook should only fire when `customerId` is available — pass `null` as the key when the customer is not yet resolved to avoid fetching as anonymous.
 
-After every mutation (create, rename, add item, remove item, delete) call `mutate([KEY_WISHLISTS, customerId])` to trigger a re-fetch. Pass the key tuple explicitly — do not use the global `mutate()` to avoid invalidating unrelated caches.
+After every mutation (create, rename, add item, remove item, delete) re-fetch (or invalidate) the `[KEY_WISHLISTS, customerId]` entry. Scope the invalidation to that key tuple explicitly — do not invalidate the entire client state-manager/cache, to avoid touching unrelated entries.
 
-For the add/remove heart icon, the mutation should feel instant. Use SWR's optimistic update: immediately toggle the local state, fire the request in the background, and revert only on error.
+For the add/remove heart icon, the mutation should feel instant. Apply an optimistic update: immediately toggle the local state, fire the request in the background, and revert only on error.
+
+> Find the stack's `concept-mapping.md` for concrete state and cache implementation.
+
 
 ---
 
@@ -73,7 +76,7 @@ A wishlist icon in the global header gives customers persistent access to their 
 - Render as an empty icon when the customer is not logged in (no badge, click redirects to login)
 - Use the same icon weight and size as the cart icon in the header for visual consistency
 
-The count should come from the same SWR hook used by the wishlist pages — no separate fetch needed.
+The count should come from the same client state hook used by the wishlist pages — no separate fetch needed.
 
 ---
 
@@ -97,7 +100,7 @@ The heart icon is the primary entry point for adding or removing a product from 
 
 **Optimistic update:** toggle the filled/outline state immediately on click; revert on API error and show a toast.
 
-The heart icon component needs access to the full wishlist SWR data to compute the `isSaved` state. Pass `variantId` (or `productId` as fallback) as the lookup key.
+The heart icon component needs access to the full wishlist client state data to compute the `isSaved` state. Pass `variantId` (or `productId` as fallback) as the lookup key.
 
 ---
 
@@ -117,12 +120,12 @@ Protect both routes with an auth guard — unauthenticated requests redirect to 
 - [ ] commercetools calls use project-level `apiRoot.shoppingLists()` — not the as-associate chain
 - [ ] Ownership check in app code after single-list fetch: `list.customer?.id === customerId` → 404 on mismatch
 - [ ] Create draft has no `store` field
-- [ ] Route handlers validate `customerId` only (not `businessUnitKey`)
-- [ ] SWR hook key is `[KEY_WISHLISTS, customerId]`; fires only when `customerId` is resolved
-- [ ] All mutations call `mutate([KEY_WISHLISTS, customerId])` after completing
+- [ ] Server endpoints validate `customerId` only (not `businessUnitKey`)
+- [ ] client state-manager/cache key is `[KEY_WISHLISTS, customerId]`; fires only when `customerId` is resolved
+- [ ] All mutations re-fetch/invalidate `[KEY_WISHLISTS, customerId]` after completing
 - [ ] Heart icon on PDP and PLP with optimistic toggle
 - [ ] Auto-creates default wishlist on first heart click if customer has none
 - [ ] Heart redirects unauthenticated users to login with `?redirect` param
-- [ ] Header icon shows total item count badge from the same SWR hook
+- [ ] Header icon shows total item count badge from the same client state hook
 - [ ] Pages at `/wishlists/` — not under `/dashboard/`
 - [ ] `expand: ['lineItems[*].variant']` on all list fetches

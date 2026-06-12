@@ -1,6 +1,6 @@
 ---
 name: shopping-lists
-description: B2B shopping lists covering wishlists (personal) vs purchase lists (BU-scoped), API chains, SWR hooks, and PDP add-to-list modal.
+description: B2B shopping lists covering wishlists (personal) vs purchase lists (BU-scoped), API chains, client state hooks, and PDP add-to-list modal.
 when_to_use:
   - "Implementing B2B purchase lists"
   - "Distinguishing wishlists from BU-scoped purchase lists"
@@ -24,12 +24,12 @@ Start from the shared [shopping lists reference](../core/shopping-lists.md) and 
 | **Wishlist** | Personal (customer-owned) | Only the customer |
 | **Purchase List** | BU-shared | All associates in the business unit |
 
-Both are backed by commercetools `ShoppingList`. The separation is entirely in which API chain you use and which session fields you require. Implement them as two separate namespaces (`lib/ct/wishlists.ts` and `lib/ct/purchase-lists.ts`) — do not try to unify them in one file.
+Both are backed by commercetools `ShoppingList`. The separation is entirely in which API chain you use and which session fields you require. Implement them as two separate namespaces (`<server>/ct/wishlists` and `<server>/ct/purchase-lists`) — do not try to unify them in one file.
 
 ## Table of Contents
 - [B2B Extension: Wishlists (Personal)](#b2b-extension-wishlists-personal)
 - [B2B Extension: Purchase Lists (BU-Scoped)](#b2b-extension-purchase-lists-bu-scoped)
-- [B2B Extension: SWR and Mutation](#b2b-extension-swr-and-mutation)
+- [B2B Extension: Client State and Mutation](#b2b-extension-client-state-and-mutation)
 - [B2B Extension: UI — Header Icon](#b2b-extension-ui--header-icon)
 - [B2B Extension: UI — PDP Add-to-List Flow](#b2b-extension-ui--pdp-add-to-list-flow)
 - [Checklist](#checklist)
@@ -40,7 +40,7 @@ Both are backed by commercetools `ShoppingList`. The separation is entirely in w
 
 Extends **Pattern 1** from the shared reference.
 
-B2B wishlists behave identically to B2C wishlists — use the project-level `apiRoot.shoppingLists()` chain, enforce ownership with `list.customer?.id === customerId` in app code, and do not include a `store` field in the create draft. Route handlers validate `customerId` only. The SWR cache key is `[KEY_WISHLISTS, customerId]`.
+B2B wishlists behave identically to B2C wishlists — use the project-level `apiRoot.shoppingLists()` chain, enforce ownership with `list.customer?.id === customerId` in app code, and do not include a `store` field in the create draft. Server endpoints validate `customerId` only. The client state-manager/cache key is `[KEY_WISHLISTS, customerId]`.
 
 The only B2B-specific consideration is that wishlist pages live at `/wishlists/` (personal space), not under `/dashboard/` (BU space). This boundary makes the scoping visible in the URL.
 
@@ -82,20 +82,23 @@ The purchase list UI must respect associate permissions. Gate write actions (`Cr
 
 ---
 
-## B2B Extension: SWR and Mutation
+## B2B Extension: Client State and Mutation
 
 Extends **Pattern 4** from the shared reference.
 
-| List type | SWR key | Fires when |
+| List type | client state-manager/cache key | Fires when |
 |---|---|---|
 | Wishlist | `[KEY_WISHLISTS, customerId]` | `customerId` is resolved |
 | Purchase list | `[KEY_PURCHASE_LISTS, businessUnitKey]` | `businessUnitKey` is resolved |
 
-For purchase lists, passing `null` as the SWR key when `businessUnitKey` is not yet available is critical — it prevents fetching as the wrong BU or before context is ready.
+For purchase lists, passing an empty/null key when `businessUnitKey` is not yet available is critical — it prevents fetching as the wrong BU or before context is ready.
 
-After any mutation, call `mutate` with the same key tuple used by the hook. For purchase lists this means `mutate([KEY_PURCHASE_LISTS, businessUnitKey])`. The `businessUnitKey` in the mutation call must come from the same source as the hook — usually `currentBusinessUnit.key` from `useBusinessUnit()` — so the cache entry matches exactly.
+After any mutation, invalidate the same key tuple used by the hook. For purchase lists this means invalidating `[KEY_PURCHASE_LISTS, businessUnitKey]`. The `businessUnitKey` in the invalidation must come from the same source as the hook — usually `currentBusinessUnit.key` from `useBusinessUnit()` — so the state-manager/cache entry matches exactly.
 
 When the user switches business unit, the purchase lists cache auto-invalidates because the key tuple changes. Wishlist caches are unaffected by BU switches.
+
+> Find the stack's `concept-mapping.md` for concrete client-state and cache implementation.
+
 
 ---
 
@@ -131,16 +134,16 @@ In B2B, clicking "Save" or "Add to list" on a PDP opens a modal or popover rathe
 - [ ] commercetools calls use project-level `apiRoot.shoppingLists()` — not the as-associate chain
 - [ ] Ownership check in app code after single-list fetch: `list.customer?.id === customerId` → 404 on mismatch
 - [ ] Create draft has no `store` field
-- [ ] Route handlers validate `customerId` only
-- [ ] SWR key is `[KEY_WISHLISTS, customerId]`
+- [ ] Server endpoints validate `customerId` only
+- [ ] client state-manager/cache key is `[KEY_WISHLISTS, customerId]`
 - [ ] Pages at `/wishlists/` — not under `/dashboard/`
 
 **Purchase lists (BU-scoped)**
 - [ ] All commercetools calls use `asAssociateInStore(associateId, businessUnitKey)` — not project-level
 - [ ] `store: { key: storeKey }` included in create draft
-- [ ] Route handlers validate `customerId` AND `businessUnitKey`
-- [ ] SWR key is `[KEY_PURCHASE_LISTS, businessUnitKey]`; fires only when `businessUnitKey` is resolved
-- [ ] All mutations call `mutate([KEY_PURCHASE_LISTS, businessUnitKey])` after completing
+- [ ] Server endpoints validate `customerId` AND `businessUnitKey`
+- [ ] client state-manager/cache key is `[KEY_PURCHASE_LISTS, businessUnitKey]`; fires only when `businessUnitKey` is resolved
+- [ ] All mutations invalidate `[KEY_PURCHASE_LISTS, businessUnitKey]` after completing
 - [ ] Permission gates: `ViewPurchaseLists` for nav, `CreatePurchaseLists` / `UpdatePurchaseLists` for write actions
 - [ ] Dashboard nav item hidden when associate lacks `ViewPurchaseLists`
 - [ ] Pages under `/dashboard/purchase-lists/`

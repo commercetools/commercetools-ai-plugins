@@ -18,7 +18,7 @@ metadata:
 
 **Impact: HIGH — Missing anonymous cart merge silently loses the customer's cart on every login.**
 
-B2C-specific auth patterns that extend the shared foundation in [reference](../core/customer-auth.md). Read that reference first for the commercetools login endpoint, Route Handler structure, SWR hook, and logout patterns.
+B2C-specific auth patterns that extend the shared foundation in [reference](../core/customer-auth.md). Read that reference first for the commercetools login endpoint, server endpoint structure, client state hook, and logout patterns.
 
 ---
 
@@ -27,7 +27,7 @@ B2C-specific auth patterns that extend the shared foundation in [reference](../c
 Pass `anonymousCartId` and `anonymousCartSignInMode` to `apiRoot.login().post()` when a guest cart exists:
 
 ```typescript
-// lib/ct/auth.ts
+// <server>/ct/auth
 export async function signIn(email: string, password: string, anonymousCartId?: string) {
   const { body } = await apiRoot.login().post({
     body: {
@@ -43,7 +43,7 @@ export async function signIn(email: string, password: string, anonymousCartId?: 
 }
 ```
 
-The login Route Handler reads `session.cartId` as `anonymousCartId`, calls `signIn`, then writes `body.cart.id` back into the session as the new `cartId`.
+The login server endpoint reads `session.cartId` as `anonymousCartId`, calls `signIn`, then writes `body.cart.id` back into the session as the new `cartId`.
 
 ---
 
@@ -55,30 +55,18 @@ The login Route Handler reads `session.cartId` as `anonymousCartId`, calls `sign
 
 ## Protected Account Layout
 
-Client Component that redirects to `/login?redirect=<path>` when `useAccount` resolves to `null`. Return `null` while loading (`user === undefined`) to avoid a layout flash.
+A client component that wraps the account section and redirects to `/login?redirect=<path>` when the current account state resolves to `null` (signed out). While the account state is still loading (undefined), render nothing to avoid a layout flash; render the children once a customer is confirmed.
 
-```typescript
-// app/[locale]/account/layout.tsx
-'use client';
-export default function AccountLayout({ children }) {
-  const { user } = useAccount();
-  const router = useRouter();
-  const pathname = usePathname();
+- Read the current account from the client state hook (see the [reference](../core/customer-auth.md)).
+- Three states: `undefined` (loading) → render nothing; `null` (signed out) → issue a client-side redirect to `/login?redirect=<encoded current path>` using the framework's client navigation and current-path access; a resolved customer → render the children.
 
-  useEffect(() => {
-    if (user === null) router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
-  }, [user, router, pathname]);
-
-  if (!user) return null;
-  return <div>{children}</div>;
-}
-```
+> Find the adapter's `concept-mapping` file for Concrete protected-layout component. Example: see the Next.js stack → [Client state hooks](../stack/nextjs/concept-mapping.md).
 
 ---
 
 ## Checklist
 
 - [ ] `signIn` passes `anonymousCartId` + `anonymousCartSignInMode: 'MergeWithExistingCustomerCart'` when a guest cart exists
-- [ ] Login Route Handler writes `cart.id` from the commercetools response back into the session
+- [ ] Login server endpoint writes `cart.id` from the commercetools response back into the session
 - [ ] Register calls `signIn` immediately after `apiRoot.customers().post()`
 - [ ] Account layout redirects to `/login?redirect=<path>` on `null`; returns `null` while loading

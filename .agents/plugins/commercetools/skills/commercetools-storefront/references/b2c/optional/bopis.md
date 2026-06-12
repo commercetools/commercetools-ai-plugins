@@ -26,7 +26,7 @@ Store channels expose per-store inventory on the PDP. A ChannelSelector lets cus
 
 **Delivery mode persists to `localStorage`.** ChannelSelector saves `'delivery'` or `'pickup'` across navigation. Switching to delivery calls `onSelect(null)` to clear the supply channel.
 
-**Use `KEY_CHANNELS` / `keyChannel(id)` from `lib/cache-keys.ts`.** Don't inline cache key strings in hooks.
+**Use `KEY_CHANNELS` / `keyChannel(id)` from `<server>/cache-keys`.** Don't inline cache key strings in hooks.
 
 ## Anti-Patterns
 
@@ -34,13 +34,13 @@ Store channels expose per-store inventory on the PDP. A ChannelSelector lets cus
 |---|---|
 | `supplyChannel: channelId` (string) | `supplyChannel: { typeId: 'channel', id: channelId }` |
 | Showing all channels in the selector | `channels.filter(c => c.roles?.includes('InventorySupply'))` |
-| Hardcoded string key in `useSWR` call | Use `KEY_CHANNELS` from `lib/cache-keys.ts` |
+| Hardcoded string key in the client state hook | Use `KEY_CHANNELS` from `<server>/cache-keys` |
 
 ## Reference
 
 | Task | Reference |
 |---|---|
-| Channels API (`lib/ct/channels.ts`), route handlers, supply channel on cart, per-channel inventory, cache keys, `useChannels` hook, `ChannelSelector` UI, pickup badge in CartItem | [bopis.md](./bopis.md) |
+| Channels API (`<server>/ct/channels`), server endpoints, supply channel on cart, per-channel inventory, cache keys, `useChannels` hook, `ChannelSelector` UI, pickup badge in CartItem | [bopis.md](./bopis.md) |
 
 
 
@@ -63,7 +63,7 @@ BOPIS adds store channels to the cart and shows per-store stock on the PDP.
 ## Pattern 1: Channels API
 
 ```typescript
-// site/lib/ct/channels.ts
+// /<server>/ct/channels
 export async function getAllChannels(): Promise<Channel[]> {
   const { body } = await ctClient
     .channels()
@@ -83,22 +83,12 @@ export async function getChannelByKey(key: string): Promise<Channel | null> {
 }
 ```
 
-Route Handlers:
+Server endpoints expose these helpers to the client:
 
-```typescript
-// site/app/api/channels/route.ts
-export async function GET() {
-  const channels = await getAllChannels();
-  return NextResponse.json(channels);
-}
+- `GET /channels` → returns `getAllChannels()`.
+- `GET /channels/:id` → returns `getChannelById(id)`, or a 404 not-found response when the channel does not exist.
 
-// site/app/api/channels/[id]/route.ts
-export async function GET(_: Request, { params }: { params: { id: string } }) {
-  const channel = await getChannelById(params.id);
-  if (!channel) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  return NextResponse.json(channel);
-}
-```
+> Find the stack's `data-loading.md` for concrete server endpoints pattern implementation.
 
 
 ## Pattern 2: Cart Supply Channel
@@ -113,7 +103,7 @@ supplyChannel: channelId   // string only — commercetools rejects this
 **CORRECT — reference object with `typeId`:**
 
 ```typescript
-// site/lib/ct/cart.ts
+// /<server>/ct/cart
 export async function addLineItem(
   cartId: string,
   cartVersion: number,
@@ -140,16 +130,8 @@ export async function addLineItem(
 }
 ```
 
-```typescript
-// site/app/api/cart/items/route.ts
-export async function POST(request: Request) {
-  const session = await getSession();
-  const { productId, variantId, quantity = 1, supplyChannelId } = await request.json();
-  const cart = await getCart(session.cartId!);
-  const updated = await addLineItem(session.cartId!, cart.version, productId, variantId, quantity, supplyChannelId);
-  return NextResponse.json({ cart: updated });
-}
-```
+The add-to-cart server endpoint reads `{ productId, variantId, quantity, supplyChannelId }` from the request and the `cartId` from the session, loads the cart with `getCart(session.cartId)`, then calls `addLineItem(cartId, cart.version, productId, variantId, quantity, supplyChannelId)` and returns the updated cart.
+
 
 
 ## Pattern 3: Per-Channel Inventory
@@ -167,57 +149,30 @@ const availableQty = storeStock?.availableQuantity ?? 0;
 ## Pattern 4: Cache Keys
 
 ```typescript
-// site/lib/cache-keys.ts
+// <root-dir>/<server>/cache-keys
 export const KEY_CHANNELS = 'channels';
 export const keyChannel = (id: string) => `channel-${id}`;
 ```
 
-Use these as the SWR cache key and as the `revalidateTag` argument in Route Handlers that mutate channels.
+Use these as the client state-manager/cache key and as the server-side cache-invalidation tag in server endpoints that mutate channels.
 
 
 ## Pattern 5: useChannels Hook
 
-```typescript
-// site/hooks/useChannels.ts
-'use client';
-import useSWR from 'swr';
-import { KEY_CHANNELS, keyChannel } from '@/lib/cache-keys';
-import type { Channel } from '@/lib/types';
+Two client state hooks back the channel UI:
 
-async function channelsFetcher() {
-  const res = await fetch('/api/channels');
-  if (!res.ok) return [];
-  return res.json();
-}
+- `useChannels()` — cache key `KEY_CHANNELS`; fetches `GET /<api>/channels`; returns `{ channels, error, isLoading }` (defaulting `channels` to `[]`). Disable refetch-on-focus.
+- `useChannel(id)` — cache key `[keyChannel(id), id]`, or `null` when `id` is null so it does not fetch; fetches `GET /<api>/channels/:id`; returns `{ channel, error, isLoading }` (defaulting `channel` to `null`). Disable refetch-on-focus.
 
-async function channelFetcher([, id]: [string, string]) {
-  const res = await fetch(`/api/channels/${id}`);
-  if (!res.ok) return null;
-  return res.json();
-}
+Import `KEY_CHANNELS` / `keyChannel` from `<server>/cache-keys` and the `Channel` type from `<server>/types` — do not inline key strings.
 
-export function useChannels() {
-  const { data, error, isLoading } = useSWR<Channel[]>(KEY_CHANNELS, channelsFetcher, {
-    revalidateOnFocus: false,
-  });
-  return { channels: data ?? [], error, isLoading };
-}
-
-export function useChannel(id: string | null) {
-  const { data, error, isLoading } = useSWR<Channel>(
-    id ? [keyChannel(id), id] : null,
-    channelFetcher,
-    { revalidateOnFocus: false }
-  );
-  return { channel: data ?? null, error, isLoading };
-}
-```
+> Find the stack's `concept-mapping.md` for concrete client-cache implementation.
 
 
 ## Pattern 6: Type Extensions
 
 ```typescript
-// site/types/index.ts
+// <root-dir>/types/index.ts
 
 export interface CartLineItem {
   id:               string;
@@ -245,80 +200,25 @@ export interface VariantChannelAvailability {
 
 ## Pattern 7: UI Components
 
-**ChannelSelector** — tabs for delivery vs pickup, persists mode to `localStorage`:
+**ChannelSelector** — a client component with tabs for delivery vs pickup that persists the chosen mode to `localStorage`:
 
-```typescript
-// site/components/bopis/ChannelSelector.tsx
-'use client';
-import { useState, useEffect } from 'react';
-import { useChannels } from '@/hooks/useChannels';
-
-type DeliveryMode = 'delivery' | 'pickup';
-
-export default function ChannelSelector({
-  onSelect,
-}: {
-  onSelect: (channelId: string | null) => void;
-}) {
-  const { channels } = useChannels();
-  const [mode, setMode] = useState<DeliveryMode>('delivery');
-  const pickupChannels = channels.filter((c) => c.roles?.includes('InventorySupply'));
-
-  useEffect(() => {
-    const saved = localStorage.getItem('deliveryMode') as DeliveryMode | null;
-    if (saved) setMode(saved);
-  }, []);
-
-  const handleModeChange = (m: DeliveryMode) => {
-    setMode(m);
-    localStorage.setItem('deliveryMode', m);
-    if (m === 'delivery') onSelect(null);
-  };
-
-  return (
-    <div>
-      <button onClick={() => handleModeChange('delivery')}>Delivery</button>
-      <button onClick={() => handleModeChange('pickup')}>Pick Up In Store</button>
-      {mode === 'pickup' && (
-        <select onChange={(e) => onSelect(e.target.value)}>
-          {pickupChannels.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
-      )}
-    </div>
-  );
-}
-```
+- Reads the channel list from `useChannels()` and derives the pickup options with `channels.filter((c) => c.roles?.includes('InventorySupply'))` — only `InventorySupply` channels appear in the pickup selector.
+- Holds a local `'delivery' | 'pickup'` mode, initialised from `localStorage` (`deliveryMode`) and written back whenever it changes.
+- Renders a Delivery button, a Pick Up In Store button, and — when in pickup mode — a `<select>` of the pickup channels that calls `onSelect(channelId)`.
+- Switching to delivery calls `onSelect(null)` to clear the supply channel.
 
 **Pickup badge in cart item:**
 
-```typescript
-// site/components/cart/CartItem.tsx
-import { useChannel } from '@/hooks/useChannels';
-
-function PickupBadge({ channelId }: { channelId: string }) {
-  const { channel } = useChannel(channelId);
-  if (!channel) return null;
-  return (
-    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800">
-      Pickup: {channel.name}
-    </span>
-  );
-}
-
-// In CartItem:
-{item.supplyChannelId && <PickupBadge channelId={item.supplyChannelId} />}
-```
+A small `PickupBadge` client component takes a `channelId`, resolves the channel via `useChannel(channelId)`, and renders the store name (e.g. "Pickup: {channel.name}"), returning nothing while unresolved. In `CartItem`, render it only when `item.supplyChannelId` is set: `{item.supplyChannelId && <PickupBadge channelId={item.supplyChannelId} />}`.
 
 
 ## Checklist
-- [ ] `getAllChannels`, `getChannelById`, `getChannelByKey` implemented in `lib/ct/channels.ts`
-- [ ] Route handlers at `app/api/channels/route.ts` and `app/api/channels/[id]/route.ts`
+- [ ] `getAllChannels`, `getChannelById`, `getChannelByKey` implemented in `<server>/ct/channels`
+- [ ] Server endpoints `GET /channels` and `GET /channels/:id` expose `getAllChannels` / `getChannelById`
 - [ ] `addLineItem` accepts `supplyChannelId` and uses `{ typeId: 'channel', id }` reference
-- [ ] `app/api/cart/items/route.ts` passes `supplyChannelId` through to `addLineItem`
-- [ ] `KEY_CHANNELS` and `keyChannel(id)` added to `lib/cache-keys.ts`
-- [ ] `useChannels()` and `useChannel(id)` hooks created with `dedupingInterval: 60_000`
+- [ ] The add-to-cart server endpoint passes `supplyChannelId` through to `addLineItem`
+- [ ] `KEY_CHANNELS` and `keyChannel(id)` added to `<server>/cache-keys`
+- [ ] `useChannels()` and `useChannel(id)` client state hooks created with a deduping interval
 - [ ] `CartLineItem.supplyChannelId?: string` added to types
 - [ ] `VariantAvailability` and `VariantChannelAvailability` interfaces added
 - [ ] `ChannelSelector` persists delivery mode to `localStorage`

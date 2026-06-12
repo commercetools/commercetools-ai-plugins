@@ -43,7 +43,7 @@ Only show policies in the selector that have a matching entry in `recurringPrice
 
 Extends **Pattern 5** from the shared reference.
 
-B2B cart operations go through the as-associate chain with `associateId` (= `session.customerId`) and `businessUnitKey`. Implement a dedicated `addLineItemWithRecurrence` wrapper in `lib/ct/cart.ts` that calls the base `addLineItem` with `recurrenceInfo` attached.
+B2B cart operations go through the as-associate chain with `associateId` (= `session.customerId`) and `businessUnitKey`. Implement a dedicated `addLineItemWithRecurrence` wrapper in `<server>/ct/cart` that calls the base `addLineItem` with `recurrenceInfo` attached.
 
 `priceSelectionMode: 'Fixed'` is the only mode used in B2B. Do not use `'Dynamic'`.
 

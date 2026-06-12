@@ -40,7 +40,7 @@ Adds payment processing via the [Checkout Browser SDK](https://docs.commercetool
 ```
 Browser (SDK)  →  Checkout service  →  PSP
                        ↑
-      /api/checkout/session  (creates Checkout Session from cart)
+      /<api>/checkout/session  (creates Checkout Session from cart)
                        ↑
       commercetools Sessions API  (POST https://session.{region}.commercetools.com/{projectKey}/sessions)
 ```
@@ -51,33 +51,33 @@ The storefront creates a **Checkout Session** (server-side, via a new API route)
 
 ## Step 0 — Prerequisites
 
-### 0a. Add environment variables to `site/.env`
+### 0a. Add environment variables to `<root-dir>/.env`
 
 ```bash
 # The key of your Checkout Application
 CTP_CHECKOUT_APP_KEY=storefront-checkout
 ```
 
-`CTP_PROJECT_KEY`, `CTP_API_URL`, and `CTP_SCOPES` are already in `site/.env`. The region is derived automatically from `CTP_API_URL` at startup — **do not add a separate `CT_REGION` variable**. `projectKey` and `region` are returned to the browser by `/api/checkout/session`, so **no `NEXT_PUBLIC_*` variables are needed**.
+`CTP_PROJECT_KEY`, `CTP_API_URL`, and `CTP_SCOPES` are already in `<root-dir>/.env`. The region is derived automatically from `CTP_API_URL` at startup — **do not add a separate `CT_REGION` variable**. `projectKey` and `region` are returned to the browser by `/<api>/checkout/session`.
 
 ### 0b. Install the Browser SDK
 
 ```bash
-cd site && npm install @commercetools/checkout-browser-sdk
+cd <root-dir> && npm install @commercetools/checkout-browser-sdk
 ```
 
 ---
 
 ## Step 1 — Session creation API route
 
-Create `site/app/api/checkout/session/route.ts`. This route:
+Create `<api-dir>/checkout/session`. This route:
 1. Reads the current cart ID from the session
 2. Exchanges an OAuth token
 3. POSTs to the commercetools Sessions API to create a Checkout Session
 4. Returns the `sessionId` to the browser
 
 ```typescript
-// site/app/api/checkout/session/route.ts
+// <root-dir>/<api-dir>/checkout/session/route.ts
 
 const APP_KEY = process.env.CTP_CHECKOUT_APP_KEY!;
 
@@ -87,6 +87,7 @@ const REGION = API_URL.replace(/^https?:\/\/api\./, '').replace(/\.commercetools
 
 async function getManageSessionsToken(): Promise<string> {
   // fetch token from oauth/token?grant_type=client_credentials
+  // use the full scope provided in .env vars
 }
 
 export async function POST() {
@@ -110,7 +111,7 @@ export async function POST() {
     );
     // handle errors here
     const data = await res.json();
-    // Return projectKey and region so the client component needs no NEXT_PUBLIC_ vars
+    // Return projectKey and region so the client component needs no frontend facing environment vars
     return NextResponse.json({ sessionId: data.id, projectKey: PROJECT_KEY, region: REGION });
   } catch (e: unknown) {
    // handle error
@@ -126,10 +127,11 @@ export async function POST() {
 
 This is the least invasive change. Keep the existing address and shipping steps. Only the payment step.
 
-#### 2A-1. Implement `StepPayment.tsx`
+#### 2A-1. Implement `StepPayment` frontend component
 
+Example react/typescript component
 ```typescript
-// site/components/checkout/StepPayment.tsx
+// <root-dir>/components/checkout/StepPayment.tsx
 'use client';
 ...
 import { paymentFlow } from '@commercetools/checkout-browser-sdk';
@@ -176,7 +178,7 @@ export default function StepPayment() {
 }
 ```
 
-**No `NEXT_PUBLIC_*` env vars are needed.** `projectKey` and `region` are returned by `/api/checkout/session` alongside the `sessionId` and read from the response in the client component.
+**No extra environment env vars are needed.** `projectKey` and `region` are returned by `/<api>/checkout/session` alongside the `sessionId` and read from the response in the client component.
 
 #### 2A-2. Integrate into the checkout step page
 
@@ -218,22 +220,19 @@ Available CSS variables are listed in the Checkout theming docs.
 |---|---|---|
 | `CTP_CHECKOUT_APP_KEY` | No | **New** — key of the Checkout Application |
 
-
-No `CT_REGION`, `NEXT_PUBLIC_CT_PROJECT_KEY`, or `NEXT_PUBLIC_CT_REGION` variables are needed. The session API derives the region from `CTP_API_URL` and returns `{ sessionId, projectKey, region }` to the browser.
-
 ---
 
 ## Checklist
 
 ### Prerequisites
-- [ ] `CTP_CHECKOUT_APP_KEY` added to `site/.env` (the only new variable required)
+- [ ] `CTP_CHECKOUT_APP_KEY` added to `<root-dir>/.env` (the only new variable required)
 - [ ] `@commercetools/checkout-browser-sdk` installed
 
 ### Session API
-- [ ] Create `site/app/api/checkout/session/route.ts`
+- [ ] Create `<api-dir>/checkout/session` endpoint
 
 ### SDK integration (per mode)
-- [ ] **paymentFlow**: Replace `StepPayment.tsx` with commercetools widget mount; remove payment actions from `/api/checkout/route.ts`
+- [ ] **paymentFlow**: Replace `StepPayment.tsx` with commercetools widget mount;
 
 ### Order confirmation
 - [ ] Update confirmation page to read `?orderId=` from commercetools redirect URL or `onInfo` callback
@@ -246,6 +245,6 @@ No `CT_REGION`, `NEXT_PUBLIC_CT_PROJECT_KEY`, or `NEXT_PUBLIC_CT_REGION` variabl
 
 **`<div data-ctc />`** — For `paymentFlow`, always render `<div data-ctc />` in the component's JSX. Without it the commercetools widget mounts at the document root and occupies the full page. 
 
-**No `NEXT_PUBLIC_*` vars** — `projectKey` and `region` are server-side config. Return them from `/api/checkout/session` alongside `sessionId` so the browser never needs `NEXT_PUBLIC_` prefixed variables for these values.
+**No `PUBLIC_*` vars** — `projectKey` and `region` are server-side config. Return them from `/<api>/checkout/session` alongside `sessionId` so the browser never needs environment vars for these values.
 
 **`paymentReturnUrl` must be registered** — Only one return URL per Connector. The URL must exactly match what's registered in the commercetools Application `paymentsConfiguration.paymentReturnUrl`.

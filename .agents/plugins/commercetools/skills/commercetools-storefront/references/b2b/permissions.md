@@ -17,7 +17,7 @@ metadata:
 
 # Permissions & RBAC
 
-**Impact: HIGH — UI must gate all actions with `usePermissions()`. No app-level enforcement in Route Handlers — commercetools enforces everything via the as-associate chain. A 403 from commercetools means the associate lacks the permission.**
+**Impact: HIGH — UI must gate all actions with `usePermissions()` (the client-state permission hook). No app-level enforcement in server endpoints — commercetools enforces everything via the as-associate chain. A 403 from commercetools means the associate lacks the permission.**
 
 This reference covers all permission strings, how `usePermissions` resolves them, UI gating patterns, and "My vs Others" semantics.
 
@@ -33,44 +33,26 @@ This reference covers all permission strings, how `usePermissions` resolves them
 
 ## Pattern 1: Permission Architecture
 
-**INCORRECT:** Adding permission checks inside Route Handlers:
+**INCORRECT:** Re-deriving and enforcing permissions inside a server endpoint — loading the business unit, finding the associate, and checking `associateRoleAssignments` for `CreateMyCarts` before proceeding. This duplicates commercetools enforcement and is fragile because it must be maintained by hand against the role config.
+
+**CORRECT — server endpoints only check session existence; commercetools enforces permissions via the as-associate chain.** The endpoint confirms there is a logged-in associate with a business unit, then delegates straight to the as-associate call. commercetools returns 403 automatically if the associate lacks `CreateMyCarts`:
 
 ```typescript
-// WRONG — duplicates commercetools enforcement; also fragile since it must be maintained manually
-export async function POST() {
-  const session = await getSession();
-  const bu = await getBusinessUnitByKey(session.businessUnitKey!);
-  const associate = bu.associates.find(a => a.customer.id === session.customerId);
-  const hasPermission = associate?.associateRoleAssignments.some(r => r.key === 'CreateMyCarts');
-  if (!hasPermission) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  // ...
-}
-```
-
-**CORRECT — Route Handlers only check session existence; commercetools enforces permissions via the as-associate chain:**
-
-```typescript
-// app/api/cart/route.ts
-export async function POST() {
-  const session = await getSession();
-  // Only check: is the user logged in with a valid BU?
-  if (!session.customerId || !session.businessUnitKey) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  // commercetools will 403 automatically if the associate lacks CreateMyCarts
-  const cart = await createCart(
-    session.customerId,
-    session.customerId,   // associateId
-    session.businessUnitKey,
-    session.storeKey!,
-    session.currency,
-    session.country
-  );
-  return NextResponse.json({ cart });
-}
+// commercetools will 403 automatically if the associate lacks CreateMyCarts
+const cart = await createCart(
+  session.customerId,
+  session.customerId,   // associateId
+  session.businessUnitKey,
+  session.storeKey!,
+  session.currency,
+  session.country
+);
 ```
 
 > **The as-associate chain is the enforcement layer.** If commercetools returns 403, propagate it to the browser as-is (or return a generic error). Never try to replicate commercetools's permission logic in application code.
+
+> Find the stack's `data-loading.md` for concrete server endpoint implementation patterns.
+
 
 ---
 
@@ -85,67 +67,47 @@ const isBuyer = currentUser.roles.includes('buyer');
 const canCreateCart = isBuyer;
 ```
 
-**CORRECT — `usePermissions` fetches associate roles from commercetools and resolves dynamically:**
+**CORRECT — `usePermissions` fetches associate roles from commercetools and resolves dynamically.** It is a client-state hook backed by the current user and the active business unit. Its resolution is:
+
+1. Fetch all `AssociateRole` objects from the associate-roles endpoint (commercetools source of truth; cached once per tab)
+2. Find the current associate in `currentBusinessUnit.associates` by `customer.id`
+3. Collect that associate's role keys from `associateRoleAssignments` → `roleKeys`
+4. Union the `permissions` of every role whose key is in `roleKeys`
+5. Expose `can(permission)`, `hasAnyPermission(ps)`, `hasAllPermissions(ps)`, and `roleKeys`
 
 ```typescript
-// hooks/usePermissions.ts
-// Resolution logic (simplified):
-// 1. Fetch all AssociateRole objects from /api/associate-roles (commercetools source of truth)
-// 2. Find current associate in currentBusinessUnit.associates by customerId
-// 3. Collect their role keys from associateRoleAssignments
-// 4. Collect all permissions from those roles
-// 5. Expose can(), hasAnyPermission(), roleKeys
+// Core resolution — framework-neutral
+const keys = new Set(
+  associate.associateRoleAssignments.map((r) => r.associateRole.key)
+); // → roleKeys
 
-export function usePermissions() {
-  const { user } = useAuth();
-  const { currentBusinessUnit } = useBusinessUnit();
-  const [permissions, setPermissions] = useState<Set<string>>(new Set());
-  const [roleKeys, setRoleKeys] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    if (!user || !currentBusinessUnit) return;
-
-    // Find the current user's associate record in the BU
-    const associate = currentBusinessUnit.associates.find(
-      (a) => a.customer.id === user.id
-    );
-    if (!associate) return;
-
-    // Collect the associate's role keys
-    const keys = new Set(associate.associateRoleAssignments.map((r) => r.associateRole.key));
-    setRoleKeys(keys);
-
-    // Fetch all roles from commercetools (module-level cache, fetched once per tab)
-    fetchAssociateRoles().then((roles) => {
-      const perms = new Set<string>();
-      for (const role of roles) {
-        if (keys.has(role.key)) {
-          for (const p of role.permissions) perms.add(p);
-        }
-      }
-      setPermissions(perms);
-    });
-  }, [user, currentBusinessUnit]);
-
-  const can = (permission: string) => permissions.has(permission);
-  const hasAnyPermission = (ps: string[]) => ps.some((p) => permissions.has(p));
-  const hasAllPermissions = (ps: string[]) => ps.every((p) => permissions.has(p));
-
-  return { can, hasAnyPermission, hasAllPermissions, roleKeys, permissions };
+const permissions = new Set<string>();
+for (const role of allAssociateRoles) {
+  if (keys.has(role.key)) {
+    for (const p of role.permissions) permissions.add(p);
+  }
 }
+
+const can = (permission: string) => permissions.has(permission);
+const hasAnyPermission = (ps: string[]) => ps.some((p) => permissions.has(p));
+const hasAllPermissions = (ps: string[]) => ps.every((p) => permissions.has(p));
 ```
 
 > Role definitions (which permissions a role has) are configured in commercetools Merchant Center, not in code. `usePermissions` fetches them at runtime — no permission mapping in the codebase.
+> Find the stack's `concept-mapping.md` for concrete client-state and cache implementation.
+
 
 ---
 
 ## Pattern 3: UI Gating Patterns
 
+All four patterns read from `usePermissions()`; the snippets below show the decision logic only. Render the gated control when the resulting boolean is true (and hide it otherwise).
+
 ### Pattern A — single permission
 
 ```typescript
 const { can } = usePermissions();
-if (!can('CreateApprovalRules')) return null;
+const canCreateRules = can('CreateApprovalRules');
 ```
 
 ### Pattern B — "either My or Others grants access" (feature visibility)
@@ -153,21 +115,19 @@ if (!can('CreateApprovalRules')) return null;
 ```typescript
 const { hasAnyPermission } = usePermissions();
 const canViewOrders = hasAnyPermission(['ViewMyOrders', 'ViewOthersOrders']);
-if (!canViewOrders) return null;
 ```
 
 Use `hasAnyPermission` for deciding whether to show a feature at all.
 
 ### Pattern C — dynamic My/Others dispatch (per-resource actions)
 
+Resolve the current user (id) from auth/session, then pick the My vs Others permission per resource:
+
 ```typescript
 const { can } = usePermissions();
-const { user } = useAuth();
 
-const isOwnQuote = quote.customer.id === user?.id;
+const isOwnQuote = quote.customer.id === currentUserId;
 const canAccept = isOwnQuote ? can('AcceptMyQuotes') : can('AcceptOthersQuotes');
-
-{canAccept && <Button onClick={handleAccept}>Accept Quote</Button>}
 ```
 
 Use this for action buttons on specific resources.
@@ -184,19 +144,14 @@ const canActOnCurrentTier = flow.currentTierPendingApprovers.some(
   (a) => roleKeys.has(a.associateRole.key)
 );
 
-{isEligibleApprover && canActOnCurrentTier && (
-  <>
-    <Button onClick={handleApprove}>Approve</Button>
-    <Button onClick={handleReject}>Reject</Button>
-  </>
-)}
+const canApprove = isEligibleApprover && canActOnCurrentTier;
 ```
 
 ---
 
 ## Pattern 4: All Permission Strings
 
-Defined as a TypeScript union in `lib/types.ts`:
+Defined as a TypeScript union in `<server>/types`:
 
 **Business Unit**
 - `AddChildUnits` — create sub-divisions
@@ -240,46 +195,38 @@ Defined as a TypeScript union in `lib/types.ts`:
 
 ## Pattern 5: Nav Item Gating
 
-**INCORRECT:** Rendering nav items and redirecting on access:
+**INCORRECT:** Always rendering a nav link (e.g. to `/dashboard/approval-rules`) and only failing once the associate clicks through — the user sees the link, clicks it, then hits an error.
+
+**CORRECT — the dashboard nav hides items when the associate lacks the required permissions.** Declare each nav item with the permissions that make it visible, then filter the list through `hasAnyPermission` before rendering:
 
 ```typescript
-// WRONG — user sees the link, clicks it, then gets an error
-<Link href="/dashboard/approval-rules">Approval Rules</Link>
-```
-
-**CORRECT — `DashboardNav` hides items when the associate lacks the required permissions:**
-
-```typescript
-// components/layout/DashboardNav.tsx
 const NAV_ITEMS = [
-  { label: t('orders'), href: '/dashboard/orders',
+  { label: 'orders', href: '/dashboard/orders',
     requiredPermissions: ['ViewMyOrders', 'ViewOthersOrders'] },
-  { label: t('quotes'), href: '/dashboard/quotes',
+  { label: 'quotes', href: '/dashboard/quotes',
     requiredPermissions: ['ViewMyQuotes', 'ViewOthersQuotes'] },
-  { label: t('approvalRules'), href: '/dashboard/approval-rules',
+  { label: 'approvalRules', href: '/dashboard/approval-rules',
     requiredPermissions: ['CreateApprovalRules', 'UpdateApprovalRules'] },
-  { label: t('company'), href: '/dashboard/company',
+  { label: 'company', href: '/dashboard/company',
     requiredPermissions: ['UpdateBusinessUnitDetails', 'UpdateAssociates'] },
 ];
 
-// In the component:
-{NAV_ITEMS
-  .filter(item =>
-    !item.requiredPermissions ||
-    hasAnyPermission(item.requiredPermissions)
-  )
-  .map(item => <NavLink key={item.href} {...item} />)
-}
+// Visible items only:
+const visibleItems = NAV_ITEMS.filter(
+  (item) => !item.requiredPermissions || hasAnyPermission(item.requiredPermissions)
+);
 ```
+
+Render each visible item with the framework's locale-aware link primitive; labels go through the framework's i18n/locale routing.
 
 ---
 
 ## Checklist
 
-- [ ] No permission checks in Route Handlers — commercetools enforces via as-associate chain
+- [ ] No permission checks in server endpoints — commercetools enforces via as-associate chain
 - [ ] All UI action buttons gated with `can()` or `hasAnyPermission()`
 - [ ] "My vs Others" pattern used for resource-scoped actions (quotes, orders, carts)
 - [ ] Approval flow actions gated with `roleKeys` (pattern D), not named permissions
 - [ ] Nav items specify `requiredPermissions` — items not shown if associate lacks them
-- [ ] New feature: check `lib/types.ts` for the correct `Permission` union strings
+- [ ] New feature: check `<server>/types` for the correct `Permission` union strings
 - [ ] Role definitions configured in commercetools Merchant Center — never hardcoded in the app

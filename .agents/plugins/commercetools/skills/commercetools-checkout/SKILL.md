@@ -49,7 +49,7 @@ When this skill is invoked, always follow these steps:
 
 See [payment-only-mode.md](./references/payment-only-mode.md) for:
 - Full architecture diagram (Browser SDK → Checkout service → PSP)
-- Session creation (`/api/checkout/session` → commercetools Sessions API)
+- Session creation (`/<api>/checkout/session` → commercetools Sessions API)
 - `paymentFlow`, `checkoutFlow`, and `expressPayment` implementation patterns
 - PSP connector setup (Stripe, Adyen, Mollie)
 - Webhook handling and order confirmation

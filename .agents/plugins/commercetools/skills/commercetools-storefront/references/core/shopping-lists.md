@@ -1,6 +1,6 @@
 ---
 name: shopping-lists
-description: Shopping list CRUD, two API chains (project-level vs as-associate), Route Handlers, SWR hooks, and shared mapper patterns.
+description: Shopping list CRUD, two API chains (project-level vs as-associate), server endpoints, client-state hooks, and shared mapper patterns.
 when_to_use:
   - "Implementing wishlists or purchase lists"
   - "Deciding between personal vs BU-scoped lists"
@@ -22,8 +22,8 @@ Shopping lists let customers save products for later. In B2C they are personal (
 ## Table of Contents
 - [Pattern 1: The Two API Chains](#pattern-1-the-two-api-chains)
 - [Pattern 2: commercetools Helper Functions](#pattern-2-commercetools-helper-functions)
-- [Pattern 3: Route Handlers](#pattern-3-route-handlers)
-- [Pattern 4: SWR Hook](#pattern-4-swr-hook)
+- [Pattern 3: Server Endpoints](#pattern-3-server-endpoints)
+- [Pattern 4: Client State Hook](#pattern-4-client-state-hook)
 - [Pattern 5: Mapper](#pattern-5-mapper)
 - [Tips and Tricks](#tips-and-tricks)
 
@@ -42,7 +42,7 @@ Never mix the chains. A wishlist fetched through the as-associate chain would in
 
 ## Pattern 2: commercetools Helper Functions
 
-`lib/ct/shopping-lists.ts` (or `lib/ct/wishlists.ts` / `lib/ct/purchase-lists.ts`) should export:
+`<server>/ct/shopping-lists` (or `<server>/ct/wishlists` / `<server>/ct/purchase-lists`) should export:
 
 - **List all** for the current owner (customer or BU) — paginated, sorted by `lastModifiedAt desc`
 - **Get by ID** — includes an ownership check before returning
@@ -54,13 +54,13 @@ Never mix the chains. A wishlist fetched through the as-associate chain would in
 
 All write operations need the current `version`. Fetch it fresh before sending the update if the caller does not already hold it — stale versions cause 409 conflicts.
 
-commercetools `ShoppingList` responses must be mapped to an app type (`Wishlist` or `PurchaseList`) before leaving `lib/ct/`. Components must never import from `@commercetools/platform-sdk`.
+commercetools `ShoppingList` responses must be mapped to an app type (`Wishlist` or `PurchaseList`) before leaving `<server>/ct/`. Components must never import from `@commercetools/platform-sdk`.
 
 ---
 
-## Pattern 3: Route Handlers
+## Pattern 3: Server Endpoints
 
-Shopping list route handlers follow the standard BFF shape: validate session → call commercetools helper → return mapped result. The session fields required differ by context:
+Shopping list server endpoints follow the standard BFF shape: validate session → call commercetools helper → return mapped result. The session fields required differ by context:
 
 | Context | Required session fields |
 |---|---|
@@ -71,28 +71,31 @@ Route structure is symmetric in both cases:
 
 | Method | Path | Intent |
 |---|---|---|
-| `GET` | `/api/[resource]` | List all for current owner |
-| `POST` | `/api/[resource]` | Create a new list |
-| `GET` | `/api/[resource]/[id]` | Fetch a single list by ID |
-| `PUT` | `/api/[resource]/[id]` | Rename the list |
-| `DELETE` | `/api/[resource]/[id]` | Delete the list |
-| `POST` | `/api/[resource]/[id]/items` | Add an item |
-| `DELETE` | `/api/[resource]/[id]/items` | Remove an item |
+| `GET` | `/<api>/[resource]` | List all for current owner |
+| `POST` | `/<api>/[resource]` | Create a new list |
+| `GET` | `/<api>/[resource]/[id]` | Fetch a single list by ID |
+| `PUT` | `/<api>/[resource]/[id]` | Rename the list |
+| `DELETE` | `/<api>/[resource]/[id]` | Delete the list |
+| `POST` | `/<api>/[resource]/[id]/items` | Add an item |
+| `DELETE` | `/<api>/[resource]/[id]/items` | Remove an item |
 
 ---
 
-## Pattern 4: SWR Hook
+## Pattern 4: Client State Hook
 
-Shopping lists change only on explicit user action (create, rename, add item, remove item, delete), so they are a good fit for SWR with `revalidateOnFocus: false`.
+Shopping lists change only on explicit user action (create, rename, add item, remove item, delete), so they are a good fit for a client-state hook that does not revalidate on focus.
 
-The SWR cache key must encode the ownership scope:
+The client state-manager/cache key must encode the ownership scope:
 
 | Context | Cache key tuple |
 |---|---|
 | B2C wishlist | `[KEY, customerId]` |
 | B2B purchase list | `[KEY, businessUnitKey]` |
 
-After any mutation (create, rename, add item, remove item, delete), call `mutate(key)` — where `key` uses the same tuple as above — so the list refreshes without a full page reload. Do not optimistically update the cache for list creation; let the re-fetch confirm the new ID and version.
+After any mutation (create, rename, add item, remove item, delete), revalidate the same key tuple as above so the list refreshes without a full page reload. Do not optimistically update the cache for list creation; let the re-fetch confirm the new ID and version.
+
+> Find the stack's `concept-mapping.md` for concrete state and cache implementation.
+
 
 ---
 

@@ -17,12 +17,13 @@ Superusers are associates whose commercetools associate role has the key `superu
 
 ## Session Flag
 
-`isSuperuser: boolean` is stored in the JWT session. It is detected at login and re-evaluated on BU selection.
+`isSuperuser: boolean` is stored in the server-managed session. It is detected at login and re-evaluated on BU selection.
 
 ### Detect at login
 
+In the login server endpoint, after fetching `businessUnits`, derive the flag and write it into the session alongside the other fields:
+
 ```typescript
-// app/api/auth/login/route.ts  (after fetching businessUnits)
 const SUPERUSER_ROLE_KEY = 'superuser';
 const isSuperuser = businessUnits.some(bu =>
   bu.associates?.some(associate =>
@@ -31,14 +32,14 @@ const isSuperuser = businessUnits.some(bu =>
   )
 );
 
-await setSession(response, {
+await setSession({
   customerId: customer.id,
   isSuperuser,
   // ... other session fields
 });
 ```
 
-## commercetools Cart Functions (`lib/ct/cart.ts`)
+## commercetools Cart Functions (`<server>/ct/cart`)
 
 ### Fetch all active carts in a store
 
@@ -114,56 +115,38 @@ export async function reassignCart(cartId, version, associateId, businessUnitKey
 
 | Route | Description |
 |---|---|
-| `GET /api/superuser/status` | Returns `{ isSuperuser, carts: [] }` — never 403 for non-superusers |
-| `POST /api/superuser/carts` | Create merchant cart; writes new cartId to session |
-| `POST /api/superuser/carts/switch` | Switch active cart; writes cartId to session |
-| `POST /api/superuser/carts/[id]/reassign` | Reassign cart to `targetCustomerId` |
+| `GET /<api>/superuser/status` | Returns `{ isSuperuser, carts: [] }` — never 403 for non-superusers |
+| `POST /<api>/superuser/carts` | Create merchant cart; writes new cartId to session |
+| `POST /<api>/superuser/carts/switch` | Switch active cart; writes cartId to session |
+| `POST /<api>/superuser/carts/[id]/reassign` | Reassign cart to `targetCustomerId` |
 
-**`GET /api/superuser/status`** returns `{ isSuperuser: false, carts: [] }` for non-superusers — no 403, no information leakage.
+**`GET /<api>/superuser/status`** returns `{ isSuperuser: false, carts: [] }` for non-superusers — no 403, no information leakage.
 
 ## SuperuserContext
 
-```typescript
-// context/SuperuserContext.tsx
-export function SuperuserProvider({ children }) {
-  const { data } = useSWR(KEY_SUPERUSER_STATUS, superuserStatusFetcher, { revalidateOnFocus: false });
-  const superuserStatus = data ?? { isSuperuser: false, carts: [] };
+A `SuperuserProvider` owns superuser state, backed by client state, and exposes it via a `useSuperuser()` hook:
 
-  const switchCart = useCallback(async (cartId: string) => {
-    const res = await fetch('/api/superuser/carts/switch', { method: 'POST', body: JSON.stringify({ cartId }) });
-    if (!res.ok) throw new Error('Failed to switch cart');
-    mutateGlobal(KEY_CART);         // force CartContext to refetch
-    window.location.replace(window.location.pathname);  // full reload
-  }, [...]);
+- **Status:** loaded from client state keyed by `KEY_SUPERUSER_STATUS` (endpoint `GET /<api>/superuser/status`), defaulting to `{ isSuperuser: false, carts: [] }`.
+- **`switchCart(cartId)`:** POSTs to `/<api>/superuser/carts/switch`; on success invalidates the `KEY_CART` client state-manager/cache entry (forces the cart context to refetch) and does a full page reload so every component sees the new active cart.
+- **`createMerchantCart()`:** POSTs to `/<api>/superuser/carts`, then refreshes the superuser cart list and invalidates the cart context.
 
-  const createMerchantCart = useCallback(async () => {
-    await fetch('/api/superuser/carts', { method: 'POST' });
-    await mutate();    // refresh cart list
-    invalidateCart();  // refresh CartContext
-  }, [...]);
-}
+> Find the stack's `concept-mapping.md` for concrete client-state and cache implementation.
 
-export function useSuperuser() { ... }
-```
 
 ## Layout Integration
 
-Add `SuperuserProvider` inside `AuthProvider`, outside `CartProvider`:
+In the root locale layout, nest the providers so `SuperuserProvider` sits inside `AuthProvider` and outside `CartProvider`:
 
-```typescript
-// app/[locale]/layout.tsx
-<AuthProvider>
-  <SuperuserProvider>
-    <BusinessUnitProvider>
-      <CartProvider>
-        <Header />
-        <SuperuserBanner />   {/* amber banner shown only to superusers */}
-        <main>{children}</main>
-      </CartProvider>
-    </BusinessUnitProvider>
-  </SuperuserProvider>
-</AuthProvider>
 ```
+AuthProvider
+  └─ SuperuserProvider
+       └─ BusinessUnitProvider
+            └─ CartProvider
+                 ├─ Header
+                 ├─ SuperuserBanner   (amber banner shown only to superusers)
+                 └─ main / page content
+```
+> Find the stack's `concept-mapping.md` for concrete provider nesting in the layout.
 
 ## UI Components
 
@@ -195,7 +178,7 @@ Create an associate role with key `superuser` in commercetools Merchant Center:
 ## Checklist
 
 - [ ] `isSuperuser` stored in session at login — not re-checked on every request
-- [ ] `GET /api/superuser/status` returns empty carts for non-superusers (never 403)
+- [ ] `GET /<api>/superuser/status` returns empty carts for non-superusers (never 403)
 - [ ] `SuperuserProvider` inside `AuthProvider`, outside `CartProvider`
 - [ ] `SuperuserBanner` rendered in layout (after Header, before main)
 - [ ] commercetools associate role `superuser` created with correct permissions

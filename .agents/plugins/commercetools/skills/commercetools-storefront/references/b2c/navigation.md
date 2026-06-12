@@ -17,9 +17,9 @@ metadata:
 
 # Header & Navigation
 
-**Impact: HIGH — The header renders on every page. Wrong data-fetching (client-side category fetch) adds a waterfall to every route; wrong Link usage breaks locale routing.**
+**Impact: HIGH — The header renders on every page. Wrong data-fetching (client-side category fetch) adds a waterfall to every route.**
 
-This reference covers the Header Server Component, logo, mega menu driven by the category tree, search bar, and country/locale switcher.
+This reference covers the Header server-rendered component, logo, mega menu driven by the category tree, search bar, and country/locale switcher.
 
 ## Table of Contents
 - [Pattern 1: Header Structure](#pattern-1-header-structure)
@@ -33,39 +33,22 @@ This reference covers the Header Server Component, logo, mega menu driven by the
 
 ## Pattern 1: Header Structure
 
-**INCORRECT:** Fetching the category tree inside the Header component with `useEffect` or a client-side SWR call — adds a loading waterfall on every page.
+**INCORRECT:** Fetching the category tree inside the Header component from the client (an effect or a client-side data fetch) — adds a loading waterfall on every page.
 
-**CORRECT — fetch the category tree once in the locale layout (Server Component) and pass it as a prop:**
+**CORRECT — fetch the category tree once in the root/locale layout (server-rendered) and pass it down as a prop:**
 
-```typescript
-// app/[locale]/layout.tsx
-import { getCategoryTree } from '@/lib/ct/categories';
-import { getLocale } from '@/lib/session';
-import Header from '@/components/layout/Header';
+In a server-rendered layout that wraps every route, resolve the active locale from the session and call `getCategoryTree(locale)` from `<server>/ct/categories` once. Render `Header` with the resulting `categoryTree` as a prop, then render the page children.
 
-export default async function LocaleLayout({ children }: Props) {
-  const { locale } = await getLocale();
-  const categoryTree = await getCategoryTree(locale);
+> Find the adapter's `data-loading.md` for concrete server-rendered layout (data fetched once and passed as props) implementation.
 
-  return (
-    <html>
-      <body>
-        <Header categoryTree={categoryTree} />
-        {children}
-      </body>
-    </html>
-  );
-}
-```
-
-`Header` itself is a Server Component. Interactive children (mega menu open/close, search input, locale switcher) are `'use client'` sub-components in their own files receiving data as props.
+`Header` itself is server-rendered. Interactive children (mega menu open/close, search input, locale switcher) are client components in their own files receiving the server-fetched data as props.
 
 ---
 
 ## Pattern 2: Logo
 
-- Render as a `<Link href="/">` using `<Link>` from `@/i18n/routing` so locale prefix is preserved
-- Use `next/image` with explicit `width`/`height` (or `fill` in a sized container) — never a bare `<img>`
+- Render as a `<Link href="/">` using the framework's locale-aware link so locale prefix is preserved
+- Use the framework's image primitive with explicit `width`/`height` (or `fill` in a sized container) — never a bare `<img>`
 - Mark the logo image `priority` — it is above the fold on every page
 
 ---
@@ -75,40 +58,31 @@ export default async function LocaleLayout({ children }: Props) {
 The mega menu receives the `categoryTree` array (already fetched server-side) and manages open/close state client-side.
 
 ### Data shape
-`categoryTree` is an array of root categories, each with a `children` array of subcategories (produced by `getCategoryTree` in `lib/ct/categories.ts`).
+`categoryTree` is an array of root categories, each with a `children` array of subcategories (produced by `getCategoryTree` in `<server>/ct/categories`).
 
 ### Desktop mega menu
-- A `'use client'` component that accepts `categoryTree` as a prop
+- A client component that accepts `categoryTree` as a prop
 - Hovering or clicking a root category reveals a panel of its `children` as links
-- Active root category highlighted using `usePathname()` — compare current path to `/category/<slug>`
-- All category links use `<Link href={/category/${slug}}>` from `@/i18n/routing`
-- Close the panel on outside click (`useEffect` + `document` listener) and on `Escape` key
+- Active root category highlighted using the framework's client navigation/query-param API — compare current path to `/category/<slug>`
+- All category links use the framework's locale-aware link
+- Close the panel on outside click (a `document` click listener registered while the panel is open) and on `Escape` key
 
 ### Mobile drawer
-- A `'use client'` component toggled by a hamburger button
+- A client component toggled by a hamburger button
 - Renders the same category tree as an accordion or flat list
 - Drawer slides in from the left; backdrop click closes it
-- Same `<Link>` usage as desktop
+- Same locale-aware link usage as desktop
 
 ---
 
 ## Pattern 4: Search Bar
 
-- A `'use client'` input component
-- On submit (Enter key or search button click), navigate to `/search?q=<encoded-query>` using `useRouter` from `@/i18n/routing`
-- The `/search` page is a Server Component that reads `searchParams.q` and calls `searchProducts`
-- Keep input state local (`useState`) — no global store needed
+- A client component input
+- On submit (Enter key or search button click), navigate to `/search?q=<encoded-query>` using the framework's client navigation/query-param API
+- The `/search` page is a server-rendered page that reads the `q` query param and calls `searchProducts`
+- Keep input state local component state — no global store needed
 
-```typescript
-// components/layout/SearchBar.tsx
-'use client';
-import { useRouter } from '@/i18n/routing';
-
-export default function SearchBar() {
-  const router = useRouter();
-  // controlled input; on submit: router.push(`/search?q=${encodeURIComponent(query)}`)
-}
-```
+A client component with a controlled input. On submit it pushes a navigation to `/search?q=<encoded query>` via the framework's locale-aware client navigation.
 
 ---
 
@@ -117,42 +91,34 @@ export default function SearchBar() {
 These are two distinct concerns wired differently:
 
 ### Locale switcher (URL-based)
-- Use `usePathname` + `useRouter` from `@/i18n/routing` to switch locale without losing the current path
-- `next-intl` handles the URL rewrite — no session update needed
+- Use the framework's client navigation/current-path access to switch locale without losing the current path
+- The framework's i18n/locale routing handles the URL rewrite — no session update needed
 
-```typescript
-// 'use client'
-import { usePathname, useRouter } from '@/i18n/routing';
+A client component that, on select, re-navigates to the current path under the chosen locale (the framework's locale-aware navigation rewrites the URL prefix).
 
-// on select: router.replace(pathname, { locale: selectedLocale })
-```
+> Find the adapter's `concept-mapping.md` for concrete locale-switcher client component.
 
 ### Country / currency switcher (session-based)
-- Changing country must update `country` and `currency` in the server session, then reload
-- `POST /api/locale` with `{ country, currency, locale }` — the Route Handler calls `setSessionCookie` and returns the updated values
-- After the response, call `router.refresh()` to re-render Server Components with the new session values
+- Changing country must update `country` and `currency` in the server-managed session, then refresh
+- `POST` to a server endpoint with `{ country, currency, locale }` — the endpoint writes the session and returns the updated values
+- After the response, trigger a refresh of the server-rendered tree so components re-render with the new session values
 - Country → currency mapping lives in a static config (e.g. `lib/locale-config.ts`) so the UI can derive the correct currency without an API call
 
-```typescript
-// 'use client'
-// on select:
-//   await fetch('/api/locale', { method: 'POST', body: JSON.stringify({ country, currency }) })
-//   router.refresh()
-```
+A client component that, on select, `POST`s the new `{ country, currency }` to the locale server endpoint and then refreshes the server-rendered tree.
 
 ---
 
 ## Checklist
 
-- [ ] `getCategoryTree` called once in `app/[locale]/layout.tsx` (Server Component) — not inside Header
-- [ ] `Header` is a Server Component; mega menu open/close and search are `'use client'` sub-components
-- [ ] Logo uses `<Link>` from `@/i18n/routing` — not `next/link` or `<a>`
-- [ ] Logo image uses `next/image` with `priority`
-- [ ] All category links use `<Link>` from `@/i18n/routing`
-- [ ] Active category detected with `usePathname()` — no manual URL parsing
+- [ ] `getCategoryTree` called once in the server-rendered root/locale layout — not inside Header
+- [ ] `Header` is server-rendered; mega menu open/close and search are client sub-components
+- [ ] Logo uses the framework's locale-aware link — not a bare `<a>`
+- [ ] Logo image uses the framework's image primitive with `priority`
+- [ ] All category links use the framework's locale-aware link
+- [ ] Active category detected with the framework's current-path/query-param access — no manual URL parsing
 - [ ] Mega menu closes on outside click and `Escape` key
-- [ ] Search navigates to `/search?q=` — does not call an API route
-- [ ] Locale switch uses `router.replace(pathname, { locale })` from `@/i18n/routing`
-- [ ] Country switch POSTs to `/api/locale` then calls `router.refresh()`
+- [ ] Search navigates to `/search?q=` — does not call a server endpoint for data
+- [ ] Locale switch re-navigates to the current path under the chosen locale via the framework's locale routing
+- [ ] Country switch POSTs to the locale server endpoint then refreshes the server-rendered tree
 
 **Next:** [product-listing.md](./product-listing.md)

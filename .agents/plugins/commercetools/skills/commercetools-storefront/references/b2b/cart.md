@@ -20,7 +20,7 @@ metadata:
 **Impact: CRITICAL — All B2B cart operations must go through the as-associate chain. Using the project-level `apiRoot.carts()` bypasses associate permission enforcement and breaks B2B semantics.**
 
 Start from the shared cart [reference](../core/cart.md).
-Implement Patterns 1, 2, and 3 (helper functions, route handlers, SWR hook) from that reference first,
+Implement Patterns 1, 2, and 3 (helper functions, server endpoints, client state hook) from that reference first,
 then layer the B2B requirements below on top of each of them.
 
 ## Table of Contents
@@ -36,11 +36,11 @@ then layer the B2B requirements below on top of each of them.
 
 Extends **Pattern 1** (helper functions) from the shared reference.
 
-Every function in `lib/ct/cart.ts` that reaches for `apiRoot.carts()` must instead go through an
+Every function in `<server>/ct/cart` that reaches for `apiRoot.carts()` must instead go through an
 as-associate helper. The project-level `carts()` endpoint does not evaluate associate permissions.
 
 ```typescript
-// lib/ct/cart.ts
+// <server>/ct/cart
 function asAssociateInStore(associateId: string, businessUnitKey: string) {
   return apiRoot
     .asAssociate()
@@ -58,13 +58,13 @@ always `session.businessUnitKey`. Both are mandatory — never make them optiona
 
 ## B2B Extension: Cart Creation with BU + Store Context
 
-Extends **Pattern 1** (cart creation helper) and **Pattern 2** (POST route handler) from the shared reference.
+Extends **Pattern 1** (cart creation helper) and **Pattern 2** (POST server endpoint) from the shared reference.
 
 The cart draft must carry both a `businessUnit` and a `store` reference. Without them commercetools will not
 enforce associate permissions and the cart will not be visible within the correct BU scope.
 
 ```typescript
-// lib/ct/cart.ts
+// <server>/ct/cart
 export async function createCart(
   customerId: string,
   associateId: string,
@@ -88,14 +88,14 @@ export async function createCart(
 }
 ```
 
-In the POST route handler, validate that `businessUnitKey` and `storeKey` are present in the session
+In the POST server endpoint, validate that `businessUnitKey` and `storeKey` are present in the session
 before calling `createCart` — return `400` if either is missing.
 
 ---
 
 ## B2B Extension: Auto-Creation on First Item Add
 
-Extends **Pattern 2** (POST `/api/cart/items` route handler) from the shared reference.
+Extends **Pattern 2** (POST `/<api>/cart/items` server endpoint) from the shared reference.
 
 The auto-creation logic from the shared reference still applies. In B2B the `createCart` call also
 requires `associateId` and `businessUnitKey`, and the distribution channel must be resolved before
@@ -113,7 +113,7 @@ Resolve the channel once from the store with `getStoreChannelData(storeKey)` (sh
 pass it to every `addLineItem` call.
 
 ```typescript
-// lib/ct/cart.ts
+// <server>/ct/cart
 export async function addLineItem(
   cartId: string, version: number,
   productId: string, variantId: number, quantity: number,

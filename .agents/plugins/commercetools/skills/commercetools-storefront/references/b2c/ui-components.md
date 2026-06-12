@@ -17,7 +17,9 @@ metadata:
 
 **Impact: LOW — Writing raw HTML with inline Tailwind instead of using `components/ui/` creates inconsistent styling and duplicated behaviour.**
 
-The shared library lives at `site/components/ui/`. Check it before writing any interactive element from scratch.
+The shared library lives at `<server>/../components/ui/`. Check it before writing any interactive element from scratch.
+
+> **Stack-specific reference.** The snippets below are a React + Tailwind reference implementation (the b2c-starter-kit's `components/ui/`). The framework-neutral concept is: keep one shared, consistently-styled set of primitives (Button, Input, Card, Modal, Drawer, Select) and compose them everywhere instead of re-styling raw markup. On another stack, build the equivalent in that stack's component model.
 
 ## Table of Contents
 - [Pattern 1: Check Before Writing](#pattern-1-check-before-writing)
@@ -100,7 +102,7 @@ import Button from '@/components/ui/Button';
 
 ---
 
-## Pattern 3: Input Component
+## Pattern 3: Input Components
 
 Props: `label`, `error`. It is a `forwardRef` component — compatible with `react-hook-form` and similar.
 
@@ -144,11 +146,9 @@ Props: `isOpen`, `onClose`, `title`, `children`, `footer`, `position` (`'left'` 
 ```typescript
 import Drawer from '@/components/ui/Drawer';
 import Button from '@/components/ui/Button';
-import { useState } from 'react';
 
-function CartDrawer() {
-  const [open, setOpen] = useState(false);
-
+// A client component holds the drawer's open/close state and passes it in via props:
+function CartDrawer({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void }) {
   return (
     <>
       <Button variant="primary" onClick={() => setOpen(true)}>
@@ -183,8 +183,8 @@ function CartDrawer() {
 **INCORRECT:** domain-specific component with commercetools imports placed in `components/ui/`.
 
 ```typescript
-// BAD — ui/ component importing from lib/ct/
-import { getProduct } from '@/lib/ct/products';
+// BAD — ui/ component importing from <server>/ct/
+import { getProduct } from '<server>/ct/products';
 
 export default function ProductBadge({ sku }: { sku: string }) {
   // fetches product data — domain knowledge, not generic UI
@@ -194,7 +194,7 @@ export default function ProductBadge({ sku }: { sku: string }) {
 **CORRECT — no domain knowledge, extends HTML attributes:**
 
 ```typescript
-// site/components/ui/Badge.tsx
+// <root-dir>/components/ui/Badge.tsx
 import { HTMLAttributes } from 'react';
 
 type BadgeVariant = 'success' | 'warning' | 'error' | 'info';
@@ -228,7 +228,7 @@ export default function Badge({
 ```
 
 Rules for `components/ui/`:
-- No imports from `lib/ct/`, `lib/mappers/`, or domain hooks
+- No imports from `<server>/ct/`, `<server>/mappers/`, or domain hooks
 - Props interface must extend the relevant `HTML*Attributes` type
 - Accept and spread `...props` so callers can add `aria-*`, `data-*`, `className` etc.
 - Export a single default component per file
@@ -237,14 +237,14 @@ Rules for `components/ui/`:
 
 ## Pattern 6: Link Component
 
-**INCORRECT:** raw `<a>` tag for internal navigation — causes a full page reload and bypasses the Next.js router.
+**INCORRECT:** raw `<a>` tag for internal navigation — causes a full page reload and bypasses the framework's locale-aware link.
 
 ```typescript
 // BAD
 <a href="/products">Browse products</a>
 ```
 
-**CORRECT — import `Link` from `@/i18n/routing`:**
+**CORRECT — use the framework's locale-aware link:**
 
 ```typescript
 // GOOD
@@ -259,7 +259,7 @@ When to use each:
 |---|---|
 | Internal route (same origin) | `<Link href="...">` |
 | External URL (`https://...`) | `<a href="..." target="_blank" rel="noopener noreferrer">` |
-| Button that navigates programmatically | `router.push(...)` via `useRouter` |
+| Button that navigates programmatically | `router.push(...)` via the framework's client navigation/query-param API |
 
 Combining with the `Button` component — pass `as="a"` only for external links; use `<Link>` wrapping for internal ones:
 
@@ -286,7 +286,7 @@ import Button from '@/components/ui/Button';
 - [ ] `components/ui/` checked before writing raw HTML for buttons, inputs, drawers, badges
 - [ ] New generic UI components placed in `components/ui/` (not in feature folders)
 - [ ] Props interface extends the appropriate `HTML*Attributes` type
-- [ ] No `lib/ct/` imports inside `components/ui/` files
+- [ ] No `<server>/ct/` imports inside `components/ui/` files
 - [ ] `...props` spread passed through to the underlying HTML element
 - [ ] `<Link href="...">` used for all internal navigation — no bare `<a>` tags pointing to internal routes
 - [ ] External links use `<a target="_blank" rel="noopener noreferrer">` (not `<Link>`)

@@ -29,50 +29,20 @@ This reference covers the shared checkout structure used by both B2C and B2B sto
 
 ---
 
-## Pattern 1: Multi-Step Checkout Page Structure
+## Pattern 1: Multi-Step Checkout Structure
 
-The checkout is URL-based with three steps: `addresses`, `shipping`, `payment`. The index page reads the cart state and redirects to the furthest step the user can access.
+The checkout is URL-based with three steps: `addresses`, `shipping`, `payment`. The index reads the cart state and redirects to the furthest step the user can access. The decision is framework-agnostic:
 
-```typescript
-// app/[locale]/checkout/page.tsx  ← redirect index
-'use client';
-
-export default function CheckoutIndexPage() {
-  const router = useRouter();
-  const { data: cart } = useCartSWR();
-
-  useEffect(() => {
-    if (cart === undefined) return; // still loading
-
-    const hasAddr = !!(cart?.shippingAddress?.streetName && cart?.billingAddress?.streetName);
-    const hasMethod = !!cart?.shippingInfo;
-
-    if (hasAddr && hasMethod) {
-      router.replace('/checkout/payment');
-    } else if (hasAddr) {
-      router.replace('/checkout/shipping');
-    } else {
-      router.replace('/checkout/addresses');
-    }
-  }, [cart]);
-
-  return null;
-}
-```
-
-Each step has a guard that redirects back if prerequisites are not met:
-
-```typescript
-useEffect(() => {
-  if (cart === undefined) return;
-  const hasAddr = !!(cart?.shippingAddress?.streetName && cart?.billingAddress?.streetName);
-  const hasMethod = !!cart?.shippingInfo;
-  if (step === 'shipping' && !hasAddr) router.replace('/checkout/addresses');
-  if (step === 'payment' && (!hasAddr || !hasMethod)) router.replace('/checkout/addresses');
-}, [cart]);
-```
+- `hasAddr = !!(cart.shippingAddress?.streetName && cart.billingAddress?.streetName)`; `hasMethod = !!cart.shippingInfo`.
+- `hasAddr && hasMethod` → `payment`; else `hasAddr` → `shipping`; else → `addresses`.
+- Each step repeats the guard and redirects back when prerequisites are unmet (e.g. on `shipping` with no address → `addresses`).
+- Wait until the cart has loaded before deciding (skip while `cart === undefined`).
 
 Layout: two-column grid — steps on the left (3 cols), sticky order summary on the right (2 cols).
+
+The index and step components are client components that drive step changes through the framework's client navigation (locale-aware replace).
+
+> Find the adapter's `concept-mapping.md` for the client-navigation shell implementation.
 
 ---
 
@@ -87,37 +57,11 @@ Address step details differ between storefronts — saved address sources and va
 
 ## Pattern 3: Shipping Method Selection
 
-Shipping methods are fetched via a Route Handler that filters by the session currency. A shipping method with no rate for the current currency must never appear.
+Shipping methods are fetched via a server endpoint that filters by the **session currency** — a method with no rate for the current currency must never appear. The endpoint reads `currency` from `getLocale()`, loads `getShippingMethods()`, filters to methods with a matching rate, and returns `{ shippingMethods }` (or `[]` on failure).
 
-```typescript
-// app/api/shipping-methods/route.ts
-export async function GET() {
-  const { currency } = await getLocale();
+On the client, a client state hook reads the shipping-methods server endpoint. Its cache key is keyed on the current `country` + `currency` (null until both are known, so it doesn't fetch prematurely). Configure it not to re-fetch on tab focus — shipping methods change rarely.
 
-  try {
-    const result = await getShippingMethods();
-    // Filter to methods that have a matching rate for the session currency
-    return NextResponse.json({ shippingMethods });
-  } catch {
-    return NextResponse.json({ shippingMethods: [] });
-  }
-}
-```
-
-```typescript
-// hooks/useShippingMethods.ts
-'use client';
-
-export function useShippingMethods() {
-  const { country, currency } = useLocale();
-  const key = country && currency ? [keyShippingMethods(country, currency), country, currency] : null;
-  return useSWR<ShippingMethod[]>(key, shippingMethodsFetcher, { revalidateOnFocus: false });
-}
-```
-
-> `revalidateOnFocus: false` — shipping methods change rarely; no need to re-fetch on tab switch.
-
-When the user selects a method, `PATCH /api/cart` with `shippingMethodId` and update the SWR cache from the response.
+When the user selects a method, call the cart update endpoint with `shippingMethodId` and update the client state-manager/cache/state from the response (no refetch). 
 
 ---
 
@@ -136,30 +80,11 @@ Key rules:
 
 ## Pattern 5: Confirmation Page
 
-The confirmation page is a Server Component that fetches the order directly from commercetools by `orderId` from the URL. Do not rely on client-side SWR here — the order may not yet appear in a freshly revalidated client cache.
-
-```typescript
-// app/[locale]/checkout/confirmation/[orderId]/page.tsx
-export default async function ConfirmationPage({ params }: PageProps) {
-  const { locale } = await getLocale();
-  const { orderId } = await params;
-
-  let order = null;
-  try {
-    order = await getOrderById(orderId);
-  } catch {
-    // Order not found — show minimal confirmation without line items
-  }
-
-  return (
-    <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-      {/* Success indicator, order number, line items summary, CTA links */}
-    </div>
-  );
-}
-```
+The confirmation page is **server-rendered**: it fetches the order directly from commercetools by `orderId` from the URL. Do not rely on the client state cache here — the order may not yet appear in a freshly revalidated client state-manager/cache. Fetch `getOrderById(orderId)` in a `try/catch`; on failure, show a minimal confirmation without line items.
 
 Both flows (cart checkout and quote checkout) redirect to `/checkout/confirmation?orderId=<id>` on success.
+
+> Find the adapter's `concept-mapping.md`. Example: **Next.js:** the Server Component shell (`app/[locale]/checkout/confirmation/[orderId]/page.tsx` with `await params`) is in the adapter's [concept-mapping.md](../stack/nextjs/concept-mapping.md).
 
 ---
 
@@ -167,8 +92,8 @@ Both flows (cart checkout and quote checkout) redirect to `/checkout/confirmatio
 
 - [ ] Checkout index redirects to the correct step based on cart state
 - [ ] Step skip guards redirect back if prerequisites are not met
-- [ ] `GET /api/shipping-methods` filters by session currency
+- [ ] The shipping-methods endpoint filters by session currency
 - [ ] Address changes debounced to update cart address method
 - [ ] Payment step mounts the Checkout frontend SDK — no custom payment form
 - [ ] `cartId` cleared from session after the SDK signals order completion
-- [ ] Confirmation page is a Server Component that fetches order by ID from commercetools
+- [ ] Confirmation page is server-rendered and fetches the order by ID from commercetools

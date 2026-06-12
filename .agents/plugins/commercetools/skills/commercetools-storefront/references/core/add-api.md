@@ -1,10 +1,10 @@
 ---
 name: add-api
-description: Documents the three-layer BFF pattern (client component → Route Handler → commercetools helper) and SWR hook structure with cache keys and mutations.
+description: Documents the three-layer BFF pattern (client component → server endpoint → commercetools helper) and client-state hook structure with cache keys and mutations.
 when_to_use:
   - "Adding a new data source such as cart, orders, or products"
-  - "Creating or updating SWR hooks with proper cache management"
-  - "Implementing mutations that update the SWR cache"
+  - "Creating or updating client-state hooks with proper cache management"
+  - "Implementing mutations that update the client state-manager/cache"
   - "Avoiding direct commercetools SDK calls from components"
 metadata:
   contentType: REFERENCE
@@ -17,65 +17,59 @@ metadata:
 
 **Impact: HIGH — Calling commercetools directly from a client component or bypassing the hook layer exposes secrets and breaks the caching model.**
 
-This reference covers adding a new Route Handler + commercetools helper + SWR hook — the three-layer BFF pattern every data source must follow.
+This reference covers adding a new server endpoint + commercetools helper + client-state hook — the three-layer BFF pattern every data source must follow.
 
 ## Table of Contents
 - [Pattern 1: Data Flow Rule](#pattern-1-data-flow-rule)
 - [Pattern 2: Cache Key](#pattern-2-cache-key)
-- [Pattern 3: Route Handler](#pattern-3-route-handler)
+- [Pattern 3: Server Endpoint](#pattern-3-server-endpoint)
 - [Pattern 4: commercetools Helper Function](#pattern-4-commercetools-helper-function)
-- [Pattern 5: SWR Hook with Mutations](#pattern-5-swr-hook-with-mutations)
+- [Pattern 5: Client State Hook with Mutations](#pattern-5-client-state-hook-with-mutations)
 - [Checklist](#checklist)
 
 ---
 
 ## Pattern 1: Data Flow Rule
 
-**INCORRECT:** Importing `lib/ct/*` in a Client Component or calling `fetch('/api/*')` directly inside a component:
+**INCORRECT:** Importing `<server>/ct/*` in a client component or calling `fetch('/<api>/*')` directly inside a component:
 
 ```typescript
 // WRONG — leaks server code into the browser bundle
-import { getCustomerOrders } from '@/lib/ct/auth';
+import { getCustomerOrders } from '<server>/ct/auth';
 // WRONG — direct fetch in component, no cache key
-const res = await fetch('/api/orders');
+const res = await fetch('/<api>/orders');
 ```
 
 **CORRECT — strict one-way data flow:**
 
 ```
-Client Component
-  → hook (site/hooks/*.ts)         'use client' — calls fetch('/api/…')
-  → Route Handler (app/api/*)      server-only — calls lib/ct/*
-  → lib/ct/<namespace>.ts          server-only — calls apiRoot
+Client component
+  → client data hook (<root-dir>/hooks/*.ts)  — calls fetch('/<api>/…') / the framework's loader
+  → server endpoint                     — server-only, calls <server>/ct/*
+  → <server>/ct/<namespace>.ts               — server-only, calls apiRoot
   → commercetools API
 ```
 
-If a client file needs a type from a commercetools module, import it from `@/lib/types` instead:
+If a client file needs a type from a commercetools module, import it from `<server>/types` instead:
 
 ```typescript
 // ✅ correct
-import type { Product } from '@/lib/types';
+import type { Product } from '<server>/types';
 
 // ❌ wrong — even for types only
-import type { ProductProjection } from '@/lib/ct/search';
+import type { ProductProjection } from '<server>/ct/search';
 ```
 
 ---
 
 ## Pattern 2: Cache Key
 
-**INCORRECT:** Inlining key strings in the hook — same resource gets different keys across components:
+**INCORRECT:** Inlining key strings in the client-state hook — same resource gets different keys across components (e.g. one component keys reads on `'widgets'`, another on `` `widget-${id}` `` ad-hoc).
+
+**CORRECT — all keys in `<server>/cache-keys`:**
 
 ```typescript
-// WRONG
-return useSWR('widgets', fetcher);
-return useSWR(`widget-${id}`, fetcher);
-```
-
-**CORRECT — all keys in `lib/cache-keys.ts`:**
-
-```typescript
-// lib/cache-keys.ts
+// <server>/cache-keys
 export const KEY_WIDGETS = 'widgets';
 
 export function keyWidget(id: string) {
@@ -90,67 +84,37 @@ export function keyShippingMethods(country: string, currency: string) {
 
 ---
 
-## Pattern 3: Route Handler
+## Pattern 3: Server Endpoint
 
-**INCORRECT:** Writing raw commercetools SDK calls inside the Route Handler:
+**INCORRECT:** Writing raw commercetools SDK calls inside the server endpoint:
 
 ```typescript
-// WRONG — commercetools logic leaks into the Route Handler
+// WRONG — commercetools logic leaks into the endpoint
 export async function GET() {
   const { body } = await apiRoot.orders().get({ queryArgs: { where: `...` } }).execute();
-  return NextResponse.json({ orders: body.results });
+  return json({ orders: body.results });
 }
 ```
 
-**CORRECT — Route Handler delegates to `lib/ct/<namespace>.ts`, validates session first:**
+**CORRECT — the endpoint validates the session, delegates to `<server>/ct/<namespace>.ts`, and returns JSON.** It does exactly three things: validate session → call the namespace helper → return JSON (401 when unauthenticated, 500 with the error message on failure). It never contains a raw SDK call.
 
-```typescript
-// app/api/widgets/route.ts
-import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/session';
-import { getWidgets } from '@/lib/ct/widgets';
-
-export async function GET() {
-  const session = await getSession();
-  if (!session.customerId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  try {
-    const widgets = await getWidgets(session.customerId);
-    return NextResponse.json({ widgets });
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : 'Failed to fetch widgets';
-    return NextResponse.json({ error: msg }, { status: 500 });
-  }
-}
-```
-
-**Directory conventions:**
-```
-app/api/
-  auth/             login, register, logout, me
-  account/          orders, addresses, payments, wishlist
-  cart/             cart CRUD, line-items, discount
-  checkout/         order creation
-  shipping-methods/ shipping options by locale
-  channels/         store channels (BOPIS)
-```
+> Example: Next.js, the concrete server endpoint (with `NextResponse`) and the `{auth,account,cart,checkout,shipping-methods,channels}` endpoint directory conventions. Find the stack's `concept-mapping.md` for concrete server endpoints.
 
 ---
 
 ## Pattern 4: commercetools Helper Function
 
-**INCORRECT:** Adding commercetools SDK calls anywhere outside `lib/ct/<namespace>.ts`:
+**INCORRECT:** Adding commercetools SDK calls anywhere outside `<server>/ct/<namespace>.ts`:
 
 ```typescript
-// WRONG — commercetools call in a Route Handler
+// WRONG — commercetools call in the endpoint
 const { body } = await apiRoot.orders().withId({ ID: id }).get().execute();
 ```
 
 **CORRECT — one function per operation in the matching namespace file:**
 
 ```typescript
-// lib/ct/widgets.ts
+// <server>/ct/widgets
 import { apiRoot } from './client';
 
 export async function getWidgets(customerId: string) {
@@ -167,107 +131,44 @@ export async function createWidget(data: Record<string, unknown>) {
 }
 ```
 
-**commercetools namespace ownership:**
+**Example of commercetools namespace ownership:**
 
 | File | Owns |
 |------|------|
-| `lib/ct/auth.ts` | `signInCustomer`, `signUpCustomer`, `getCustomerById`, `updateCustomer` |
-| `lib/ct/cart.ts` | All cart + order operations |
-| `lib/ct/orders.ts` | `getCustomerOrders`, `getOrderById` |
-| `lib/ct/search.ts` | `searchProducts`, `getProductBySku` |
-| `lib/ct/categories.ts` | `getCategoryTree`, `getCategoryBySlug` |
-| `lib/ct/wishlist.ts` | Shopping list operations |
+| `<server>/ct/auth` | `signInCustomer`, `signUpCustomer`, `getCustomerById`, `updateCustomer` |
+| `<server>/ct/cart` | All cart + order operations |
+| `<server>/ct/orders` | `getCustomerOrders`, `getOrderById` |
+| `<server>/ct/search` | `searchProducts`, `getProductBySku` |
+| `<server>/ct/categories` | `getCategoryTree`, `getCategoryBySlug` |
+| `<server>/ct/wishlist` | Shopping list operations |
 
 ---
 
-## Pattern 5: SWR Hook with Mutations
+## Pattern 5: Client State Hook with Mutations
 
-**INCORRECT:** Mutating without updating the SWR cache — requires a full refetch to see the change:
+**INCORRECT:** Mutating without updating the client state-manager/cache — requires a full refetch to see the change. A `deleteWidget` that only does `fetch('/<api>/widgets/<id>', { method: 'DELETE' })` leaves the UI stale until the next revalidation.
 
-```typescript
-// WRONG — cache not updated, UI stale until next revalidation
-async function deleteWidget(id: string) {
-  await fetch(`/api/widgets/${id}`, { method: 'DELETE' });
-}
-```
+**CORRECT — a read hook + a mutations module:**
 
-**CORRECT — mutations update SWR cache from the response body, throw on error:**
-
-```typescript
-// hooks/useWidgets.ts
-'use client';
-
-import useSWR, { useSWRConfig } from 'swr';
-import { KEY_WIDGETS, keyWidget } from '@/lib/cache-keys';
-
-export interface Widget { id: string; name: string }
-
-async function widgetsFetcher(): Promise<Widget[]> {
-  const res = await fetch('/api/widgets');
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.widgets ?? [];
-}
-
-export function useWidgets() {
-  return useSWR<Widget[]>(KEY_WIDGETS, widgetsFetcher, { revalidateOnFocus: false });
-}
-
-export function useWidgetMutations() {
-  const { mutate } = useSWRConfig();
-
-  async function createWidget(data: Partial<Widget>) {
-    const res = await fetch('/api/widgets', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) {
-      const d = await res.json().catch(() => ({}));
-      throw new Error(d.error || 'Failed to create');
-    }
-    // Option A: set cache directly from response — no extra round-trip
-    const newData = await res.json();
-    mutate(KEY_WIDGETS, newData.widgets, { revalidate: false });
-    // Option B: revalidate (simpler but adds one request)
-    // mutate(KEY_WIDGETS);
-  }
-
-  async function deleteWidget(id: string) {
-    const res = await fetch(`/api/widgets/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error('Failed to delete');
-    const newData = await res.json();
-    mutate(KEY_WIDGETS, newData.widgets, { revalidate: false });
-    mutate(keyWidget(id), null, { revalidate: false }); // clear detail cache
-  }
-
-  return { createWidget, deleteWidget };
-}
-```
+- A **read hook** is keyed by `KEY_WIDGETS` and reads the widgets list from the widgets endpoint (`GET /<api>/widgets`). It does not revalidate on focus. The fetcher returns a safe default (`[]`) when the response is not ok — read hooks never throw.
+- A **mutations module** wraps each write (`createWidget`, `deleteWidget`). Each write calls the endpoint, throws on a non-ok response (surfacing the server's error message), then updates `KEY_WIDGETS` directly from the response body **without a refetch**. A delete also clears the detail key `keyWidget(id)`. (Updating from the response body is preferred over a blind revalidation, which costs an extra round-trip.)
 
 > **Mutations always throw** — the component wraps the call in `try/catch` and shows the error. Read hooks return safe defaults (`null`, `[]`) on failure — never throw.
 
-**Locale-parameterised hook (tuple key):**
+**Locale-parameterised hook:** a read hook can use a **tuple key** — e.g. `[KEY_WIDGETS, country, currency]` — built from the framework's locale/currency context, and read only once both parts are present (otherwise the key is null and the read is skipped). This refetches automatically when the locale tuple changes.
 
-```typescript
-export function useWidgetsByLocale() {
-  const { country, currency } = useLocale();
-  const key = country && currency ? [KEY_WIDGETS, country, currency] : null;
-  return useSWR<Widget[]>(key, ([, c, cur]) => fetchWidgets(c, cur), {
-    revalidateOnFocus: false,
-  });
-}
-```
+> Find the stack's `concept-mapping.md` for concrete state and cache implementation.
+
 
 ---
 
 ## Checklist
 
-- [ ] Cache key(s) added to `lib/cache-keys.ts`
-- [ ] Route Handler in `app/api/` validates session before accessing user data
-- [ ] commercetools calls in `lib/ct/<namespace>.ts` — not inside the Route Handler
-- [ ] Hook uses `revalidateOnFocus: false` (exception: `useCartSWR` uses `true` — cart must stay fresh when the user returns from another tab)
+- [ ] Cache key(s) added to `<server>/cache-keys`
+- [ ] Server endpoint validates session before accessing user data
+- [ ] commercetools calls in `<server>/ct/<namespace>.ts` — not inside the endpoint
+- [ ] Read hook does not revalidate on focus (exception: the cart hook does — cart must stay fresh when the user returns from another tab)
 - [ ] Mutations throw on error; read hooks return safe defaults
-- [ ] Mutations update SWR cache from response body (`revalidate: false`)
-- [ ] Types exported from the hook file — not from `lib/ct/`
-- [ ] No `fetch('/api/*')` calls directly in components
+- [ ] Mutations update the client state-manager/cache from the response body — no refetch
+- [ ] Types exported from the hook file — not from `<server>/ct/`
+- [ ] No endpoint (`fetch('/<api>/*')`) calls directly in components

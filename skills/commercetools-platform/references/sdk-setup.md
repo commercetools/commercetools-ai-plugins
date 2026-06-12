@@ -91,7 +91,7 @@ export async function getSomething(id: string) {
 
 ## Pattern 3: Environment Variables
 
-**INCORRECT:** `NEXT_PUBLIC_CTP_CLIENT_SECRET` — exposes the secret in the browser bundle.
+**INCORRECT:** Example Nextjs `NEXT_PUBLIC_CTP_CLIENT_SECRET` — exposes the secret in the browser bundle.
 
 **CORRECT — all commercetools variables are server-only (no `NEXT_PUBLIC_` prefix):**
 
@@ -123,5 +123,5 @@ Use **Frontend B2C** template (or Frontend B2B), then make sure `manage_sessions
 
 - [ ] `lib/ct/client.ts` exports a single `apiRoot` — no `new ClientBuilder()` anywhere else
 - [ ] `.env` is listed in `.gitignore`
-- [ ] No commercetools env vars use the `NEXT_PUBLIC_` prefix
+- [ ] No commercetools env vars exposed to client rendering component
 - [ ] All `lib/ct/*.ts` helper functions import `apiRoot` from `./client`

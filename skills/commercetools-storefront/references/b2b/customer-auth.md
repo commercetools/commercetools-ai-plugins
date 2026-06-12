@@ -1,6 +1,6 @@
 ---
 name: customer-auth
-description: B2B auth extensions covering BU auto-selection at login, session B2B fields, AuthContext, and logout with B2B cache clearing.
+description: B2B auth extensions covering BU auto-selection at login, session B2B fields, auth client state, and logout with B2B cache clearing.
 when_to_use:
   - "Implementing B2B authentication"
   - "Auto-selecting BU and store at login"
@@ -19,13 +19,13 @@ metadata:
 
 **Impact: HIGH — Missing BU auto-selection at login leaves the user without a business unit context and breaks all B2B operations.**
 
-B2B-specific auth patterns that extend the [shared foundation](../core/customer-auth.md). Read that reference first for the commercetools login endpoint, Route Handler structure, SWR hook, and logout patterns.
+B2B-specific auth patterns that extend the [shared foundation](../core/customer-auth.md). Read that reference first for the commercetools login endpoint, server endpoint structure, client state hook, and logout patterns.
 
 ---
 
 ## BU Auto-Selection at Login
 
-Immediately after `loginCustomer`, fetch all business units the customer is an associate of and auto-select the first BU and its first store. This must happen in the same login Route Handler — never leave the session without a `businessUnitKey`.
+Immediately after `loginCustomer`, fetch all business units the customer is an associate of and auto-select the first BU and its first store. This must happen in the same login server endpoint — never leave the session without a `businessUnitKey`.
 
 BU discovery uses a project-level call (`apiRoot.businessUnits()` filtered by associate ID), not the as-associate chain. The as-associate chain is used for all subsequent operations once `businessUnitKey` is in the session.
 
@@ -35,7 +35,7 @@ Once the first store is identified, call `getStoreChannelData(storeKey)` to reso
 
 ## Session Fields Written at Login
 
-The login Route Handler writes all B2B context fields in a single `setSession()` call alongside the base auth fields:
+The login server endpoint writes all B2B context fields in a single `setSession()` call alongside the base auth fields:
 
 - **Auth:** `customerId`, `customerEmail`, `customerFirstName`, `customerLastName`
 - **B2B context:** `businessUnitKey`, `storeKey`, `storeId`, `distributionChannelId`, `supplyChannelId`, `productSelectionId`
@@ -45,15 +45,15 @@ Writing these atomically ensures no intermediate state where auth fields exist b
 
 ---
 
-## AuthContext and `useAccount`
+## Auth client state and `useAccount`
 
-Same SWR-backed pattern as the shared reference — `AuthContext` reads from `GET /api/auth/me`, `useAccount` exposes the same key. No B2B-specific changes needed here.
+Same client-state-backed pattern as the shared reference — the auth client state reads from `GET /<api>/auth/me`, `useAccount` exposes the same key. No B2B-specific changes needed here.
 
 ---
 
 ## Logout
 
-On logout, clear `KEY_AUTH_ME`, `KEY_CART`, and `KEY_BUSINESS_UNITS` from the SWR cache. The logout Route Handler preserves `locale`, `currency`, `country` but strips all user and B2B context fields from the session.
+On logout, clear `KEY_AUTH_ME`, `KEY_CART`, and `KEY_BUSINESS_UNITS` from the client state-manager/cache. The logout server endpoint preserves `locale`, `currency`, `country` but strips all user and B2B context fields from the session.
 
 ---
 
@@ -62,5 +62,5 @@ On logout, clear `KEY_AUTH_ME`, `KEY_CART`, and `KEY_BUSINESS_UNITS` from the SW
 - [ ] Login calls `getBusinessUnitsForAssociate(customer.id)` immediately after authentication
 - [ ] First BU's first store is auto-selected; `getStoreChannelData(storeKey)` populates channel IDs
 - [ ] All B2B session fields written atomically in one `setSession()` call
-- [ ] Logout clears `KEY_AUTH_ME`, `KEY_CART`, and `KEY_BUSINESS_UNITS` from SWR cache
+- [ ] Logout clears `KEY_AUTH_ME`, `KEY_CART`, and `KEY_BUSINESS_UNITS` from the client state-manager/cache
 - [ ] Logout preserves `locale`, `currency`, `country` in the session

@@ -38,7 +38,7 @@ addresses (shipping + billing) → shipping method → payment (Checkout SDK) �
 3. **Payment step** — Checkout frontend SDK mounts, handles payment capture and order placement
 4. **Confirmation** — SDK signals completion → clear `cartId` from session → redirect to `/checkout/confirmation?orderId=<id>`
 
-Order placement is handled entirely by the Checkout frontend SDK on the payment step. Do not implement a separate `POST /api/checkout` route for order creation.
+Order placement is handled entirely by the Checkout frontend SDK on the payment step. Do not implement a separate `POST /<api>/checkout` route for order creation.
 
 > **Reference:** See the [Checkout frontend SDK](../../../commercetools-checkout/references/payment-only-mode.md) implementation skill for SDK setup and the order-completion event handler.
 
@@ -49,7 +49,7 @@ Order placement is handled entirely by the Checkout frontend SDK on the payment 
 - [ ] Extends shared checkout patterns (page structure, shipping methods, payment SDK, confirmation)
 - [ ] Address step auto-selects `isDefaultShipping` / `isDefaultBilling` from `useAccount()`
 - [ ] Saved address list shown as selectable options; manual entry also allowed
-- [ ] Address changes debounced to `PATCH /api/cart` (inherited from shared)
+- [ ] Address changes debounced to `PATCH /<api>/cart` (inherited from shared)
 - [ ] Shipping method filtered by session currency (inherited from shared)
 - [ ] Order placement driven by Checkout frontend SDK — no custom order route
 - [ ] `cartId` cleared from session after SDK order completion event

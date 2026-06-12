@@ -2,12 +2,12 @@
 
 ## Project Rule: `unoptimized: true` Is Intentional
 
-`site/next.config.ts` sets `images.unoptimized: true`. **Do not remove it.**
+`<root-dir>/next.config.ts` sets `images.unoptimized: true`. **Do not remove it.**
 
-commercetools CDN returns `403`/`400` when Next.js appends `?url=...&w=...&q=...` optimization params. Sizing is handled explicitly in `site/lib/ct/image-config.ts` transform functions.
+commercetools CDN returns `403`/`400` when Next.js appends `?url=...&w=...&q=...` optimization params. Sizing is handled explicitly in `<root-dir>/lib/ct/image-config.ts` transform functions.
 
 ```typescript
-// site/next.config.ts — do not change
+// <root-dir>/next.config.ts — do not change
 const nextConfig: NextConfig = {
   images: { unoptimized: true },
 };
@@ -16,6 +16,8 @@ const nextConfig: NextConfig = {
 ---
 
 ## Product Images: Always Go Through image-config.ts
+
+The URL transform functions themselves (CDN swap, Imgix, Cloudinary, suffix sizing) are framework-agnostic and documented in the generic skill's [core/image-config.md](../../../core/image-config.md). This file covers only the Next.js rendering side (`next/image`).
 
 Components never build image URLs inline. Import from `image-config.ts`:
 
@@ -73,7 +75,7 @@ import Image from 'next/image'
 For images not from the commercetools CDN, add the hostname to `remotePatterns` in `next.config.ts`:
 
 ```typescript
-// site/next.config.ts
+// <root-dir>/next.config.ts
 images: {
   unoptimized: true,
   remotePatterns: [

@@ -58,7 +58,7 @@ approvers: [{ associateRole: { key: 'approver', typeId: 'associate-role' } }]
 **CORRECT — tiers are sequential; each tier is `and: [{ or: [roles] }]`:**
 
 ```typescript
-// lib/ct/approval-rules.ts
+// <server>/ct/approval-rules
 export async function createApprovalRule(
   associateId: string,
   businessUnitKey: string,
@@ -125,7 +125,7 @@ Conditions are joined with ` and `. `parsePredicate` in `PredicateBuilder.tsx` h
 
 ## Pattern 3: Approve/Reject — Read-Then-Write
 
-**INCORRECT:** Using a cached version number from SWR state:
+**INCORRECT:** Using a cached version number from client state:
 
 ```typescript
 // WRONG — version may be stale if another approver acted concurrently
@@ -135,7 +135,7 @@ await performApprovalAction(flowId, cachedFlow.version, 'approve');
 **CORRECT — always fetch the current version immediately before posting the action:**
 
 ```typescript
-// lib/ct/approval-flows.ts
+// <server>/ct/approval-flows
 async function fetchApprovalFlowRaw(
   associateId: string, businessUnitKey: string, flowId: string
 ) {
@@ -197,10 +197,9 @@ export async function rejectFlow(
 
 **CORRECT — gate on both `eligibleApprovers` and `currentTierPendingApprovers`:**
 
-```typescript
-// app/[locale]/dashboard/orders/[id]/page.tsx
-const { roleKeys } = usePermissions();
+On the order detail view, resolve the current associate's `roleKeys` via `usePermissions()`, then derive two booleans before rendering the approve/reject controls:
 
+```typescript
 // Check 1: user's role is listed as eligible for this flow
 const isEligibleApprover = flow.eligibleApprovers.some(
   (a) => roleKeys.has(a.associateRole.key)
@@ -210,17 +209,14 @@ const isEligibleApprover = flow.eligibleApprovers.some(
 const canActOnCurrentTier = flow.currentTierPendingApprovers.some(
   (a) => roleKeys.has(a.associateRole.key)
 );
-
-// Only show buttons when BOTH conditions are true
-{isEligibleApprover && canActOnCurrentTier && flow.status === 'Pending' && (
-  <>
-    <Button onClick={() => handleAction('approve')}>Approve</Button>
-    <Button variant="danger" onClick={() => setShowRejectModal(true)}>Reject</Button>
-  </>
-)}
 ```
 
+Render the approve and reject controls only when `isEligibleApprover && canActOnCurrentTier && flow.status === 'Pending'` — all three must hold. Reject typically opens a reason input before posting.
+
 > This uses `roleKeys` (role keys from associate role assignments), not named permissions. Approval eligibility is role-based, not permission-based.
+
+
+> Find the stack's `concept-mapping.md` for concrete client-state and cache implementation.
 
 ---
 
@@ -251,36 +247,18 @@ Touch exactly these five things in `components/approval-rules/PredicateBuilder.t
 
 ## Pattern 6: Graceful Degradation on 403
 
-**INCORRECT:** Returning 403 to the browser when commercetools returns 403 on the approval flows list:
+**INCORRECT:** Propagating a commercetools 403 to the browser on the approval flows list — this produces an error page for associates who simply cannot see flows.
+
+**CORRECT — silently return empty results on commercetools 403 for the flows list.** The server endpoint that backs the flows list first checks the session exists (a missing customer/BU is the only auth check it owns), calls `getApprovalFlows(customerId, businessUnitKey)`, and wraps that call so that:
+
+- a commercetools **403** (associate lacks `UpdateApprovalFlows`) resolves to an empty result set `{ results: [], total: 0 }` — not an error
+- any other failure surfaces as a generic 500
 
 ```typescript
-// WRONG — causes an error page for associates who just can't see flows
-if (response.status === 403) {
-  return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-}
-```
-
-**CORRECT — silently return empty results on commercetools 403 for the flows list:**
-
-```typescript
-// app/api/approval-flows/route.ts
-export async function GET() {
-  const session = await getSession();
-  if (!session.customerId || !session.businessUnitKey) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  try {
-    const flows = await getApprovalFlows(session.customerId, session.businessUnitKey);
-    return NextResponse.json({ results: flows, total: flows.length });
-  } catch (error: unknown) {
-    const statusCode = (error as { statusCode?: number }).statusCode;
-    // commercetools 403 = associate lacks UpdateApprovalFlows — return empty list, not an error
-    if (statusCode === 403) {
-      return NextResponse.json({ results: [], total: 0 });
-    }
-    return NextResponse.json({ error: 'Failed to fetch approval flows' }, { status: 500 });
-  }
+const statusCode = (error as { statusCode?: number }).statusCode;
+// commercetools 403 = associate lacks UpdateApprovalFlows — return empty list, not an error
+if (statusCode === 403) {
+  return { results: [], total: 0 };
 }
 ```
 
@@ -292,6 +270,6 @@ export async function GET() {
 - [ ] Approval rule draft uses nested `tiers → and → or` structure
 - [ ] Approve/reject always calls `fetchApprovalFlowRaw` first to get current version
 - [ ] Approve/reject buttons gated on both `eligibleApprovers` AND `currentTierPendingApprovers`
-- [ ] `GET /api/approval-flows` returns empty list on commercetools 403 (no error to browser)
+- [ ] Approval flows list endpoint returns empty list on commercetools 403 (no error to browser)
 - [ ] Always expand `order`, `approvals[*].approver.customer`, `rejection.rejecter.customer` when fetching flow detail
 - [ ] New predicate field: touch all 5 locations in `PredicateBuilder.tsx`

@@ -6,7 +6,8 @@
       "skills": [
         "commercetools-platform",
         "commercetools-storefront",
-        "commercetools-checkout"
+        "commercetools-checkout",
+        "commercetools-commerce-patterns"
       ]
     }
   ]

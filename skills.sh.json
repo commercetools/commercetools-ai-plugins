@@ -7,7 +7,8 @@
         "commercetools-platform",
         "commercetools-storefront",
         "commercetools-checkout",
-        "commercetools-commerce-patterns"
+        "commercetools-commerce-patterns",
+        "commercetools-connect"
       ]
     }
   ]

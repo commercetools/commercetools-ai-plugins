@@ -43,6 +43,8 @@ Also installed: `swr`, `jose`, `tailwindcss @tailwindcss/postcss postcss`. Scaff
     └── postcss.config.mjs    # @tailwindcss/postcss
 ```
 
+> **Co-located with a Connect connector?** If `<root-dir>/` (e.g. `site/`) is a sibling of a `connect.yaml` and its connector apps in the same repo, the storefront still deploys exactly as above — keep the platform's project root scoped to `<root-dir>/` so it ignores the connector code. For the monorepo layout and why the connector apps must be root siblings, see the commercetools-connect skill's [monorepo-with-storefront.md](../../../../commercetools-connect/references/monorepo-with-storefront.md).
+
 ## next-intl locale routing
 
 `i18n/routing.ts` derives locales from `COUNTRY_CONFIG` and exports the locale-aware navigation primitives — **always import `Link`/`useRouter`/`redirect` from here, never from `next/link` or `next/navigation` directly** in locale-prefixed UI:
@@ -110,6 +112,7 @@ Both targets build from `<root-dir>/` with `npm run build` and publish `.next`. 
 ```
 
 Run `/nextjs-deploy-vercel` or `/nextjs-deploy-netlify` — they enforce the Frontend (non-admin) API client, verify `SESSION_SECRET ≥ 32 chars`, and walk through project import and env vars. Delete `app/api/health/route.ts` before deploying.
+
 
 ## Commands
 

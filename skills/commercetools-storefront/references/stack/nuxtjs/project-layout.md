@@ -52,6 +52,8 @@ storefront/                      # <root-dir> — project root
 
 > **The boundary:** `app/` may never import from `server/`. Secrets live only in `server/utils/ct/`. Isomorphic helpers (types, `COUNTRY_CONFIG`, formatters) live in `shared/` — importable from both, but they must not import Vue or Nitro APIs.
 
+> **Co-located with a Connect connector?** If `<root-dir>/` (e.g. `storefront/`) is a sibling of a `connect.yaml` and its connector apps in the same repo, the storefront still deploys exactly as above — keep the platform's project root scoped to `<root-dir>/` so it ignores the connector code. For the monorepo layout and why the connector apps must be root siblings, see the commercetools-connect skill's [monorepo-with-storefront.md](../../../../commercetools-connect/references/monorepo-with-storefront.md).
+
 ## @nuxtjs/i18n locale routing
 
 Configure in `nuxt.config.ts` with `strategy: 'prefix'` so every route carries a locale prefix. Derive `locales` from `COUNTRY_CONFIG` (the isomorphic source of truth in `shared/utils/`):

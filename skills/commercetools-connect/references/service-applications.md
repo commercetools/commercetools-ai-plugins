@@ -204,7 +204,7 @@ router.post('/products', verifyInbound, async (req, res) => {
   }
 }
 ```
-Map the external model to the commercetools draft in `shared/src/mappers` ([project-structure.md](./project-structure.md)). Use the external system's stable identifier as the commercetools `key` so upserts are deterministic. Consider the [Import API](https://docs.commercetools.com/import-export/) for high-volume bulk loads instead of one call per item.
+Map the external model to the commercetools draft in `shared/src/mappers` ([project-structure.md](./project-structure.md)). Use the external system's stable identifier as the commercetools `key` so upserts are deterministic. Consider the [Import API](https://docs.commercetools.com/api/import-export/overview) for high-volume bulk loads instead of one call per item.
 
 ---
 

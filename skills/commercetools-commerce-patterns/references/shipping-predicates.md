@@ -41,7 +41,6 @@ This means rather than one complex predicate, they created per-warehouse shippin
 
 ## Useful Links
 
-- https://docs.commercetools.com/tutorials/shipping-method-with-predicate
 - https://docs.commercetools.com/api/projects/predicates
 - https://docs.commercetools.com/api/projects/shippingMethods#get-shippingmethod
 - Get matching ShippingMethods for a Cart (the canonical predicate-evaluated lookup): https://docs.commercetools.com/api/projects/shippingMethods#get-matching-shippingmethods-for-a-cart (`/shipping-methods/matching-cart`)

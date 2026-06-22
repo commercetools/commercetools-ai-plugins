@@ -32,7 +32,6 @@ At this point an easy solution will be in the front end to eliminate the shippin
 
 ## Useful Links
 
-- https://docs.commercetools.com/tutorials/shipping-method-with-predicate
 - https://docs.commercetools.com/api/projects/predicates
 - https://docs.commercetools.com/api/projects/shippingMethods#get-shippingmethod
 - https://docs.commercetools.com/api/projects/shippingMethods#get-shippingmethods-for-a-cart-and-location

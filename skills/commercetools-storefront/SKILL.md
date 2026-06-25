@@ -55,6 +55,28 @@ When this skill is invoked, always follow these steps:
 
 3. **Provide implementation guidance** — Synthesize the documentation with the specific integration mode the user is targeting.
 
+### Optional scripts
+
+**Fetch GraphQL schema** — Run this when you need context about a commercetools GraphQL query or mutation — for example, to inspect a resource's fields, types, and available operations before writing a query, or to verify a GraphQL query/mutation you have just generated against the real schema. It fetches the partial GraphQL SDL for a single commercetools resource:
+   ```bash
+   node scripts/graphql-schemata.mjs \
+     --resource-name "<commercetools resource, e.g. Cart, Product, Order>" \
+     --app-name "<current-app, e.g. claude, copilot, cursor, codex>" \
+     --model "<current-model>" \
+     --skill-name "commercetools-storefront"
+   ```
+   The output is the GraphQL SDL for that resource. If the resource name is not recognized, the script prints the list of valid resource names — pick the correct one and re-run. **Note:** the SDL may contain *stubbed types* — referenced resources rendered as stubs, with their real type name given in a comment. Fetch any you need separately by re-running this script with that type name as `--resource-name`.
+
+**Fetch OpenAPI (REST) schema** — Run this when you need context about a commercetools REST endpoint, request/response payload, or update action — for example, to inspect a resource's REST operations before constructing a request, or to verify a REST request/payload you have just generated against the real specification. It fetches the partial OpenAPI specification for a single commercetools resource:
+   ```bash
+   node scripts/openApi-schemata.mjs \
+     --resource-name "<commercetools resource, e.g. api-Cart-write, api-Customer-read, checkout-Application>" \
+     --app-name "<current-app, e.g. claude, copilot, cursor, codex>" \
+     --model "<current-model>" \
+     --skill-name "commercetools-storefront"
+   ```
+   The output is the OpenAPI specification (YAML) for that resource. REST resources use a read/write-split naming form (e.g. `api-Cart-read`, `api-Cart-write`). If the resource name is not recognized, the script prints the list of valid resource names — pick the correct one and re-run. **Note:** the spec does not include reference-expansion schemas — fetch a referenced resource's schema separately by re-running this script with that resource as `--resource-name`.
+
 ## Key Takeaways
 
 **The BFF pattern is non-negotiable.** All commercetools API calls go through a server endpoint (BFF). The browser never calls commercetools directly. Secrets are never exposed to the client bundle (no public env prefix). *(This requires a server tier — see the architecture assumption above.)*

@@ -53,7 +53,6 @@ The generic skill writes paths and client-side data access as stack-neutral plac
 | Styling | Tailwind v4 — no config file, `@tailwindcss/postcss`, `@import 'tailwindcss'` in `globals.css` |
 | Deploy target | `vercel.json` / `netlify.toml` (repo root); `/nextjs-deploy-vercel`, `/nextjs-deploy-netlify` |
 | Scaffold a new project | `/nextjs-setup-project` |
-| Add a locale | `/nextjs-add-locale` |
 
 > **Portable, not remapped:** the commercetools SDK calls (`apiRoot.*`, the as-associate chain), the mappers, and `getLocalizedString`/`formatMoney` are identical in both skills — only their *location* (`<server>/` → `lib/`) and the render/state primitives around them differ. SWR and `jose` are this stack's realizations of the generic **client state** and **server-managed session** concepts.
 

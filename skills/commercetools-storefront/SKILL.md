@@ -111,7 +111,7 @@ Pick the adapter for your frontend stack. Each stack folder under `references/st
 
 | Stack | Reference | Commands |
 |-------|-----------|----------|
-| **Next.js 16** (App Router) + next-intl v4 + Tailwind v4 | [stack/nextjs/overview.md](./references/stack/nextjs/overview.md) | `/nextjs-setup-project`, `/nextjs-deploy-vercel`, `/nextjs-deploy-netlify`, `/nextjs-add-locale` |
+| **Next.js 16** (App Router) + next-intl v4 + Tailwind v4 | [stack/nextjs/overview.md](./references/stack/nextjs/overview.md) | `/nextjs-setup-project`, `/nextjs-deploy-vercel`, `/nextjs-deploy-netlify` |
 | **Nuxt 4** (Vue, SSR) + Nitro + @nuxtjs/i18n v10 + nuxt-auth-utils + Pinia + Tailwind v4 | [stack/nuxtjs/overview.md](./references/stack/nuxtjs/overview.md) | `/nuxtjs-setup-project` |
 
 

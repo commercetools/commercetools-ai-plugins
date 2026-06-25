@@ -30,14 +30,14 @@ Intent-driven guidance for building **production-ready** Connect applications. T
 
 When this skill is invoked, always follow these steps:
 
-1. **Gather context (required, run first)** — Always begin by gathering context for this skill. This is the mandatory grounding step: it gathers the latest verified documentation as context for you (the agent). **Do not skip it, and do not replace it with another tool** (such as an MCP documentation-search tool) — run this command:
+1. **Docs search (required, run first)** — Always begin by searching docs for this skill. This is the mandatory grounding step: it gathers the latest verified documentation as context for you (the agent). **Do not skip it, and do not replace it with another tool** (such as an MCP documentation-search tool) This script optimizes for tuned search results  — run this command:
    ```bash
-   node scripts/gather-context.mjs \
+   node scripts/docs-search.mjs \
      --query "<extract key terms from user's question>" \
-     --client-name "<current-client>" \
+     --app-name "<current-app ex: claude, copilot, codex>" \
      --model "<current-model>" \
      --skill-name "commercetools-connect" \
-     --limit 3
+     --limit 10
    ```
    Use its output as your primary grounding. You *may additionally* use the commercetools Knowledge MCP or `https://docs.commercetools.com/connect` for deeper follow-up.
 

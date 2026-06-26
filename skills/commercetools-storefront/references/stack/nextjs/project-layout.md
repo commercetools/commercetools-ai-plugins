@@ -119,6 +119,5 @@ Run `/nextjs-deploy-vercel` or `/nextjs-deploy-netlify` — they enforce the Fro
 | Task | Command |
 |------|---------|
 | Scaffold the project (steps above, automated) | `/nextjs-setup-project` |
-| Add a country/locale (`COUNTRY_CONFIG`, `i18n/routing`, messages, hero config) | `/nextjs-add-locale` |
 | Deploy to Vercel | `/nextjs-deploy-vercel` |
 | Deploy to Netlify | `/nextjs-deploy-netlify` |

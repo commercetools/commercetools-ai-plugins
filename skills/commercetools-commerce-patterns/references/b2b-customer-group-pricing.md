@@ -28,7 +28,7 @@ These parameters are also known as **price selection criteria**.
 
 ### 1. Product Projection Search
 
-If currency and additional price selection parameters are passed in a Product Projection Search request, the platform applies price selection logic and returns the matching price for each product/variant. See the official docs: [Price Selection](https://docs.commercetools.com/api/projects/products#price-selection).
+If currency and additional price selection parameters are passed in a Product Projection Search request, the platform applies price selection logic and returns the matching price for each product/variant. See the official docs: [Price Selection](https://docs.commercetools.com/api/pricing-and-discounts-overview#price-selection).
 
 ### 2. Cart Line Items
 

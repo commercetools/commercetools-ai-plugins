@@ -80,7 +80,7 @@ curl --location 'https://import.us-central1.gcp.commercetools.com/{your-project-
 }
 ```
 
-For additional information on import containers and best practices, refer to [this document](https://docs.commercetools.com/api/import-export/best-practices#using-import-containers-effectively).
+For additional information on import containers and best practices, refer to [this document](https://docs.commercetools.com/api/import-export/best-practices#effective-use-of-import-containers).
 
 ### Uploading prices to the Import Container
 

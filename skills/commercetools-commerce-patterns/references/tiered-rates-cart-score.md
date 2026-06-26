@@ -34,4 +34,4 @@ At this point an easy solution will be in the front end to eliminate the shippin
 
 - https://docs.commercetools.com/api/projects/predicates
 - https://docs.commercetools.com/api/projects/shippingMethods#get-shippingmethod
-- https://docs.commercetools.com/api/projects/shippingMethods#get-shippingmethods-for-a-cart-and-location
+- https://docs.commercetools.com/api/projects/shippingMethods#get-matching-shippingmethods-for-a-cart#for-a-cart-and-location

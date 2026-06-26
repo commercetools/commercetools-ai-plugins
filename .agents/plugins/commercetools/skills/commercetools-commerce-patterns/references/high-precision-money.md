@@ -6,7 +6,7 @@ Documentation: https://docs.commercetools.com/api/types#highprecisionmoney
 
 HighPrecision Money provides greater decimal precision than the BaseMoney type. Allowing for non-traditional currencies (for example, Crypto Currencies) as well as product pricing (for example, Gasoline).
 
-Usage documentation: https://docs.commercetools.com/api/types#usage
+Usage documentation: https://docs.commercetools.com/api/types#moneytype
 
 Introducing HighPrecisionMoney into a project can add risk and complexity. The business value of supporting HighPrecisionMoney should be evaluated against this risk and complexity, including:
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Consider a scenario where you want to allow customers to pick up certain products in-store while shipping others to their home or a designated delivery address. While the process for managing this use case is documented at https://docs.commercetools.com/tutorials/multiple-shipping-addresses-methods#using-multiple-shipping-methods, this article provides additional context and insights.
+Consider a scenario where you want to allow customers to pick up certain products in-store while shipping others to their home or a designated delivery address. While the process for managing this use case is documented at https://docs.commercetools.com/tutorials/multiple-shipping-addresses-methods#use-multiple-shipping-methods, this article provides additional context and insights.
 
 ## High Level Flow
 

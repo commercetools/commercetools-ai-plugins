@@ -45,18 +45,20 @@ if (missingParams.length > 0) {
   process.exit(1);
 }
 
+// Build request URL with query parameters
+const url = new URL(SCHEMA_URL);
+url.searchParams.set('resourceName', values['resource-name']);
+
 // Fetch the partial GraphQL SDL and print it (fail soft: exit 0 on any error)
 try {
-  const res = await fetch(SCHEMA_URL, {
-    method: 'POST',
+  const res = await fetch(url, {
+    method: 'GET',
     headers: {
-      'Content-Type': 'application/json',
       'User-Agent': `${values['app-name']}/1.0 (${values.model})`,
       'X-Model': values.model,
       'X-Client-Type': values['app-name'],
       'X-Skill-Name': values['skill-name'],
     },
-    body: JSON.stringify({ resourceName: values['resource-name'] }),
     signal: AbortSignal.timeout(60000),
   });
 

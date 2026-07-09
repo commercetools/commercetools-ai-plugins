@@ -51,36 +51,34 @@ if (missingParams.length > 0) {
 
 const normalizedLimit = Math.min(parseInt(values.limit, 10), 20)
 
-// Build request body
-const requestBody = {
-  query: values.query,
-  limit: normalizedLimit,
-  products: ['Composable Commerce', 'Checkout', 'Connect', 'InStore', 'AI Hub']
-};
+// Build request URL with query parameters
+const url = new URL(CONTEXT_URL);
+url.searchParams.set('query', values.query);
+url.searchParams.set('limit', String(normalizedLimit));
+for (const p of ['Composable Commerce', 'Checkout', 'Connect', 'InStore', 'AI Hub']) {
+  url.searchParams.append('products', p);
+}
 
 // Add optional content types filter
 if (values['content-types']) {
-  requestBody.contentTypes = values['content-types'].split(',').map(t => t.trim());
+  for (const t of values['content-types'].split(',').map(t => t.trim())) {
+    url.searchParams.append('contentTypes', t);
+  }
 }
-
-const requestData = JSON.stringify(requestBody);
 
 async function main() {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 60000);
 
   try {
-    const res = await fetch(CONTEXT_URL, {
-      method: 'POST',
+    const res = await fetch(url, {
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(requestData),
         'User-Agent': `${values['app-name']}/1.0 (${values.model})`,
         'X-Model': values.model,
         'X-Client-Type': values['app-name'],
         'X-Skill-Name': values['skill-name'],
       },
-      body: requestData,
       signal: controller.signal,
     });
 

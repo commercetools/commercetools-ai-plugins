@@ -1,6 +1,6 @@
 ---
 name: commercetools-connect
-description: Build, test, deploy, and install production-ready commercetools Connect applications (connectors) in TS, JS or Java. Use for connect apps, API extensions, subscription/event handlers, jobs, merchant center custom applications (views), syncing to external systems (ERP, WMS, tax, email, search, CRM), and deploying/installing/certifying a connector.
+description: Build, test, deploy, and install production-ready commercetools Connect applications (connectors) in TS, JS or Java. Use for connect apps, API extensions, subscription/event handlers, jobs, merchant center custom applications (views), syncing to external systems (ERP, WMS, tax, email, search, CRM), and deploying/installing/certifying a connector and integrating a deployed payment connector into a custom storefront.
 when_to_use:
   - "Building a Connect application or connector (service, event, job, or merchant-center custom application)"
   - "Writing or debugging connect.yaml, standardConfiguration/securedConfiguration, or inheritAs scopes"
@@ -10,6 +10,8 @@ when_to_use:
   - "Job app: scheduled or on-demand batch work (sync, cleanup, import)"
   - "Syncing commercetools to an external system (ERP, WMS, OMS, tax, email, search, CRM)"
   - "Deploying, installing, redeploying, or certifying a connector; choosing a region or deployment type"
+  - "Integrating a deployed payment-connector, forking one, or spinning up a new one from the payment-integration template — not the hosted Checkout SDK"
+  - "Deciding whether a certified/public PSP connector fits, needs forking, or must be built"
 metadata:
   contentType: SKILL
   area:
@@ -93,6 +95,18 @@ A single connector commonly combines types (e.g. a `service` API Extension that 
 
 Detail and trade-offs: [architecture-decisions.md](./references/architecture-decisions.md).
 
+## Connector-type integration sub-areas
+
+The build-side guidance in this skill is **connector-type-agnostic** (any service/event/job). Some connector *types* also have a focused, end-to-end sub-area that owns the whole job for that type — from "is there a connector already?" through configuring, forking, or building one, to the application backend around it:
+
+| Connector type | Covers | Go to |
+|---|---|---|
+| **Payment** (e.g Stripe, Adyen, Mollie, PayPal, ...etc) | The full payment lifecycle for a custom storefront: decide whether a certified/public connector fits → configure it, **or fork it, or spin up a new one from the payment-integration template** → build the backend (session BFF, Order after authorization, capture/refund/cancel via the processor, webhook reconciliation); plus debugging the round trip | [integrations/payment/overview.md](./references/integrations/payment/overview.md) |
+
+Start at that `overview.md` for **any** payment-connector task — integrating a deployed one *or building/forking one*. Its decision ladder routes you: rung 1 configure, rung 2 config-closes-the-gap, rung 3 fork, rung 4 build-from-template (payment-specific gotchas live in [integrations/payment/stripe.md](./references/integrations/payment/stripe.md)). It hands back to the build-side workflow and references **above** only for the deep, type-agnostic publish/certify lifecycle and the production-readiness gate.
+
+Each sub-area lives under [`references/integrations/<type>/`](./references/integrations/) with its own `overview.md`. Adding another connector type later (e.g. shipping, tax) means adding a sibling `references/integrations/<type>/` tree and one row here — the build-side guidance does not change.
+
 ## Step 2 — Price the contract before you build
 
 The expensive mistakes come from not pricing the contract you just chose:
@@ -167,6 +181,24 @@ A connector is **not done** until every applicable item holds. Each maps to a re
 | structured logs + correlation IDs, health, feature flags, runbook, DLQ | [observability-operations.md](./references/observability-operations.md) |
 | auth/envelope test matrices, supertest + msw patterns, what to mock | [testing.md](./references/testing.md) |
 | connect.yaml config, sandbox→preview→publish, install, redeploy, certification, regions, CLI | [deployment-installation.md](./references/deployment-installation.md) |
+
+### Integrating a deployed payment connector (sub-area)
+
+Start at the overview; it routes to the rest (integrate, configure, fork, **or build a new one**). See also the [Connector-type integration sub-areas](#connector-type-integration-sub-areas) section above.
+
+| Concern | Reference |
+|---|---|
+| **Start here** — the backend-focused workflow: requirements → is-a-certified-connector-enough → config → BFF/Order/capture-refund/webhook | [integrations/payment/overview.md](./references/integrations/payment/overview.md) |
+| Is a certified connector enough? fit-check a use case vs public connectors using live marketplace/docs data | [integrations/payment/connector-selection.md](./references/integrations/payment/connector-selection.md) |
+| Requirements → `connect.yaml` config mapping, worked example | [integrations/payment/config-from-requirements.md](./references/integrations/payment/config-from-requirements.md) |
+| The backend: session/BFF, Order after payment, capture/refund/cancel via the processor, webhook reconciliation, who owns the Payment | [integrations/payment/backend-integration.md](./references/integrations/payment/backend-integration.md) |
+| Test-drive the backend test-first: assert-vs-mock per piece, invariants as regression tests | [integrations/payment/backend-tdd.md](./references/integrations/payment/backend-tdd.md) |
+| Full-flow integration test against a real deployed connector + test card | [integrations/payment/integration-test.md](./references/integrations/payment/integration-test.md) |
+| Provider-agnostic frontend contract: session body, enabler load, processor routes + auth, pitfall catalog | [integrations/payment/connector-contract.md](./references/integrations/payment/connector-contract.md) |
+| Stripe specifics: exact `connect.yaml` keys + defaults, enabler bundle, test cards, webhook setup | [integrations/payment/stripe.md](./references/integrations/payment/stripe.md) |
+| Deploy a public payment connector (CLI auth, scopes, `deployment create`, not `connectorstaged`) | [integrations/payment/deploy-public-connector.md](./references/integrations/payment/deploy-public-connector.md) |
+| Deploy a forked/custom payment connector (`connectorstaged → publish → deployment create`) | [integrations/payment/deploy-custom-connector.md](./references/integrations/payment/deploy-custom-connector.md) |
+| Verify the round trip; throwaway harness to prove a deployed connector | [integrations/payment/verification.md](./references/integrations/payment/verification.md), [integrations/payment/test-harness.md](./references/integrations/payment/test-harness.md) |
 
 **Related skills:** SDK client setup, scopes, query predicates, and core data model live in [commercetools-platform](../commercetools-platform/SKILL.md) — link to it rather than restating client/auth basics here.
 

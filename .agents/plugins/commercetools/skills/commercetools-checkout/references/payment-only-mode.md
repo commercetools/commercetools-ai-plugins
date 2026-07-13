@@ -31,7 +31,7 @@ Adds payment processing via the [Checkout Browser SDK](https://docs.commercetool
    - `expressPayment` — express buttons: add Apple Pay / Google Pay buttons to the cart or PDP. Can coexist with either of the above.
 
 2. **Which PSP (Payment Service Provider)?**
-   The user must configure a Connector in the commercetools Merchant Center that connects to their PSP (e.g., Stripe, Adyen, Mollie, PayPal). The skill does not set up the PSP connector — that is done in commercetools Merchant Center or via the Payment Integrations API. Just record the answer so it's clear in your implementation notes.
+   The user must configure a Connector in the commercetools Merchant Center that connects to their PSP (e.g., Stripe, Adyen, Mollie, PayPal, ...etc). The skill does not set up the PSP connector — that is done in commercetools Merchant Center or via the Payment Integrations API. Just record the answer so it's clear in your implementation notes.
 
 ---
 
@@ -144,7 +144,7 @@ export default function StepPayment() {
     (async () => {
       try {
         const { sessionId, projectKey, region } = await getCheckoutSession();
-        
+
 
         paymentFlow({
           projectKey,
@@ -169,7 +169,7 @@ export default function StepPayment() {
 
   return (
     <div>
-      // display loading DOM 
+      // display loading DOM
       {/* Required mount point — without this the widget occupies the full page */}
       <div data-ctc />
       // display errors
@@ -184,7 +184,7 @@ export default function StepPayment() {
 
 In Checkout page, the payment step should render the PaymentStep.tsx
 
-> **Note**: With `paymentFlow`, Checkout handles the payment AND the **order is created by commercetools** automatically when payment succeeds (via the `paymentReturnUrl` configured in the Application). 
+> **Note**: With `paymentFlow`, Checkout handles the payment AND the **order is created by commercetools** automatically when payment succeeds (via the `paymentReturnUrl` configured in the Application).
 
 ---
 
@@ -243,7 +243,7 @@ Available CSS variables are listed in the Checkout theming docs.
 
 **Session expiry** — Checkout Sessions expire. Create the session as late as possible (when the user lands on the payment step / checkout page), not when the cart is created.
 
-**`<div data-ctc />`** — For `paymentFlow`, always render `<div data-ctc />` in the component's JSX. Without it the commercetools widget mounts at the document root and occupies the full page. 
+**`<div data-ctc />`** — For `paymentFlow`, always render `<div data-ctc />` in the component's JSX. Without it the commercetools widget mounts at the document root and occupies the full page.
 
 **No `PUBLIC_*` vars** — `projectKey` and `region` are server-side config. Return them from `/<api>/checkout/session` alongside `sessionId` so the browser never needs environment vars for these values.
 

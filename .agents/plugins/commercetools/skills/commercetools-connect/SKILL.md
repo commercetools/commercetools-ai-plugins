@@ -105,7 +105,7 @@ The build-side guidance in this skill is **connector-type-agnostic** (any servic
 
 Start at that `overview.md` for **any** payment-connector task — integrating a deployed one *or building/forking one*. Its decision ladder routes you: rung 1 configure, rung 2 config-closes-the-gap, rung 3 fork, rung 4 build-from-template (payment-specific gotchas live in [integrations/payment/stripe.md](./references/integrations/payment/stripe.md)). It hands back to the build-side workflow and references **above** only for the deep, type-agnostic publish/certify lifecycle and the production-readiness gate.
 
-Each sub-area lives under [`references/integrations/<type>/`](./references/integrations/) with its own `overview.md`. Adding another connector type later (e.g. shipping, tax) means adding a sibling `references/integrations/<type>/` tree and one row here — the build-side guidance does not change.
+Each sub-area lives under `references/integrations/<type>/` with its own `overview.md`. Adding another connector type later (e.g. shipping, tax) means adding a sibling `references/integrations/<type>/` tree and one row here — the build-side guidance does not change.
 
 ## Step 2 — Price the contract before you build
 

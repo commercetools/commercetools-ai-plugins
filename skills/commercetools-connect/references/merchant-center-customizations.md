@@ -21,7 +21,7 @@ metadata:
 This is the judgment layer. For the CLI commands themselves (scaffold, run, build, login) see [merchant-center-cli.md](./merchant-center-cli.md); for the shared Connect deploy lifecycle see [deployment-installation.md](./deployment-installation.md). The official docs are the source of truth for every field and step — this reference tells you *which* decisions matter and *why*, and links the rest.
 
 ## Table of Contents
-- [Contract facts (verified)](#contract-facts-verified)
+- [Contract facts (verified)](#contract-facts)
 - [Pattern 1: Custom application vs custom view](#pattern-1-custom-application-vs-custom-view)
 - [Pattern 2: The config-file contract](#pattern-2-the-config-file-contract)
 - [Pattern 3: Permissions](#pattern-3-permissions)

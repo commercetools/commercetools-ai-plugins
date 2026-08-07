@@ -1,0 +1,303 @@
+{
+  "skill_name": "commercetools-connect",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "We use Avalara for tax and want to integrate it into our commercetools storefront checkout — how do we set this up?",
+      "expected_output": "Recognizes Avalara has a certified, open-source connector and routes to configuring/forking it rather than building from scratch. Surfaces the two-app architecture (cart API Extension for calculation, OrderCreated Subscription for recording), asks for the key requirements (nexus regions, tax-code source, exemptions, void/refund lifecycle), and derives connect.yaml config (ExternalAmount tax mode, least-privilege scopes) grounded in the Avalara reference.",
+      "files": [],
+      "expectations": [
+        "Identifies that Avalara has a certified, open-source connector (names or clearly references the mediaopt/avalara-commercetools-connector or an equivalent certified connector)",
+        "Recommends configuring (or forking) the existing connector rather than building a new one from scratch",
+        "Describes the two-app architecture: a cart API Extension for tax calculation and an OrderCreated Subscription for recording/filing",
+        "Surfaces nexus regions as a requirement to gather from the user",
+        "Recommends ExternalAmount tax mode (with rationale, e.g. avoiding rounding drift)",
+        "Mentions least-privilege API client scopes via inheritAs.apiClient.scopes rather than hand-supplied CTP_CLIENT_ID/SECRET"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Our client only uses TaxJar for sales tax, no other engine. We need cart tax calculation and order recording in commercetools via a Connect app.",
+      "expected_output": "Recognizes TaxJar has no public certified connector and correctly routes to building from the tax-integration template (rung 4), not a marketplace install. Explains the two apps to build (tax-calculator service + order-syncer event), the ExternalAmount tax mode and the four required update actions, and surfaces TaxJar-specific gotchas (to_state required, sandbox doesn't persist, duplicate transaction_id handling).",
+      "files": [],
+      "expectations": [
+        "States that TaxJar has no public/certified commercetools connector",
+        "Correctly routes to building from the tax-integration template (rung 4) rather than a marketplace install",
+        "Describes both apps to build: a tax-calculator service (cart API Extension) and an order-syncer event app",
+        "Mentions the four ExternalAmount update actions (line item, custom line item, shipping method, cart total tax)",
+        "Surfaces at least one TaxJar-specific gotcha (e.g. to_state required on transactions, sandbox does not persist transactions, duplicate transaction_id treated as success)"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Our tax connector's cart extension keeps failing — checkout breaks every time a customer adds an item to their cart, and I think it's returning a 202. Also tax isn't showing up in TaxJar's dashboard for orders.",
+      "expected_output": "Diagnoses the 202 response as the response-status trap (API Extensions must return 200/201, not 202) as the cause of checkout breaking on every cart update. Separately diagnoses the missing dashboard transactions as the calculation-vs-recording distinction (the calculator's quote never appears in the dashboard; only the order-syncer's record call does) and/or the sandbox-doesn't-persist trap, rather than conflating the two issues.",
+      "files": [],
+      "expectations": [
+        "Identifies returning HTTP 202 as the root cause of the cart/checkout failures (API Extensions must return 200 or 201)",
+        "Explains the missing dashboard transactions via the calculation-vs-recording distinction and/or the sandbox-doesn't-persist trap",
+        "Treats the two symptoms (checkout failing, missing dashboard transactions) as two separate root causes rather than conflating them into one fix",
+        "Does not misdiagnose the 202 issue as a tax-calculation-logic bug (e.g. wrong tax amounts) rather than a response-status bug"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "We want to sync our commercetools customers into HubSpot as contacts, and also push new orders as deals. How do we build this?",
+      "expected_output": "Recognizes HubSpot has no certified commercetools connector and routes to building a connector (not a marketplace install). Asks direction and source of truth first, then routes to an event-driven outbound design: a Connect event app subscribing to customer changes and OrderCreated, re-fetching the resource by id and upserting into HubSpot keyed on externalId (writing the HubSpot id back to the Customer). Recommends a separate one-time migration job for existing customers, least-privilege scopes, and the HubSpot token in securedConfiguration.",
+      "files": [],
+      "expectations": [
+        "States that HubSpot has no public/certified commercetools connector and this is a build, not a marketplace install",
+        "Establishes direction (commercetools → CRM) and source of truth before proposing an architecture",
+        "Proposes an event-driven outbound design (a Connect event app on customer changes / OrderCreated), not a synchronous API Extension",
+        "Emphasizes upsert keyed on externalId (linking the Customer to the HubSpot record) rather than create-on-every-event",
+        "Recommends a separate one-time migration job for existing customers, distinct from ongoing sync",
+        "Puts the HubSpot API token in securedConfiguration and uses least-privilege scopes (e.g. view_customers, view_orders, manage_subscriptions)"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Our Salesforce integration keeps creating duplicate contacts, and after we added writing customer updates back from Salesforce into commercetools it started an endless loop of updates. What's wrong?",
+      "expected_output": "Diagnoses the duplicates as create-instead-of-upsert (must look up and upsert by externalId, writing the external id back on first sync) and the endless loop as a missing self-change filter in a bi-directional sync (the inbound Salesforce write raises a ResourceUpdated that re-triggers the outbound sync). Treats them as two separate root causes, recommends one-way sync as the durable fix, and if bi-directional is required, a self-change filter plus field-level source-of-truth ownership.",
+      "files": [],
+      "expectations": [
+        "Identifies the duplicate contacts as create-instead-of-upsert; fix is upsert keyed on externalId with write-back of the external id",
+        "Identifies the endless loop as a missing self-change filter in a bi-directional sync (inbound write re-triggers the outbound syncer)",
+        "Treats the two symptoms as separate root causes rather than one fix",
+        "Recommends one-way sync as the durable fix and notes bi-directional sync is discouraged",
+        "If bi-directional is required, recommends a self-change filter (e.g. marking connector-originated writes) and field-level source-of-truth ownership"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "We want customers to be able to pay with gift cards at checkout. We use Voucherify to manage the cards. How do we set this up in commercetools?",
+      "expected_output": "Recognizes Voucherify has a public, open-source gift card connector and routes to using/configuring it rather than building from scratch. Surfaces the two-app architecture (enabler UI + processor with balance/redeem), asks for key requirements (currency, region, fallback payment method), and — critically — states that a gift card Payment Integration must always be configured alongside another (PSP) Payment Integration for the insufficient-balance case.",
+      "files": [],
+      "expectations": [
+        "Identifies that Voucherify has a public gift card connector (names or clearly references commercetools/connect-giftcard-integration-voucherify or an equivalent public connector)",
+        "Recommends using/configuring (or forking) the existing connector rather than building a new one from scratch",
+        "Describes the two-app architecture: an enabler (frontend UI) and a processor (backend that checks balance and redeems value, owning the commercetools Payment)",
+        "States that a gift card Payment Integration must be configured alongside at least one other (fallback) Payment Integration",
+        "Surfaces currency and region as requirements to gather, and mentions least-privilege scopes (e.g. manage_payments, view_sessions, manage_checkout_payment_intents)"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "We have our own in-house store-credit system with a REST API and want to let shoppers spend that credit at checkout as if it were a gift card. There's no existing connector for it.",
+      "expected_output": "Recognizes there is no public connector for the in-house system and routes to building from the gift-card-integration template (rung 4). Explains the two apps to build (enabler + processor), the processor routes and their auth split (balance/redeem session-authenticated, payment-intents JWT/OAuth for refund/reverse), partial-redemption remainder handling with a fallback method, and idempotent redeem.",
+      "files": [],
+      "expectations": [
+        "States there is no public connector for the in-house system and routes to building from the gift-card-integration template",
+        "Describes both apps to build: an enabler (frontend) and a processor (backend to the store-credit API)",
+        "Explains the auth split: balance/redeem are session-authenticated; the payment-intents route is JWT/OAuth-authenticated (manage_checkout_payment_intents) for refund/reverse",
+        "Explains partial redemption — the card/credit covers what it can and a fallback payment method covers the remainder, rather than rejecting the payment",
+        "Mentions redeem idempotency (a retried redeem must not double-charge)"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "We want to send transactional emails from commercetools — order confirmation, shipment, and password reset — using SendGrid. How do we set this up as a Connect connector?",
+      "expected_output": "Recognizes email as a purely asynchronous, event-driven integration: one `event` Connect application driven by a Subscription on Customer/Order Messages, with no API Extension. Notes email is template-first (checks the marketplace but expects to build from the official transactional email template and implement the SendGrid send call). Maps each email to its Message, surfaces the at-most-once vs at-least-once delivery decision for a non-idempotent send, gates order/shipment emails on the target state, and derives least-privilege scopes.",
+      "files": [],
+      "expectations": [
+        "Describes a single event application (Subscription on Customer/Order Messages) and explicitly does NOT use an API Extension for email",
+        "Checks for a ready-made connector but routes to building from the official transactional email template (implementing the SendGrid send call), noting email is template-first",
+        "Maps each requested email to its commercetools Message (OrderCreated, OrderShipmentStateChanged or OrderStateChanged, CustomerPasswordTokenCreated)",
+        "Surfaces the delivery-semantics decision: at-most-once (ack-first, may drop) vs at-least-once (retries but must dedupe to avoid duplicate emails)",
+        "Recommends least-privilege scopes via inheritAs.apiClient.scopes (manage_subscriptions plus the read/write the handlers need) rather than hand-supplied CTP_CLIENT_ID/SECRET",
+        "Notes order/shipment emails must be gated on the target state, not sent on every OrderStateChanged"
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "Our commercetools email connector has two problems: some customers get two order confirmation emails, and password reset emails sometimes never arrive. What's going on?",
+      "expected_output": "Diagnoses the duplicate confirmations as at-least-once redelivery without deduplication (event delivery is at-least-once and an ESP send is not idempotent), fixed with an idempotency key or a sent-marker on a stable key. Separately diagnoses missing reset emails as either the ack-first (fire-and-forget) pattern silently dropping a failed send with no retry, or an empty/invalid token because the token value is only in the CustomerPasswordTokenCreated Message when validity is <= 60 minutes. Treats the two symptoms as distinct root causes.",
+      "files": [],
+      "expectations": [
+        "Explains duplicate emails as at-least-once redelivery without dedupe, since an ESP send is not idempotent",
+        "Recommends deduplication via an ESP idempotency key or a stable sent-marker (not an in-process set)",
+        "Explains missing reset emails via ack-first silently dropping a failed send (no redelivery) and/or the token value only being present when token validity is <= 60 minutes",
+        "Treats the duplicate-email and missing-email symptoms as two separate root causes rather than one fix",
+        "Does not recommend a stateful/in-memory dedup store as the idempotency solution"
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "We're launching a multi-vendor marketplace on commercetools. Sellers and their listings live in our marketplace platform and should appear in our storefront, and each seller has to receive their part of an order. How do we build the connector?",
+      "expected_output": "Fixes the role (operator) and direction per domain before proposing an architecture, and asks the user to choose between using a public connector directly, customising/forking an open-source one, or building for their marketplace service — after checking the live marketplace listings and warning that most marketplace listings are partner integrations rather than deployable Connect connectors (and that there is no marketplace Connect template). Proposes the seller/offer model (a Channel per seller keyed on the marketplace seller id, per-seller prices carrying a distribution channel, InventoryEntry per sku + supply channel, one shared Product when several sellers sell the same SKU, Store per seller only when isolation is required) and the apps: an authenticated inbound service webhook (or job poll) for seller/offer sync, an event app on OrderCreated that groups line items by seller and records the hand-off in the Order's syncInfo, and a reconciliation job. States that commissions and payouts stay in the marketplace/PSP.",
+      "files": [],
+      "expectations": [
+        "Establishes the operator role and the direction per domain (offers/sellers in, order lines out) before proposing an architecture",
+        "Checks live marketplace listings and asks the user to choose between using a public connector as-is, customising/forking one, and building for their service",
+        "Warns that marketplace listings are often partner integrations rather than deployable Connect connectors, and that there is no marketplace Connect template",
+        "Models sellers as Channels keyed on the marketplace seller id (Store per seller only if isolation is required), not as an invented seller resource",
+        "Scopes per-seller offers correctly: price with a distribution channel, InventoryEntry per sku + supplyChannel, and one shared Product when multiple sellers sell the same SKU",
+        "Proposes an authenticated inbound service webhook (or job poll) plus an event app on OrderCreated that splits line items per seller — not an API Extension",
+        "Uses the Order's syncInfo (updateSyncInfo) to record the per-seller hand-off so redelivery does not double-push",
+        "States that commissions/payouts are out of scope for commercetools (Payment tracks status only)"
+      ]
+    },
+    {
+      "id": 11,
+      "prompt": "Our marketplace connector is misbehaving: we get a duplicate product every time a second seller lists the same SKU, one seller's price shows up on every seller's store, and after a Pub/Sub redelivery some sellers received the same order twice. Also we can't delete a Channel when offboarding a seller.",
+      "expected_output": "Diagnoses four separate root causes: duplicate Products from creating per seller instead of resolving to one shared Product with per-seller prices and inventory; the price leak from a price written without a distribution channel (Stores only filter prices that have a channel, so channel-less prices are inherited everywhere); the double order push from not reading/writing the Order's syncInfo per seller channel before exporting (at-least-once delivery); and the Channel deletion failure as expected platform behavior (a Channel referenced by inventory, Line Items, Stores or Prices cannot be deleted until those references are removed) whose fix is deactivation rather than deletion.",
+      "files": [],
+      "expectations": [
+        "Identifies the duplicate Products as one-Product-per-seller modeling; fix is one shared Product with per-seller prices and InventoryEntries",
+        "Identifies the price leak as a price written without a distribution channel, and explains that channel-less prices are visible in every Store",
+        "Identifies the double order push as missing syncInfo idempotency (read syncInfo before pushing, updateSyncInfo per seller channel) under at-least-once delivery",
+        "Explains the Channel deletion failure as documented behavior (referenced by InventoryEntry/LineItem/Store/Price) and recommends deactivating the seller instead of deleting the Channel",
+        "Treats the symptoms as separate root causes rather than conflating them into one fix"
+      ]
+    },
+    {
+      "id": 12,
+      "prompt": "We want to build a commercetools Connect promotion connector. Requirements are 20% off orders over EUR 100, a SUMMER25 promo code with a usage limit, and free shipping above EUR 150.",
+      "expected_output": "Recognizes that every stated requirement is covered by native commercetools discounts (Cart Discounts + Discount Code, shipping-cost target) and pushes back on building a connector at all (rung 0), explaining the cost of a connector on the cart hot path. Offers to proceed with a connector only if there is an unstated requirement that native discounts cannot meet.",
+      "files": [],
+      "expectations": [
+        "Identifies that all three requirements are achievable natively with Cart Discounts plus a Discount Code (including a shipping-cost target for free shipping)",
+        "Explicitly recommends NOT building a connector for these requirements (rung 0)",
+        "Names a concrete cost of the connector path (per-call engine cost, added cart latency, or an availability dependency on the cart hot path)",
+        "Asks what requirement native discounts cannot meet, rather than silently proceeding to build",
+        "Does not begin scaffolding an API Extension or connect.yaml for these requirements"
+      ]
+    },
+    {
+      "id": 13,
+      "prompt": "Our marketing team runs everything in Talon.One — loyalty tiers, referral campaigns, unique coupon codes. We need it wired into our commercetools checkout. What are our options?",
+      "expected_output": "Checks live marketplace data rather than answering from memory, identifies that Talon.One has a public MIT-licensed Connect connector, and presents the three paths (use as-is, customise/fork, build new) asking the user to choose. Surfaces the two-app architecture (evaluator API Extension + redemption Subscription), that discounts land via setDirectDiscounts, and the mutual exclusivity consequence for native Discount Codes.",
+      "files": [],
+      "expectations": [
+        "Identifies that Talon.One has a public/listed Connect connector with public MIT source (names composable-com/ct-connect-talonone or equivalent), rather than assuming a build is needed",
+        "Presents the choice between using the connector as-is, customising/forking it, and building a new one, and asks the user to decide",
+        "Describes the two halves: cart API Extension for evaluation and an OrderCreated Subscription (or equivalent) for redemption/loyalty points",
+        "States that discounts are applied via setDirectDiscounts (Direct Discounts) rather than native Cart Discounts",
+        "Warns that Direct Discounts and Discount Codes are mutually exclusive, so native discount codes become inert on those carts",
+        "Checks live marketplace/docs data rather than asserting connector availability purely from memory"
+      ]
+    },
+    {
+      "id": 14,
+      "prompt": "We have our own in-house promotions microservice with a REST API. Build us a Connect connector that applies its discounts to the cart and tells it when an order is placed.",
+      "expected_output": "Correctly routes to a from-scratch build (rung 4) and states there is no promotion-integration template, so it scaffolds a plain service + event connector with the Connect CLI. Designs the evaluator (setDirectDiscounts, fail-open, cart-hash call reduction, 200 not 202) and the redemption-syncer (re-fetch order by id, idempotent redeem on order id), and derives least-privilege scopes via inheritAs.apiClient.scopes.",
+      "files": [],
+      "expectations": [
+        "States that there is no promotion-integration Connect template (unlike payment and tax) and scaffolds a plain service + event connector instead",
+        "Declares two applications: a service registered as a cart API Extension and an event app driven by an OrderCreated Subscription",
+        "Applies discounts via setDirectDiscounts, writing the complete array rather than a delta",
+        "Specifies idempotent redemption keyed on a stable value (the order id) and treats an already-redeemed response as success",
+        "Recommends fail-open for the evaluator so a promotion-service outage does not break cart updates",
+        "Uses inheritAs.apiClient.scopes for least-privilege credentials rather than hand-supplied CTP_CLIENT_ID/CTP_CLIENT_SECRET",
+        "Does not redeem or award points at cart-evaluation time"
+      ]
+    },
+    {
+      "id": 15,
+      "prompt": "Our promotion connector is live but two things are wrong: our old commercetools discount codes stopped doing anything, and some customers got their loyalty points twice for a single order.",
+      "expected_output": "Diagnoses the inert discount codes as the documented Direct Discounts / Discount Codes mutual exclusivity (correct behavior, not a bug, requiring an ownership decision) and the double points as a non-idempotent redemption handler under at-least-once Subscription redelivery. Treats them as two separate root causes and gives the idempotency fix keyed on the order id.",
+      "files": [],
+      "expectations": [
+        "Explains the inert discount codes via Direct Discounts and Discount Codes being mutually exclusive, and frames it as designed behavior rather than a defect",
+        "Diagnoses the duplicate loyalty points as non-idempotent redemption under at-least-once Subscription delivery / message redelivery",
+        "Prescribes idempotency keyed on a stable identifier such as the order id, treating an already-redeemed response as success",
+        "Treats the two symptoms as two separate root causes rather than conflating them",
+        "For the discount-code issue, raises the promotion-ownership decision (engine owns promotions vs native) instead of proposing to make both work on the same cart"
+      ]
+    },
+    {
+      "id": 16,
+      "prompt": "We want to stream our commercetools orders into BigQuery for analytics as they happen. How do we build this?",
+      "expected_output": "Recognizes there is no turnkey analytics connector and no Export API, so this is a build from the product-export template (after a live registry check). Routes to an event-driven streamer: a Connect event app subscribing to order Messages (not an API Extension), decoding the Pub/Sub envelope, re-fetching the Order by id (required on payloadNotIncluded), transforming to the BigQuery row, and delivering with a dedup key. Emphasizes destination-side deduplication on resource.id + sequenceNumber because delivery is at-least-once with no ordering, least-privilege read scopes (view_orders, manage_subscriptions), and the destination credentials in securedConfiguration.",
+      "files": [],
+      "expectations": [
+        "States there is no dedicated/turnkey analytics connector and no Export API, so this is a build (from the product-export template) rather than a marketplace install",
+        "Proposes an event app subscribing to order Messages/Subscriptions, and explicitly does NOT use an API Extension",
+        "Re-fetches the Order by resource.id rather than trusting the Message payload (and notes payloadNotIncluded forces a re-fetch)",
+        "Emphasizes at-least-once delivery and a destination-side dedup key on resource.id + sequenceNumber to avoid duplicate rows",
+        "Recommends least-privilege read scopes (e.g. view_orders, manage_subscriptions) via inheritAs.apiClient.scopes rather than an admin client",
+        "Puts the BigQuery credentials in securedConfiguration"
+      ]
+    },
+    {
+      "id": 17,
+      "prompt": "We need a nightly load of our customers and orders into Snowflake for reporting. What's the right way to build this on Connect?",
+      "expected_output": "Routes to a scheduled job application (not an event app) that queries the HTTP/GraphQL API, because there is no Export API. Windows the query on lastModifiedAt and uses cursor-based pagination (not offset), checkpointing the window so a re-run loads only the delta and resumes after a failure. Makes the load idempotent via an upsert/MERGE keyed on the resource id so a re-run does not double-load, keeps the batch backfill separate from any streaming path, and puts Snowflake credentials in securedConfiguration with least-privilege read scopes.",
+      "files": [],
+      "expectations": [
+        "Routes to a scheduled job application for the batch load (not an event/subscription app for the nightly run)",
+        "States there is no Export API, so it queries the HTTP/GraphQL API",
+        "Windows the query on lastModifiedAt and uses cursor-based pagination rather than offset",
+        "Checkpoints the window so a re-run loads only the delta and resumes after a failure",
+        "Makes the load idempotent via upsert/MERGE keyed on the resource id (a re-run does not duplicate rows)",
+        "Puts Snowflake credentials in securedConfiguration and uses least-privilege read scopes"
+      ]
+    },
+    {
+      "id": 18,
+      "prompt": "Our analytics pipeline is misbehaving: we're getting duplicate rows in the warehouse, and some orders never arrive at all. What's going on?",
+      "expected_output": "Diagnoses the duplicate rows as at-least-once delivery (and/or a batch window overlapping the stream) with no destination-side dedup key, fixed by deduping/MERGEing on resource.id + sequenceNumber. Separately diagnoses the missing orders as either the Subscription never being registered (so no Messages are delivered), an ack-first handler swallowing a failed destination delivery with no retry, or payloadNotIncluded producing empty rows without a re-fetch. Treats the two symptoms as separate root causes rather than one fix, and does not recommend an in-process/stateful dedup store.",
+      "files": [],
+      "expectations": [
+        "Explains the duplicate rows as at-least-once delivery (or a batch/stream overlap) without a destination-side dedup key",
+        "Prescribes deduplication on the warehouse side keyed on resource.id + sequenceNumber (not an in-process/stateful dedup store)",
+        "Explains the missing orders via at least one of: Subscription not registered, ack-first swallowing a failed delivery with no retry, or payloadNotIncluded without a re-fetch",
+        "Treats the duplicate-row and missing-order symptoms as two separate root causes rather than one fix",
+        "Does not misroute the fix to Change History or an Export API (recognizes neither is the mechanism)"
+      ]
+    },
+    {
+      "id": 19,
+      "prompt": "We want to add typo-tolerant search with brand and size facets and price sorting to our storefront. Which external search connector should we set up?",
+      "expected_output": "Recognizes that native commercetools Product Search already covers typo/fuzzy full-text, faceting, and sorting, so no external engine or connector is warranted for these requirements. Pushes back at rung 0 before proposing any connector, names the concrete cost of the external-engine path (a standing indexing pipeline to own and secure, an eventual-consistency lag, per-record/query cost, an operational dependency), and asks what native search cannot do (merchandising, synonyms, recommendations, analytics, A/B) before escalating.",
+      "files": [],
+      "expectations": [
+        "Identifies that native Product Search / Product Projection Search already provides full-text search, typo/fuzzy tolerance, faceting, and sorting",
+        "Pushes back at rung 0 and recommends no connector unless a need beyond native is named",
+        "Names a concrete cost of the external-engine path (indexing pipeline to own, eventual-consistency lag, per-record/query cost, operational dependency)",
+        "Asks what native search cannot do (merchandising, synonyms, recommendations, analytics, A/B testing) before proposing an engine",
+        "Does not propose an API Extension or any synchronous cart-path integration for search"
+      ]
+    },
+    {
+      "id": 20,
+      "prompt": "We use Algolia and want our commercetools catalog indexed into it. How do we build this connector?",
+      "expected_output": "Checks live listings rather than answering from memory, and distinguishes the vendor-hosted, dashboard-configured 'Algolia for commercetools' integration (not a deployable Connect connector) from the open-source launchpad-algolia-sync reference and the official product-export template scaffold. Proposes the two-app outbound design — a full-ingestion service/job plus an incremental-updater event app on ProductPublished/ProductUnpublished — reading the current published projection (staged=false) and reindexing atomically, not an API Extension. Puts the Algolia admin key in securedConfiguration and uses least-privilege read-only scopes.",
+      "files": [],
+      "expectations": [
+        "Checks live marketplace/docs data rather than asserting connector availability purely from memory",
+        "Distinguishes the vendor-hosted 'Algolia for commercetools' dashboard integration (not a Connect connector) and surfaces it with the not-a-Connect-solution warning",
+        "Points to the open-source launchpad-algolia-sync as a fork base and/or the product-export template as the scaffold",
+        "Proposes two outbound apps (full-ingestion service/job + incremental-updater event on ProductPublished/ProductUnpublished), not an API Extension",
+        "Indexes the current, published projection (staged=false) and reindexes atomically (build-and-swap), not wipe-then-fill",
+        "Puts the Algolia admin key in securedConfiguration and uses least-privilege read-only scopes (view_products) via inheritAs.apiClient.scopes rather than manage_products or hand-supplied credentials"
+      ]
+    },
+    {
+      "id": 21,
+      "prompt": "We run a self-hosted Elasticsearch cluster and there is no connector for it. Build us a Connect connector that keeps a product search index in sync with our commercetools catalog.",
+      "expected_output": "Routes to a from-scratch build but scaffolds from the official product-export template (rather than claiming no template exists), declaring two applications: a full-ingestion service/job that pages Product Projections with cursor pagination and reindexes atomically, and an incremental-updater event app on product-change Subscriptions. Maps a Product Projection onto a flat, denormalized document keyed on a stable objectID, propagates deletions, uses least-privilege read-only scopes, and keeps the Elasticsearch credentials in securedConfiguration.",
+      "files": [],
+      "expectations": [
+        "Scaffolds from the product-export template (the official outbound scaffold) rather than claiming there is no template or building from nothing",
+        "Declares two applications — a full-ingestion service/job and an incremental-updater event app on product-change Subscriptions — not an API Extension",
+        "Full load reads the current projection with cursor pagination (staged=false, sort=id asc, where=id > \"<lastId>\") and reindexes atomically (build-and-swap), verifying record counts",
+        "Maps the Product Projection onto a flat, denormalized document keyed on a stable objectID for idempotent upsert",
+        "Propagates deletions (ProductUnpublished/ProductDeleted remove the record) so the index has no ghost results",
+        "Uses least-privilege read-only scopes via inheritAs.apiClient.scopes and puts the Elasticsearch credentials in securedConfiguration"
+      ]
+    },
+    {
+      "id": 22,
+      "prompt": "Our search index has two problems: products we unpublished still show up in search results, and during last night's full rebuild the storefront search went nearly empty for several minutes. Also a product we just published isn't searchable yet.",
+      "expected_output": "Diagnoses the persistent unpublished products as missing deletion propagation (the incremental updater must remove the record by objectID on ProductUnpublished/ProductDeleted) and the half-empty index during the rebuild as a non-atomic reindex (wipe-then-fill instead of build-and-swap). Treats them as two separate root causes, and explains the just-published-not-yet-searchable lag as expected eventual consistency (projection plus engine indexing delay), not a defect — and not the same cause as the ghost records.",
+      "files": [],
+      "expectations": [
+        "Diagnoses the persistent unpublished products as missing deletion propagation — the incremental updater must handle ProductUnpublished (and ProductDeleted) by removing the record by objectID",
+        "Diagnoses the half-empty index during the rebuild as a non-atomic reindex, and prescribes build-and-swap / replace-all-objects (atomic) instead of wipe-then-fill",
+        "Treats the two symptoms as two separate root causes rather than conflating them",
+        "Explains the just-published-not-yet-searchable lag as expected eventual consistency (projection + engine indexing delay), not a defect",
+        "Does not attribute the ghost records to eventual consistency (distinguishes a missing delete from indexing lag)"
+      ]
+    }
+  ]
+}

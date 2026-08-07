@@ -5,16 +5,16 @@
  *
  * Gathers relevant commercetools documentation as grounding context for the agent, with instrumentation headers.
  * Results are written to stdout for consumption by AI agents.
- * 
+ *
  * Usage:
  *   node scripts/docs-search.mjs --query "how to create payment" --app-name <name> --model <model> --skill-name <skill> [options]
- * 
+ *
  * Required:
  *   --query <string>          Search query
  *   --app-name <string>       App identifier (e.g., vscode-copilot, claude-desktop)
  *   --model <string>          Model name (e.g., claude-sonnet-4.5, gpt-4)
  *   --skill-name <string>     Skill identifier (e.g., commercetools-checkout)
- * 
+ *
  * Optional:
  *   --limit <number>          Number of results (default: 3)
  *   --content-types <string>  Comma-separated content types
@@ -65,6 +65,8 @@ if (values['content-types']) {
     url.searchParams.append('contentTypes', t);
   }
 }
+// Exclude Skill content type to avoid self-referencing results
+url.searchParams.append("excludeContentTypes", "Skill");
 
 async function main() {
   const controller = new AbortController();

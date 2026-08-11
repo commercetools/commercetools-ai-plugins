@@ -21,6 +21,8 @@ metadata:
 
 An `event` application receives commercetools [Subscription](https://docs.commercetools.com/api/projects/subscriptions.md) notifications through a Connect-provisioned message broker. The connector registers the Subscription in `postDeploy` (see [lifecycle-scripts.md](./lifecycle-scripts.md)) and exposes an HTTP endpoint (`endpoint: /event`) that the broker pushes to.
 
+> The **transactional email** sub-area ([integrations/email/overview.md](./integrations/email/overview.md)) is a worked, end-to-end `event` app built on the patterns below — including the at-most-once vs at-least-once decision for a non-idempotent ESP send.
+
 ## Table of Contents
 - [Contract facts (verified)](#contract-facts-verified)
 - [Pattern 1: Validate the envelope before processing](#pattern-1-validate-the-envelope-before-processing)
@@ -39,7 +41,7 @@ An `event` application receives commercetools [Subscription](https://docs.commer
 From [Connect — deployment information](https://docs.commercetools.com/connect/overview.md) and [Subscriptions — Delivery](https://docs.commercetools.com/api/projects/subscriptions.md):
 
 - **At-least-once delivery, no ordering guarantee, no delivery-time guarantee.**
-- **The payload arrives wrapped in the Google Cloud Pub/Sub push envelope, and `message.data` is base64-encoded.** **All Google Cloud Platform event payload `message.data` is base64-encoded** (verified: [Connect — locally test an event app](https://docs.commercetools.com/connect/steps-locally-test-event)) — the wrapper is `{ "message": { "data": "<base64>" } }`. The base64 is the Pub/Sub transport, not something commercetools adds; the commercetools notification underneath is plain JSON. Decode it before processing (Pattern 1).
+- **The payload arrives wrapped in the Google Cloud Pub/Sub push envelope, and `message.data` is base64-encoded.** **All Google Cloud Platform event payload `message.data` is base64-encoded** (verified: [Connect — locally test an event app](https://docs.commercetools.com/connect/test-applications-locally.md#test-an-event-application)) — the wrapper is `{ "message": { "data": "<base64>" } }`. The base64 is the Pub/Sub transport, not something commercetools adds; the commercetools notification underneath is plain JSON. Decode it before processing (Pattern 1).
 - **Ack by status code (Connect event apps):** the broker retries unless the app responds `102`, `200`, `201`, `202`, or `204`. Too many negative acks trigger push backoff.
 - **Event acknowledgement timeout: 10 seconds.** Application request times out after 5 minutes; the broker retains unacknowledged messages for **7 days**.
 - **Delivery identity (for dedup comparisons and logging, not storage):** for `notificationType: "Message"` the `resource.id` + `sequenceNumber`; for Change payloads (`ResourceCreated/Updated/Deleted`) the `resource.id` + `version`.

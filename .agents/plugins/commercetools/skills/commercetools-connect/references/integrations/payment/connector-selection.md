@@ -34,6 +34,8 @@ The set of supported PSPs, payment methods, integration types, and capabilities 
 
 State explicitly to the user that you're checking current data, and cite what you found — capabilities differ by **connector version**, so name the version.
 
+**Verify it's an actual Connect connector — and ask the user.** Apply the parent skill's general rule ([SKILL.md → Marketplace listings are not all Connect connectors](../../../SKILL.md#marketplace-listings-are-not-all-connect-connectors--verify-before-recommending)): the marketplace lists integrations that are **not necessarily commercetools Connect connectors**, and it can be out of sync with what's actually deployable, so confirm a candidate is a real Connect connector (Connect affordance / repo / `connect.yaml`; the **Connect CLI registry is authoritative** over the listing) before treating it as rung 1/2. If a good-match option turns out to be a non–Connect (partner/SaaS) integration, surface it but **warn that this skill does not cover using non–Connect connectors** and offer the build/fork path instead.
+
 ## The fit check
 
 Compare the requirements gathered in Step 1 against what a candidate public connector actually supports. Check each dimension:
@@ -62,6 +64,7 @@ Only rungs 3–4 leave this skill (hand off to build/extend); the skill resumes 
 
 ## Checklist
 - [ ] Checked live marketplace + supported-PSPs docs (not memory); cited the connector + version
+- [ ] Verified the candidate is a **deployable Connect connector** (not a partner/SaaS listing); asked the user, and warned if they chose a non–Connect integration this skill doesn't cover
 - [ ] PSP, methods, integration type, capabilities, region each compared to the requirements
 - [ ] Apparent capability gaps re-checked as **config** (rung 2) before considering any build
 - [ ] When a public connector exists but has a real gap, chose **fork/extend** (rung 3) over build-from-scratch

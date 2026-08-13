@@ -6,6 +6,8 @@ when_to_use:
   - "Setting up payment-only mode while keeping existing address and shipping flows"
   - "Configuring PSP connectors such as Stripe, Adyen, or Mollie"
   - "Handling payment webhooks and order confirmation"
+  - "Implementing a spec/plan/tasks.md task annotated [SKILL: commercetools-checkout]"
+  - "An implementation-plan step that integrates the Checkout, payment sessions, or PSP connectors"
 metadata:
   contentType: SKILL
   area:

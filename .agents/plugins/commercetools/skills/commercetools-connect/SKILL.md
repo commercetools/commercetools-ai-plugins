@@ -17,6 +17,8 @@ when_to_use:
   - "Promotion/loyalty connectors (Talon.One, Voucherify, Dovetech, Eagle Eye): rule out native discounts first, then use/fork/build the evaluator API Extension + redemption Subscription (setDirectDiscounts); debugging inert Discount Codes or double redemption"
   - "Analytics export to a data warehouse/CDP/product-analytics tool (BigQuery, Snowflake, Segment): no turnkey connector and no Export API, so build an event streamer on Subscriptions/Messages plus a batch job (lastModifiedAt windowing + cursor pagination) from the product-export template, deduped on the destination side; debugging duplicate rows or missing events; distinct from Platform Insights (APM) and Change History (governance)"
   - "Search/product-discovery connectors (Algolia, Constructor, Bloomreach, Elasticsearch, Typesense): rule out native Product Search first, then use/fork or build from the product-export template the two outbound apps (full-ingestion service/job + incremental-updater event on ProductPublished/ProductUnpublished), staged=false projection, atomic reindex; debugging ghost records, a half-empty rebuild, or wrong price/locale in results"
+  - "Implementing a spec/plan/tasks.md task annotated [SKILL: commercetools-connect]"
+  - "An implementation-plan step that builds a Connect app, API Extension, Subscription, or MC custom app"
 metadata:
   contentType: SKILL
   area:

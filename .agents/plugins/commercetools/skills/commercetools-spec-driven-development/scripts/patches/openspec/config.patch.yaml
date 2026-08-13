@@ -1,0 +1,23 @@
+# commercetools-spec-extension:begin v=1 id=platform-skills-conventions
+context: |
+  commercetools platform skills (commercetools-spec-extension overlay):
+  Any proposal, spec, design, task, or implementation that touches commercetools
+  — its APIs, SDKs, storefronts, Merchant Center apps, Connect applications, or
+  the Checkout — must first load the matching `commercetools-*` skill. Consult
+  the available `commercetools-*` skills (their descriptions are in context)
+  while proposing and while writing tasks. Ground endpoints, GraphQL fields, and
+  update actions in the loaded skill, then confirm them with the
+  `commercetools-knowledge` MCP — `commercetools-graphql-validate` for queries and
+  mutations, `commercetools-rest-validate` for REST calls, and
+  `commercetools-graphql-schemata` or `commercetools-oas-schemata` to look up
+  fields and types. When proposing a change against an existing commercetools
+  codebase, first survey existing platform usage (SDK clients, API calls, Connect
+  apps, MC customizations) before writing the proposal so that discovery happens
+  first.
+rules:
+  proposal:
+    - "If the change touches commercetools, review the available `commercetools-*` skills before writing this proposal; for an existing codebase, first survey current commercetools usage and record it under \"What Changes\" and \"Impact\"."
+  tasks:
+    - "Every task that touches commercetools must carry a `[SKILL: <name>]` annotation at the end of its description, resolved by choosing the matching `commercetools-*` skill (e.g. `- [ ] 1.1 Implement payment session [SKILL: commercetools-checkout]`)."
+    - "Before implementing a task that carries a `[SKILL: <name>]` annotation, load that skill first."
+# commercetools-spec-extension:end id=platform-skills-conventions

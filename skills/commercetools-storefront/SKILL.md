@@ -7,6 +7,8 @@ when_to_use:
   - "Building a B2C storefront: anonymous carts, customer auth, BOPIS, bundles, promotions, or CSR impersonation"
   - "Building a B2B storefront: quotes, approval workflows, store-scoped pricing, purchase lists, or recurring orders"
   - "Deciding server-rendered vs client-fetched data loading, designing the commercetools type boundary, or the as-associate API chain"
+  - "Implementing a spec/plan/tasks.md task annotated [SKILL: commercetools-storefront]"
+  - "An implementation-plan step that builds a storefront surface (PDP/PLP/cart/customer/B2B)"
 metadata:
   contentType: SKILL
   area:

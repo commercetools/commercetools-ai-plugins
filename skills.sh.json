@@ -8,7 +8,8 @@
         "commercetools-storefront",
         "commercetools-checkout",
         "commercetools-commerce-patterns",
-        "commercetools-connect"
+        "commercetools-connect",
+        "commercetools-spec-driven-development"
       ]
     }
   ]

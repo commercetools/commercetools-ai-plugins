@@ -5,6 +5,8 @@ when_to_use:
   - "Setting up a new commercetools project in TypeScript"
   - "Connecting to the commercetools API from any surface (storefront, MC app, Connect, serverless function)"
   - "Implementing product search with the Product Search API"
+  - "Implementing a spec/plan/tasks.md task annotated [SKILL: commercetools-platform]"
+  - "An implementation-plan step that sets up commercetools SDK clients, auth, or API access"
 metadata:
   contentType: SKILL
   area:

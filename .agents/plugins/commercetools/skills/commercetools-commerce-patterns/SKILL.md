@@ -12,6 +12,8 @@ when_to_use:
   - "Catalog architecture: ProductType design, bundle patterns, item substitutes, inventory modeling"
   - "B2B order flows: Business Unit hierarchy, as-associate API, approval rules, quote lifecycle"
   - "Recurring orders: RecurrencePolicy, priceSelectionMode, recurringOrderScope"
+  - "Implementing a spec/plan/tasks.md task annotated [SKILL: commercetools-commerce-patterns]"
+  - "An implementation-plan step covering pricing, discounts, tax, shipping, catalog, or B2B domain modeling"
 metadata:
   contentType: SKILL
   area:

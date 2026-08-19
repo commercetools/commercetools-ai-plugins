@@ -16,7 +16,7 @@ metadata:
 
 # Lifecycle Scripts (postDeploy / preUndeploy)
 
-**Impact: HIGH — Lifecycle scripts run as the connector's privileged setup. A non-idempotent script leaves a redelivery/validation gap on every redeploy; a script that exits non-zero rolls back the deployment.**
+**Impact: HIGH — Lifecycle scripts run as the connector's privileged setup. A non-idempotent script leaves a redelivery/validation gap on every redeploy; and a failing script does not reliably surface as a failed deployment, so the registration it was supposed to perform can silently never happen.**
 
 `postDeploy` runs after a successful deployment (register Extensions/Subscriptions, create Custom Types). `preUndeploy` runs before teardown (remove them). Declared in `connect.yaml` `scripts` (verified: [automation scripts](https://docs.commercetools.com/connect/automation-scripts.md)).
 
@@ -59,10 +59,12 @@ if (results.length === 0) {
   const current = results[0];
   await apiRoot.extensions().withKey({ key: KEY }).post({ body: {
     version: current.version,
-    actions: diffToUpdateActions(current, draft),                      // e.g. setTriggers, changeDestination, changeTimeoutInMs
+    actions: diffToUpdateActions(current, draft),                      // e.g. changeTriggers, changeDestination, setTimeoutInMs
   }}).execute();                                                       // no gap
 }
 ```
+
+**Don't guess an update-action name from a sibling action's verb.** commercetools update actions don't follow one verb per resource: the Extension's triggers use `changeTriggers` and its timeout uses `setTimeoutInMs` — not the more guessable `setTriggers`/`changeTimeoutInMs`, which fail with `InvalidJsonInput` — even though `changeDestination` sits right next to them on the same resource. Confirm the exact action name against the resource's `UpdateAction` discriminator (Knowledge MCP `api-Extension`, or [API Extensions](https://docs.commercetools.com/api/projects/api-extensions.md)) before writing `diffToUpdateActions()`; never extrapolate from another action on the same or a different resource.
 
 ## Pattern 2: Schema-as-code for custom types
 
@@ -114,14 +116,18 @@ A leftover Extension after undeploy is especially dangerous: it stays registered
 
 ## Pattern 5: Exit codes and platform-injected variables
 
-- **Exit non-zero on real failure.** A non-zero exit from `postDeploy`/`preUndeploy` rolls back the deployment. Wrap `run()` and set `process.exitCode = 1` on genuine errors; don't exit non-zero for benign "already exists" cases.
+- **Exit non-zero on real failure — but don't trust `deployment.status` as proof it mattered.** Wrap `run()` and set `process.exitCode = 1` on genuine errors (the pattern the [automation scripts](https://docs.commercetools.com/connect/automation-scripts.md) examples use); don't exit non-zero for benign "already exists" cases. Docs state only that `postDeploy` "runs after a successful deployment" — they don't define what a failing script does to the Deployment's status, so don't assume it flips to `Failed`. Verify the outcome directly:
+  1. `deployment logs` — the documented debugging surface ([Query Deployment Logs](https://docs.commercetools.com/connect/deployment-logs.md#query-deployment-logs)). Start here.
+  2. The resource itself — `GET /{projectKey}/extensions` or `GET /{projectKey}/subscriptions` for the expected key. This is the only check that proves the registration actually happened.
+  3. `details.build.report.entries` on the Deployment, for `type: "Error"` entries, if populated.
 - **Use the injected variables** rather than guessing URLs/topics (verified: [automation scripts](https://docs.commercetools.com/connect/automation-scripts.md)):
   - `service`: `CONNECT_SERVICE_URL` — the public URL to register as the extension destination.
-  - `event`: `CONNECT_GCP_TOPIC_NAME` and `CONNECT_GCP_PROJECT_ID` — build the Google Cloud Pub/Sub destination from these. See [event-applications.md](./event-applications.md), Pattern 7.
+  - `event`: `CONNECT_SUBSCRIPTION_DESTINATION` (`GoogleCloudPubSub` or `SNS` — branch on this first), then either `CONNECT_GCP_TOPIC_NAME` + `CONNECT_GCP_PROJECT_ID` or `CONNECT_AWS_TOPIC_ARN`. Don't build a Pub/Sub destination unconditionally; the broker follows the deployment's region. See [event-applications.md](./event-applications.md), Pattern 7.
 
 ---
 
 ## Checklist
+- [ ] Registration verified by querying `extensions`/`subscriptions` for the expected key — not by `status: "Deployed"`
 - [ ] Extension registration is get-then-update (create only if absent) — no delete-then-recreate gap (an Extension gap fails live operations); Subscriptions may use get-then-update or the docs' delete-then-recreate, since their gap only risks missed events covered by re-fetch reconciliation
 - [ ] Custom Types created idempotently (add only missing fields) and removed in `preUndeploy`
 - [ ] `preUndeploy` deletes every resource `postDeploy` created (no dangling extension/subscription)

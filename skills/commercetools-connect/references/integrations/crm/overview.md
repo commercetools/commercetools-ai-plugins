@@ -74,7 +74,7 @@ Then walk the **ladder** — stop at the first rung that fits, because each late
 3. **A public connector exists with a genuine gap config can't close, and it's open source** → **fork/extend it**; add only the delta and deploy as an Organization connector. Don't rebuild a working connector. Hand off to [commercetools-connect](../../../SKILL.md) for the build/publish lifecycle.
 4. **No public connector for the CRM (the common case — Salesforce, HubSpot, Dynamics, Zoho, or any CRM the user defines)** → **build it.** There is no CRM template, so scaffold plain `event`/`service`/`job` apps (or start from the closest outbound template — `transactional-emails` or `product-export` — and adapt; there is no inbound template). You implement the CRM API calls and the mapping. The exact contract and gotchas are in [crm-contract.md](./crm-contract.md).
 
-Record the decision, the rung, and the version in the requirements block.
+**Ask the user to choose the rung explicitly** once you have the live landscape — "install the public connector as-is", "fork it", and "build the sync apps for our CRM" are materially different amounts of work, so give your recommendation and its reasoning, then let them decide. Record the decision, the rung, and the version in the requirements block.
 
 ### Step 2 — Derive the config from the requirements
 
@@ -130,7 +130,7 @@ Requirements
 
 Connector fit (decide before wiring/building)
 - [ ] Checked **live** marketplace + integration docs (not memory); named the connector + version (or confirmed none exists)
-- [ ] Ladder rung chosen: configure (1) · config-closes-gap (2) · fork/extend (3) · build (4)
+- [ ] Ladder rung **presented to the user and chosen by them**: configure (1) · config-closes-gap (2) · fork/extend (3) · build (4)
 - [ ] For a classic CRM with no connector, recognized this is a build, not a marketplace install
 
 Config (the deliverable)

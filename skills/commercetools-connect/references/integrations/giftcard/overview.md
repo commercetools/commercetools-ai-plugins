@@ -73,7 +73,7 @@ Then walk the **ladder** — stop at the first rung that fits, because each late
 
 The **sample gift card connector** (installable from the marketplace) is for test/PoC only — it simulates payments with codes like `Valid-10000-EUR` and makes no real payment ([docs](https://docs.commercetools.com/checkout/connectors-and-applications.md#sample-gift-card-connector)). Use it to validate the checkout wiring before a real system exists; it is not a production integration.
 
-Record the decision, the rung, and the version in the requirements block. Details and the landscape table: [connector-selection.md](./connector-selection.md). Rungs 3–4 switch to the parent [commercetools-connect](../../../SKILL.md) skill for the build/stage/publish lifecycle, then return here.
+**Ask the user to choose the rung explicitly** once you have the live landscape — "install as-is" (including the sample connector for a PoC), "customize/fork it", and "build from the gift-card template" are materially different amounts of work, so give your recommendation and its reasoning, then let them decide. Record the decision, the rung, and the version in the requirements block. Details and the landscape table: [connector-selection.md](./connector-selection.md). Rungs 3–4 switch to the parent [commercetools-connect](../../../SKILL.md) skill for the build/stage/publish lifecycle, then return here.
 
 ### Step 2 — Derive the config from the requirements
 
@@ -124,7 +124,7 @@ Requirements
 
 Use / customize / build (decide before wiring/building)
 - [ ] Checked **live** marketplace + gift-card docs (not memory); named the connector + version
-- [ ] Ladder rung chosen: use public (1) · config-closes-gap (2) · fork/customize (3) · build from template (4)
+- [ ] Ladder rung **presented to the user and chosen by them**: use public (1) · config-closes-gap (2) · fork/customize (3) · build from template (4)
 - [ ] For a real gap on a system with a public connector, chose fork over rebuild
 - [ ] Used the sample connector only for PoC, not production
 

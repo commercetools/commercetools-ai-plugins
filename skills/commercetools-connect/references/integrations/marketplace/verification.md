@@ -69,7 +69,7 @@ Sandbox accounts may cap sellers or listings, expire data, return canned payload
 
 ### Trap 5 — the seller you can't remove
 
-Offboarding fails because the seller's Channel is referenced by inventory, Line Items, Stores, or Prices, and it [cannot be deleted](https://docs.commercetools.com/api/projects/channels.md#delete-channel) while any reference exists — including historical Orders. That's expected. Verify the *deactivation* path instead: unassigned from Stores, offers delisted, sync stopped, historical Orders intact.
+Offboarding fails because the seller's Channel is still referenced, and it [cannot be deleted](https://docs.commercetools.com/api/projects/channels.md#delete-channel) while any InventoryEntry, LineItem, Store, Price, StandalonePrice, or CartDiscountValueGiftLineItem points at it — including historical Orders, and including the seller's own StandalonePrices. That's expected. Verify the *deactivation* path instead: unassigned from Stores, offers delisted, sync stopped, historical Orders intact.
 
 ## Verification checklist
 

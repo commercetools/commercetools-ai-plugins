@@ -119,6 +119,11 @@ try {
 ```
 If your real work can't fit in ~1.5 s, raise `timeoutInMs` (up to 10 s) deliberately — but a longer extension timeout means a slower checkout for every customer. Consider moving the work to an `event` app instead.
 
+**Connect the failure signature to the cause before reaching for a code fix.** An extension that intermittently blows the response limit and then **succeeds on an immediate retry with no other change** is usually a cold start in a scale-to-zero backing service, not a code bug. Match the fix to the cause — they are different fixes:
+
+- **Cold start.** A `sandbox` deployment needs ~15 s to boot after idling ([deployment-installation.md](./deployment-installation.md), Pattern 2), which is *above* the 10 s `timeoutInMs` ceiling — so raising the timeout cannot cover it. The fixes are a `production` deployment (warmed instances, no scale-to-zero) or keeping the service warm with a periodic ping.
+- **Genuinely slow dependency work** that fits under 10 s. Here raising `timeoutInMs` from the 2 s default is the right first move — a one-line update (`setTimeoutInMs`) with no redeploy — before adding client-side retry logic. Allow up to a minute for the change to take effect.
+
 ## Pattern 4: Fail-open vs fail-closed
 
 When the external dependency is down or times out, you must have *decided* what happens — and documented it.
@@ -137,10 +142,46 @@ catch (error) { return { statusCode: 400, error: error.message }; }   // any out
 catch (err) {
   logger.error({ correlationId, err }, 'external dependency failed');
   if (FAIL_OPEN) return res.status(200).end();          // proceed without enrichment
-  return res.status(400).json({ errors: [{ code: 'General', message: 'validation unavailable' }] });
+  return res.status(400).json({ errors: [{ code: 'InvalidOperation', message: 'validation unavailable' }] });
 }
 ```
 Record the stance in the connector README (see [deployment-installation.md](./deployment-installation.md)).
+
+**Classify the dependency's error before mapping it to a response code.** Fail-open vs fail-closed answers "what do we do when the dependency is *down*" — it does not cover the dependency rejecting a specific, legitimately invalid input. A `4xx` from the provider means *this cart will never succeed* and is an actionable, fixable problem; a `5xx`/timeout/connection error means *try again later*. Collapsing both into one response hides the former behind an outage-looking failure, and applying the fail-open stance to a `4xx` silently ships a cart with no tax on it forever.
+
+```typescript
+catch (err) {
+  // `err` is `unknown` under strict TS — narrow before reading anything off it.
+  const e = err as { status?: number; statusCode?: number };
+  const status = e.status ?? e.statusCode;                   // shape varies — see below
+
+  // Bad input = this cart will never succeed. 401/403 (misconfigured credentials)
+  // and 408/429 (retryable) are 4xx but belong in the outage branch.
+  const isBadInput =
+    typeof status === 'number' && status >= 400 && status < 500 &&
+    ![401, 403, 408, 429].includes(status);
+
+  if (isBadInput) {
+    logger.warn({ correlationId, status, err }, 'external dependency rejected the input');
+    // Fixed message: the provider's own text reaches the API caller, so don't echo it.
+    return res.status(400).json({ errors: [{ code: 'InvalidInput', message: 'validation failed' }] });
+  }
+
+  if (status === undefined) {
+    // Not a real outage — this dependency's error shape doesn't match the read above.
+    logger.error({ correlationId, err }, 'could not resolve a status from the dependency error');
+  }
+  logger.error({ correlationId, status, err }, 'external dependency unavailable');
+  if (FAIL_OPEN) return res.status(200).end();
+  return res.status(400).json({ errors: [{ code: 'InvalidOperation', message: 'validation unavailable' }] });
+}
+```
+
+The `errors[].code` must be one of the [defined error codes](https://docs.commercetools.com/api/errors.md) — docs name `InvalidInput` and `InvalidOperation` for a [failed Extension validation](https://docs.commercetools.com/api/projects/api-extensions.md#validation-failed). Don't reach for `General`: it's the generic **500** code, not a 400 one.
+
+**A repeated 401/403 is not transient.** It sits in the outage branch because retrying is the right immediate behaviour, but under `FAIL_OPEN` that quietly ships every cart without your enrichment for as long as the credential stays broken. Alert on sustained 401/403 separately from genuine timeouts.
+
+**Don't assume one provider shapes its errors consistently across its own surface.** The same provider can reject with a typed `Error` carrying `.statusCode` on one method, a plain `{status, error, detail}` object on another, and a `200`-shaped body with the failure embedded in a field on a third. Check the actual error shape of each SDK method you depend on rather than reusing a check that worked for a different call — a `status` read that comes back `undefined` silently routes every rejection down the outage branch.
 
 ## Pattern 5: Minimize work on the hot path
 
@@ -161,7 +202,7 @@ return res.status(200).json({ actions });
 (verified: [API Extensions — Response](https://docs.commercetools.com/api/projects/api-extensions.md))
 
 - **Success, no changes:** `200`/`201`, empty body (or empty `actions`).
-- **Updates:** `200`/`201` with `{ "actions": [ ... ] }` — up to 100 actions, each a valid update action for that resource type. Return well-formed, domain-correct actions (e.g. for external tax on a cart: `changeTaxMode` → `ExternalAmount`, then `setLineItemTaxAmount` / `setCartTotalTax`.
+- **Updates:** `200`/`201` with `{ "actions": [ ... ] }` — up to 100 actions, each a valid update action for that resource type. Return well-formed, domain-correct actions (e.g. for external tax on a cart: `changeTaxMode` → `ExternalAmount`, then `setLineItemTaxAmount` / `setCartTotalTax`).
 - **Validation failure:** `400` with `{ "errors": [{ "code": "InvalidInput", "message": "..." }] }` — `code` must be a [known error code](https://docs.commercetools.com/api/errors); optional `localizedMessage`, `extensionExtraInfo`.
 
 ## Pattern 7: Inbound webhook mode (external system → commercetools)
@@ -202,7 +243,7 @@ router.post('/products', verifyInbound, async (req, res) => {
     logger.error({ correlationId, err }, 'inbound upsert failed');
     res.status(503).end();                                       // transient → let the sender retry
   }
-}
+});
 ```
 Map the external model to the commercetools draft in `shared/src/mappers` ([project-structure.md](./project-structure.md)). Use the external system's stable identifier as the commercetools `key` so upserts are deterministic. Consider the [Import API](https://docs.commercetools.com/api/import-export/overview) for high-volume bulk loads instead of one call per item.
 
@@ -215,6 +256,7 @@ Map the external model to the commercetools draft in `shared/src/mappers` ([proj
 - [ ] Trigger `condition` set so the extension only fires when it can actually act
 - [ ] Outbound calls have an explicit timeout under the extension response limit; `timeoutInMs` set deliberately if >2 s
 - [ ] Fail-open vs fail-closed decided per use case and documented in the README
+- [ ] The dependency's `4xx` (bad input — actionable) branched separately from its `5xx`/timeout (outage — retryable), against that SDK method's real error shape
 - [ ] Hot-path work skipped when relevant inputs are unchanged (hash/signature compare)
 - [ ] Responses use the correct format: 200/201 (+ actions) or 400 (+ errors with valid codes)
 

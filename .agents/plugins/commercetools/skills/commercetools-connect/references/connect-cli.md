@@ -44,6 +44,8 @@ commercetools connect application add --type service|event|job --language typesc
 
 Do **not** hand-roll the directory layout — the generated tree (one folder per `deployAs` entry, `src/`, `connect.yaml`, scripts, tsconfig, test config) is the canonical shape. Build on it.
 
+> **A template is a starting point, not a warranty.** The [template docs](https://docs.commercetools.com/connect/templates/payment-integration.md) say so directly: "Connect application templates are for development purposes. They require further customization before being used in production projects." The directory layout is canonical and safe to build on; the generated *logic* is not production-verified. Read and test-drive the generated `postDeploy`/`preUndeploy` scripts and any bundled validators against a real deployment before relying on them as correct by construction.
+
 > **Match the route to the endpoint.** The platform routes traffic to `{connect-url}/{endpoint}`. Mount your router at the same base path as the `endpoint` in `connect.yaml` (e.g. `endpoint: /service` ↔ `app.use('/service', router)`), or all traffic 404s.
 
 ## Step 3. Pin dependency versions

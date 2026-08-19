@@ -93,6 +93,8 @@ Each requirement drives one or more config keys. The middle column is the *conce
 | **Sync vs. async settlement** | webhook id + signing secret (secured) | Required whenever final state arrives via webhook. Without it the transaction never finalizes. Drives whether Order creation waits on the webhook. |
 | **(always)** PSP credentials, CT client | secured: PSP secret key, webhook signing secret, `CTP_CLIENT_ID`, `CTP_CLIENT_SECRET` | Always `securedConfiguration`, never standard, never hardcoded, never invented — the user supplies the real values. |
 
+**When configuring an existing public connector, verify against the live connector before finalizing.** The key tables here and in the provider references are snapshots; a fast-iterating connector's actual `required` flags, defaults, and runtime scope list can have moved. `GET /connectors/key={connector-key}` returns the authoritative `configurations` and `apiClient.scopes` — see [deployment-installation.md](../../deployment-installation.md), Pattern 4. This does not apply when you're authoring `connect.yaml` for a connector you're building, where this file *is* the source.
+
 ## How to present the result
 
 Give the user four things, not a vague pointer:

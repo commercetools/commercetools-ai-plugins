@@ -66,9 +66,9 @@ Then walk the **ladder** — stop at the first rung that fits, because each late
 1. **Public connector covers everything** → install + configure (Step 2). Don't build. Installing it (CLI auth, scopes, `deployment create`) is the parent skill's [deployment-installation.md](../../deployment-installation.md); it is **not** the `connectorstaged` flow.
 2. **Supported engine, gap looks like a capability** → prove it isn't **config** first. Most "missing" behaviors (which order states commit/void, tax-code source, exemptions) are `connect.yaml` values or Merchant Center settings → back to rung 1. See [config-from-requirements.md](./config-from-requirements.md).
 3. **Supported engine, genuine gap config can't close** → **fork/extend the public connector** (Avalara's is open source; see [avalara.md](./avalara.md)); add only the delta and deploy as an Organization connector. Don't rebuild a working, maintained connector. Hand off to [commercetools-connect](../../../SKILL.md) for the build/publish lifecycle.
-4. **No public connector for the engine at all (e.g. TaxJar)** → build from the [tax integration template](https://docs.commercetools.com/connect/templates/tax-integration.md). The template ships both apps as stubs; you implement the engine calls and the mapping. The exact contract, gotchas, and a worked engine are in [tax-contract.md](./tax-contract.md) and [avalara.md](./avalara.md) (with TaxJar as the from-scratch example).
+4. **No public connector for the engine at all (e.g. TaxJar)** → build from the [tax integration template](https://docs.commercetools.com/connect/templates/tax-integration.md). The template ships both apps as stubs; you implement the engine calls and the mapping. The exact contract, gotchas, and a worked engine are in [tax-contract.md](./tax-contract.md) and [avalara.md](./avalara.md) (with TaxJar as the from-scratch example). The [template docs](https://docs.commercetools.com/connect/templates/tax-integration.md) state it is for development purposes and needs further customization before production use, so read and test-drive the generated lifecycle scripts and validators rather than treating them as production-ready ([connect-cli.md](../../connect-cli.md), Step 2).
 
-Record the decision, the rung, and the version in the requirements block.
+**Ask the user to choose the rung explicitly** once you have the live landscape — "install the certified connector as-is", "fork it", and "build both apps from the tax-integration template" are materially different amounts of work, so give your recommendation and its reasoning, then let them decide. Record the decision, the rung, and the version in the requirements block.
 
 ### Step 2 — Derive the config from the requirements
 
@@ -121,7 +121,7 @@ Requirements
 
 Connector fit (decide before wiring/building)
 - [ ] Checked **live** marketplace + tax docs (not memory); named the connector + version
-- [ ] Ladder rung chosen: configure (1) · config-closes-gap (2) · fork/extend (3) · build from template (4)
+- [ ] Ladder rung **presented to the user and chosen by them**: configure (1) · config-closes-gap (2) · fork/extend (3) · build from template (4)
 - [ ] For a real gap on an engine with a public connector, chose fork over rebuild
 
 Config (the deliverable)

@@ -95,6 +95,33 @@ setTimeout(enablePayButton, 5000); // fallback if no ready event
 payButton.onclick = () => dropin.submit();
 ```
 
+## Automating the card-entry step
+
+Steps 1–7 (token, cart, session, warm processor, load enabler, mount the drop-in, wait for `ready`) automate cleanly and prove the integration risk that actually matters. Step 8 is different: card fields live inside a **cross-origin iframe** owned by the payment provider, and the automation approach decides whether this works at all.
+
+| Approach | Against a cross-origin card iframe |
+|---|---|
+| Page-context script injection (JS evaluated *inside* the page) | **Cannot work** — same-origin policy blocks reaching into the iframe's DOM, regardless of tooling |
+| Synthetic keyboard events from the parent frame (Tab-to-next-field) | **Unreliable** — key events don't reliably cross the frame boundary, and some widgets grow mid-fill so a repeated click lands somewhere else |
+| A browser driver controlling the browser externally (Playwright, Puppeteer) | **Works** — frame-scoped locators address the iframe's contents directly |
+
+With a driver, scope to the frame and select by visible label rather than placeholder text:
+
+```typescript
+const frame = page.frameLocator('iframe[title="Secure payment input frame"]');  // title is provider-specific
+await frame.getByLabel('Card number').fill('4242 4242 4242 4242');
+await frame.getByLabel('Expiration date').fill('12/34');
+await frame.getByLabel('CVC').fill('123');
+await page.getByRole('button', { name: /pay/i }).click();                        // the Pay button is in the parent page
+```
+
+If no iframe-aware driver is available, don't burn time on synthetic events — pick one:
+
+- **Human completes the submit.** Automate through step 7, then have a person enter the test card. Legitimate; this harness is disposable by design.
+- **Bypass the widget entirely.** Create and confirm a payment directly against the provider's API, create the matching commercetools Payment (`interfaceId` = the provider's transaction id, plus a `Charge`/`Success` transaction for the amount), `addPayment` it to the cart, then call your place-order endpoint. This skips the widget's own payment creation but does exercise the real order-confirmation path — including BFF scope gaps, which is exactly where a live charge otherwise strands a customer ([backend-integration.md](./backend-integration.md)).
+
+Note that some providers only expose an inspectable session/intent object *after* submission, so "just confirm it via the provider's API" may have nothing to look at while the drop-in is merely mounted. Check the provider's docs before designing a test strategy around it. Whatever works here is confirmed against this hand-rolled enabler/processor flow only — re-verify if the storefront later goes through the Checkout Sessions API and Browser SDK, where the widget markup can differ.
+
 ## After it works
 - Verify the Payment (→ [verification.md](./verification.md)).
 - Move steps 1–3 server-side for the real integration, and add Order creation + post-purchase operations (→ [backend-integration.md](./backend-integration.md)); the browser only ever gets the `sessionId`, processor URL, and enabler URL.
@@ -105,4 +132,5 @@ payButton.onclick = () => dropin.submit();
 - [ ] non-zero cart; session with `cartRef` + correct `metadata`
 - [ ] enabler loaded from UMD bundle; `ready`-gated Pay button
 - [ ] one test-card payment completed and verified as a CT Payment
+- [ ] card entry either driven by an iframe-aware browser driver, or deliberately left to a human / an API-level payment — not attempted via synthetic key events
 - [ ] harness not deployed; secrets removed afterward

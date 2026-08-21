@@ -71,7 +71,7 @@ Then walk the decision **ladder** — stop at the first rung that fits, because 
 3. **Supported PSP, genuine gap config can't close** → **fork/extend the public connector** (its repo is open source); add only the delta and deploy as an Organization connector. Don't rebuild — you'd throw away a working, maintained connector. Hand off to [commercetools-connect](../../../SKILL.md). For monitoring the connector you build: deployment logs, structured logging, and the poison-message runbook are in [`observability-operations.md`](../../observability-operations.md).
 4. **No public connector for the PSP at all** → build from the [payment integration template](https://docs.commercetools.com/connect/templates/payment-integration.md). This can be done **inline** (within this skill session) when the user explicitly asks to build custom — see the [stripe.md](./stripe.md) "Building a custom Stripe connector" section for the key gotchas (raw body, API version, POST vs GET route). For staging, publishing, and deploying the built connector see [deploy-custom-connector.md](./deploy-custom-connector.md). Hand off to [commercetools-connect](../../../SKILL.md) when the full Connect publish/certification lifecycle is the goal. For monitoring: [`observability-operations.md`](../../observability-operations.md).
 
-Rungs 3–4 switch to the build-side workflow in the parent [commercetools-connect](../../../SKILL.md) skill, then resume this integration flow once the connector is deployed — but rung 4 can be executed inline when the user wants to build in the current session. Full procedure and dimension-by-dimension table: [connector-selection.md](./connector-selection.md). Record the decision, the rung, and the version in the requirements block.
+Rungs 3–4 switch to the build-side workflow in the parent [commercetools-connect](../../../SKILL.md) skill, then resume this integration flow once the connector is deployed — but rung 4 can be executed inline when the user wants to build in the current session. Full procedure and dimension-by-dimension table: [connector-selection.md](./connector-selection.md). **Ask the user to choose the rung explicitly** once you have the live landscape — "install the certified connector as-is", "fork it", and "build from the payment-integration template" are materially different amounts of work, so give your recommendation and its reasoning, then let them decide. Record the decision, the rung, and the version in the requirements block.
 
 ### Step 2 — Derive the provider config from the requirements
 
@@ -155,7 +155,7 @@ Requirements
 Connector fit (decide before wiring/building)
 - [ ] Checked live marketplace + supported-PSPs docs (not memory); named the connector + version
 - [ ] PSP, methods, integration type, capabilities, region compared to the requirements; apparent gaps re-checked as config
-- [ ] Ladder rung chosen: configure (1) · config-closes-gap (2) · fork/extend public connector (3) · build from template (4)
+- [ ] Ladder rung **presented to the user and chosen by them**: configure (1) · config-closes-gap (2) · fork/extend public connector (3) · build from template (4)
 - [ ] For a real gap on a PSP that has a public connector, chose fork/extend over rebuild
 
 Config (the deliverable)

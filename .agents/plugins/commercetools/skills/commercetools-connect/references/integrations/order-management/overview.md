@@ -74,7 +74,7 @@ Then walk the decision **ladder** — stop at the first rung that fits, because 
 3. **A connector exists but has a genuine gap config can't close** → **fork/customize** it (if its source is available) — add only the delta and deploy as an Organization connector. Don't rebuild a working, maintained connector. → [connector-selection.md](./connector-selection.md), then the parent [commercetools-connect](../../../SKILL.md) build-side.
 4. **No connector fits, or the OMS is bespoke/home-grown** → **build a new connector**, scaffolding from the `fulfilment-integration` CLI template (order-export `event` + order-updates/inventory-import `service`), adding a reconcile `job` if needed. → [build-oms-connector.md](./build-oms-connector.md).
 
-Rungs 3–4 use the build-side workflow in the parent skill; the sync design (Step 2) applies to all four rungs. Record the decision, the rung, and the version in the requirements block. Full procedure and dimension table: [connector-selection.md](./connector-selection.md).
+Rungs 3–4 use the build-side workflow in the parent skill; the sync design (Step 2) applies to all four rungs. **Ask the user to choose the rung explicitly** once you have the live landscape — "install the public connector as-is", "fork/customize it", and "build a new one for our OMS" are materially different amounts of work, so give your recommendation and its reasoning, then let them decide. Record the decision, the rung, and the version in the requirements block. Full procedure and dimension table: [connector-selection.md](./connector-selection.md).
 
 ### Step 2 — Design the sync architecture (the core deliverable)
 
@@ -127,7 +127,7 @@ Connector fit (decide before wiring/building)
 - [ ] Checked live marketplace + docs (not memory); named connector + version
 - [ ] Confirmed installable-vs-vendor-hosted before promising a Connect deploy
 - [ ] Apparent gaps re-checked as config before considering fork/build
-- [ ] Ladder rung chosen: use (1) · configure (2) · fork/customize (3) · build new (4); decision recorded
+- [ ] Ladder rung **presented to the user and chosen by them**: use (1) · configure (2) · fork/customize (3) · build new (4); decision recorded
 
 Sync design (the deliverable)
 - [ ] Direction fixed; no bidirectional sync of the same field

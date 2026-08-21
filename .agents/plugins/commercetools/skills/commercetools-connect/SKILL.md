@@ -135,6 +135,21 @@ Whenever a sub-area has you check the [commercetools marketplace](https://market
 - **Then ask the user what to do** — don't silently pick. Present the fit and whether it's Connect-deployable.
 - **If the user wants to use a non–Connect integration, warn that this skill does not cover using non–Connect connectors** — its build/configure/deploy patterns (`connect.yaml`, the Connect CLI, lifecycle scripts, the Connect deployment model) don't apply. Point them to the vendor/partner's own onboarding, and offer the in-skill alternative: build or fork a Connect connector instead.
 
+### Open every sub-area with the paths — don't wait to be asked
+
+When a request routes into any sub-area above, the user has told you **what** they want to integrate. They have not told you **how**, and it is not yours to assume. So before requirements gathering, before config, before code — **lay out the paths and let the user pick one**:
+
+0. **Native first, where a rung 0 exists** (promotion, search). If commercetools already ships the capability, say so plainly and stop. Don't design around something the platform does.
+1. **Deploy an existing public connector as-is** — grounded in a **live** registry/marketplace check, never memory, and verified Connect-deployable per the rule above.
+2. **Fork and modify an existing connector** — when there's a real gap that configuration can't close.
+3. **Build a new one** — from the sub-area's template, or from the type-agnostic `service`/`event`/`job` patterns when no template exists.
+
+State which rung you'd recommend and why, then **ask the user to choose**. These are materially different amounts of work and the decision is theirs, not yours.
+
+Do this **unprompted, in your first substantive response in the sub-area** — including (especially) when the user's phrasing already sounds like it presumes an answer. "Build me an X integration", "sync Y into commercetools", or naming a service they're already running are *not* instructions to skip the ladder: a user who says "build" usually means "make this work" and will happily take an install if one exists. Ask a clarifying question or two first if you genuinely can't fit-check without it, but don't let requirements gathering delay the landscape — present what exists early, then let the requirements decide the rung.
+
+Each sub-area's `overview.md` carries the full ordered gate (its Step 1.4/1.5) with the fit criteria and the template to build from. This is the rule that governs all of them.
+
 ## Step 2 — Price the contract before you build
 
 The expensive mistakes come from not pricing the contract you just chose:
@@ -159,13 +174,13 @@ A connector is **not done** until every applicable item holds. Each maps to a re
 - [ ] **Hot-path work minimized (sync).** Extensions skip the external call when relevant data is unchanged (e.g. a stored hash) and short-circuit early. → [service-applications.md](./references/service-applications.md)
 
 ### Security
-- [ ] **Inbound endpoints authenticated.** Service extensions register a destination with `AuthorizationHeaderAuthentication` (or `AzureFunctions`) **and** validate that secret in-app. Webhooks from external systems validate a full JWT (signature, issuer, audience, subject, expiry, algorithm). → [security.md](./references/security.md)
+- [ ] **Inbound endpoints authenticated.** Service extensions register a destination whose `authentication.type` is the discriminator value `AuthorizationHeader` — **not** the schema's type name `AuthorizationHeaderAuthentication`, which fails with `InvalidJsonInput` — (or `AzureFunctions`) **and** validate that secret in-app. Webhooks from external systems validate a full JWT (signature, issuer, audience, subject, expiry, algorithm). A `postDeploy` that hits this typo may not surface as a failed deployment, so confirm the Extension actually registered via `GET /{projectKey}/extensions`. → [security.md](./references/security.md), [service-applications.md](./references/service-applications.md) Pattern 1
 - [ ] **Least-privilege CT scopes.** Use `inheritAs.apiClient.scopes` with only the scopes the apps need (e.g. `manage_orders`, `manage_subscriptions`, `manage_extensions`) — not an admin/`manage_project` client. → [security.md](./references/security.md)
 - [ ] **Secrets in `securedConfiguration`.** API keys, client secrets, JWT secrets are never `standardConfiguration` and never hardcoded. → [security.md](./references/security.md)
 - [ ] **No stack traces or secrets in responses.** Error middleware returns a generic message in production. → [security.md](./references/security.md)
 
 ### Correctness
-- [ ] **Envelope validation.** Google Cloud Pub/Sub push envelope decoded (`message.data` is base64) and validated (→ JSON → resource ref → notificationType) before any processing; malformed envelopes rejected. → [event-applications.md](./references/event-applications.md)
+- [ ] **Envelope validation.** Envelope decoded per the injected destination type — branch on `CONNECT_SUBSCRIPTION_DESTINATION` (Pub/Sub: `message.data` is base64; SNS has its own envelope) — then validated (→ JSON → resource ref → notificationType) before any processing; malformed envelopes rejected. → [event-applications.md](./references/event-applications.md)
 - [ ] **Message-type filtering.** Subscribe to only the needed message types; ack-and-ignore anything else (including the platform's test/subscription messages). → [event-applications.md](./references/event-applications.md)
 - [ ] **Self-change filtering.** Updates your own connector makes don't re-trigger it into a loop. → [event-applications.md](./references/event-applications.md)
 - [ ] **Route path matches `connect.yaml` `endpoint`.** The Express router is mounted at the same base path as the app's `endpoint` (e.g. `endpoint: /service` ↔ `app.use('/service', router)`), or the platform's traffic 404s. → [project-structure.md](./references/project-structure.md)
@@ -201,7 +216,7 @@ A connector is **not done** until every applicable item holds. Each maps to a re
 | Monorepo holding a connector + a storefront: root-sibling layout, why no npm workspaces, the two independent deploy lifecycles | [monorepo-with-storefront.md](./references/monorepo-with-storefront.md) |
 | event vs service vs job; sync vs async contract cost | [architecture-decisions.md](./references/architecture-decisions.md) |
 | CLI scaffold + local dev, monorepo layout, client setup (ts-client), connect.yaml anatomy, route↔endpoint matching, fail-fast env validation | [project-structure.md](./references/project-structure.md) |
-| subscriptions: envelope, ack semantics, idempotency, redelivery, re-fetch, Pub/Sub destination | [event-applications.md](./references/event-applications.md) |
+| subscriptions: envelope, ack semantics, idempotency, redelivery, re-fetch, injected subscription destination (Pub/Sub or SNS) | [event-applications.md](./references/event-applications.md) |
 | API extensions: authenticated registration, triggers, timeout budget, fail-open/closed, hot-path | [service-applications.md](./references/service-applications.md) |
 | scheduled/on-demand jobs: schedule, timeout, concurrency, checkpointing | [job-applications.md](./references/job-applications.md) |
 | post-deploy/pre-undeploy: idempotent registration, schema-as-code, deploy-time validation | [lifecycle-scripts.md](./references/lifecycle-scripts.md) |

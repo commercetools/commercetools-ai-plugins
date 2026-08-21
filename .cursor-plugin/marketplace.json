@@ -11,7 +11,7 @@
       "name": "commercetools",
       "source": "./",
       "description": "Build commercetools solutions faster",
-      "version": "0.26.0",
+      "version": "0.28.0",
       "logo": "assets/commercetools-symbol.svg"
     }
   ]

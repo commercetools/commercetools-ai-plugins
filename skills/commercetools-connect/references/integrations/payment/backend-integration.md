@@ -107,6 +107,16 @@ Order-creation timing — pick one and be consistent:
 
 If the cart total changed between authorization and order creation (discount expired, tax shift), don't silently proceed — cancel the authorization and re-authorize for the new amount, or surface the new total for confirmation. The processor/PSP handles the money; you orchestrate the decision.
 
+### Scopes for your BFF's own API client — a different client from the connector's
+
+The processor creates and owns the Payment during `submit()` under the connector's own runtime client ([deploy-public-connector.md](./deploy-public-connector.md), "Two clients"). But the order-creation code above — refetch the cart, read `paymentInfo.payments[0]`, `GET` that Payment to confirm a `Success` transaction, `POST /orders` — runs under **your BFF's** client, which needs its own scopes:
+
+- `view_payments:{projectKey}` — to read the Payment and confirm it succeeded before creating the Order.
+- `manage_orders:{projectKey}` — to create the Order (plus the cart scopes the rest of your BFF already uses).
+- `manage_payments:{projectKey}` — only if your BFF writes back to a Payment outside the processor's operation routes (e.g. a reconciliation flag). Skip it otherwise.
+
+**A missing read scope here surfaces only after a real charge has already succeeded**: the PSP confirms payment, then this confirmation step fails with a 403 insufficient-scope error on the Payment read — the customer is charged but never gets an Order or a confirmation page. Worse, [API Client scopes cannot be changed after creation](https://docs.commercetools.com/api/projects/api-clients.md) ("Scopes cannot be changed after an API Client is created" — the API offers create, read, and delete only). Recovering means provisioning a *new* client with the existing scope list plus the missing one, swapping `CTP_CLIENT_ID`/`CTP_CLIENT_SECRET`, and restarting the app (env vars aren't hot-reloaded). Request the full set up front, and cover this path in the integration test ([integration-test.md](./integration-test.md)) so a scope gap fails there rather than after a live charge — assert on the status code, not on a message string.
+
 ## Post-purchase: capture, refund, cancel
 
 These happen **after** the Order exists and are a merchant responsibility, not the storefront's. How you trigger them depends on whether the Payment was created by **Checkout** or by a **direct-connector** flow — and this skill's path is the latter:
@@ -172,3 +182,4 @@ To keep the boundary crisp across this skill: on the direct-connector path the *
 - [ ] Capture/refund/cancel go through the **processor's** operation routes (not the Payment Intents API, which is Checkout-only)
 - [ ] Post-order side effects (email, ERP) driven off the `OrderCreated` Subscription, not the request path
 - [ ] Backend does not create Payment objects (the processor owns them)
+- [ ] The BFF's **own** API client has `view_payments` + `manage_orders` (scopes can't be edited after client creation, and a gap only surfaces after a real charge)

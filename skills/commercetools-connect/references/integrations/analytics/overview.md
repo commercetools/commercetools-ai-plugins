@@ -83,7 +83,7 @@ Then walk the **ladder** (details + how a CDP/ELT tool changes the answer: [conn
 3. **An open-source connector with a real gap** → **fork/extend** it; hand off to [commercetools-connect](../../../SKILL.md) for the lifecycle.
 4. **No connector for the destination (the common case)** → **build from the [Product export template](https://docs.commercetools.com/connect/templates/product-export.md)** and adapt it to your destination. This is the default landing rung. → [connector-selection.md](./connector-selection.md), [pipeline-architecture.md](./pipeline-architecture.md).
 
-Record the decision, rung, and connector name + version (or "none exists") in the requirements block.
+**Ask the user to choose the rung explicitly** even here — "install a destination connector if one exists", "fork one", and "build from the product-export template" are materially different amounts of work; present the (likely empty) landscape, recommend the build, and let them confirm rather than assuming it. Record the decision, rung, and connector name + version (or "none exists") in the requirements block.
 
 ### Step 2 — Design the pipeline (the core deliverable)
 
@@ -134,7 +134,7 @@ Requirements
 
 Connector fit (decide before building)
 - [ ] Ran the **live** marketplace/registry check even though build is expected; applied the listing-isn't-a-connector rule; confirmed with the user
-- [ ] Ladder rung chosen and recorded: configure (1) · config-closes-gap (2) · fork (3) · build-from-template (4, the default)
+- [ ] Ladder rung **presented to the user and chosen by them**, and recorded: configure (1) · config-closes-gap (2) · fork (3) · build-from-template (4, the default)
 
 Pipeline design (the deliverable)
 - [ ] Apps chosen: event streamer (`event`) and/or batch job (`job`); optional full-export service noted

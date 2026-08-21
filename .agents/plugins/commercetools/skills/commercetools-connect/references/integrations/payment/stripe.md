@@ -85,7 +85,12 @@ The Stripe connector validates the session against its own deployed processor. I
 { "metadata": { "processorUrl": "https://service-….europe-west1.gcp.3.sandbox.commercetools.app" } }
 ```
 
-`applicationKey` only applies if you have configured a Checkout Application in the Merchant Center (the hosted Checkout product path). Trying `applicationKey` on a custom connector will get you a 401 that looks like a session issue but is actually a metadata mismatch.
+Trying `applicationKey` here gets you a 401 that looks like a session problem but is actually a metadata mismatch. **The split is not certified-vs-custom** — `processorUrl` works against any deployed connector; `applicationKey` just has preconditions a custom connector doesn't meet:
+
+- A Checkout Application must exist for the Project — created in the Merchant Center **or** via the [Checkout Applications API](https://docs.commercetools.com/checkout/applications-api.md) (`POST /{projectKey}/applications`), with the [Payment Integrations API](https://docs.commercetools.com/checkout/payment-integrations-api.md) configuring its payment methods.
+- Creating one requires **a Connector installed from the Connect marketplace** — that is what the Application's Payment Integrations bind to ([Connectors and Applications](https://docs.commercetools.com/checkout/connectors-and-applications.md#applications)). This is why a purely custom connector can't back the `applicationKey` path.
+
+Default to `processorUrl`; reach for `applicationKey` only once a Checkout Application is confirmed to exist for the Project.
 
 ## API client scopes
 

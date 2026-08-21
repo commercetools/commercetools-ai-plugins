@@ -31,7 +31,8 @@ An `event` application receives commercetools [Subscription](https://docs.commer
 - [Pattern 4: Idempotency under at-least-once delivery](#pattern-4-idempotency-under-at-least-once-delivery)
 - [Pattern 5: Re-fetch by ID, never trust the payload](#pattern-5-re-fetch-by-id-never-trust-the-payload)
 - [Pattern 6: Self-change filtering](#pattern-6-self-change-filtering)
-- [Pattern 7: Register the Pub/Sub subscription destination](#pattern-7-register-the-pubsub-subscription-destination)
+- [Pattern 7: Register the subscription destination](#pattern-7-register-the-subscription-destination)
+- [Pattern 8: Reconciliation sweep for SLA-bound consumers](#pattern-8-reconciliation-sweep-for-sla-bound-consumers)
 - [Checklist](#checklist)
 
 ---
@@ -41,7 +42,7 @@ An `event` application receives commercetools [Subscription](https://docs.commer
 From [Connect — deployment information](https://docs.commercetools.com/connect/overview.md) and [Subscriptions — Delivery](https://docs.commercetools.com/api/projects/subscriptions.md):
 
 - **At-least-once delivery, no ordering guarantee, no delivery-time guarantee.**
-- **The payload arrives wrapped in the Google Cloud Pub/Sub push envelope, and `message.data` is base64-encoded.** **All Google Cloud Platform event payload `message.data` is base64-encoded** (verified: [Connect — locally test an event app](https://docs.commercetools.com/connect/test-applications-locally.md#test-an-event-application)) — the wrapper is `{ "message": { "data": "<base64>" } }`. The base64 is the Pub/Sub transport, not something commercetools adds; the commercetools notification underneath is plain JSON. Decode it before processing (Pattern 1).
+- **The payload arrives wrapped in a push envelope whose `message.data` is base64-encoded** (verified: [Connect — locally test an event app](https://docs.commercetools.com/connect/test-applications-locally.md#test-an-event-application), which documents this envelope for event applications without qualifying it per broker) — the wrapper is `{ "message": { "data": "<base64>" } }`. The base64 is the transport's, not something commercetools adds; the commercetools notification underneath is plain JSON. Decode it before processing (Pattern 1).
 - **Ack by status code (Connect event apps):** the broker retries unless the app responds `102`, `200`, `201`, `202`, or `204`. Too many negative acks trigger push backoff.
 - **Event acknowledgement timeout: 10 seconds.** Application request times out after 5 minutes; the broker retains unacknowledged messages for **7 days**.
 - **Delivery identity (for dedup comparisons and logging, not storage):** for `notificationType: "Message"` the `resource.id` + `sequenceNumber`; for Change payloads (`ResourceCreated/Updated/Deleted`) the `resource.id` + `version`.
@@ -175,25 +176,103 @@ If your handler writes back to commercetools (e.g. sets a custom field on the or
 
 Guard against it: subscribe to only the message types that represent *external* changes; check whether the change is the one you just made (compare a marker custom field or the modifying client); or short-circuit when the resource is already in the target state. Without this, a connector that "stamps processed orders" can re-trigger itself indefinitely.
 
-## Pattern 7: Register the Pub/Sub subscription destination
+## Pattern 7: Register the subscription destination
 
-Connect provisions the Google Cloud Pub/Sub broker and injects its details into `postDeploy`. Build the destination from the injected vars (verified: [automation scripts](https://docs.commercetools.com/connect/automation-scripts.md)):
+Connect provisions the broker and injects its details into `postDeploy` as environment variables. **Never hardcode a topic, project, or ARN — read them from the injected vars** (verified: [automation scripts](https://docs.commercetools.com/connect/automation-scripts.md)):
 
-| Injected vars | Destination object |
+| Injected var (`event` apps) | Purpose |
 |---|---|
-| `CONNECT_GCP_TOPIC_NAME`, `CONNECT_GCP_PROJECT_ID` | `{ type: 'GoogleCloudPubSub', topic, projectId }` |
+| `CONNECT_SUBSCRIPTION_DESTINATION` | Which broker this deployment got — `GoogleCloudPubSub` or `SNS`. Branch on this first. |
+| `CONNECT_GCP_TOPIC_NAME`, `CONNECT_GCP_PROJECT_ID` | Pub/Sub topic + project → `{ type: 'GoogleCloudPubSub', topic, projectId }` |
+| `CONNECT_AWS_TOPIC_ARN` | SNS topic ARN → `{ type: 'SNS', topicArn, authenticationMode: 'IAM' }` |
+
+**Branch on `CONNECT_SUBSCRIPTION_DESTINATION`, don't assume Pub/Sub.** Connect deploys to [both GCP and AWS regions](https://docs.commercetools.com/connect/hosts-and-authorization.md), and the broker follows the region. A `postDeploy` that builds a `GoogleCloudPubSub` destination unconditionally registers the wrong destination type on an AWS deployment — so the same connector source works in one region and silently delivers nothing in another:
 
 ```typescript
-const destination = {
-  type: 'GoogleCloudPubSub',
-  topic: process.env.CONNECT_GCP_TOPIC_NAME,
-  projectId: process.env.CONNECT_GCP_PROJECT_ID,
-};
+const destinationType = process.env.CONNECT_SUBSCRIPTION_DESTINATION;
+
+let destination;
+if (destinationType === 'SNS') {
+  destination = {
+    type: 'SNS',
+    topicArn: process.env.CONNECT_AWS_TOPIC_ARN,
+    authenticationMode: 'IAM',
+  };
+} else if (destinationType === 'GoogleCloudPubSub' || destinationType == null) {
+  // null/absent means Pub/Sub, per the docs' own example
+  destination = {
+    type: 'GoogleCloudPubSub',
+    topic: process.env.CONNECT_GCP_TOPIC_NAME,
+    projectId: process.env.CONNECT_GCP_PROJECT_ID,
+  };
+} else {
+  // Fail loudly rather than silently registering the wrong destination type.
+  throw new Error(`Unknown subscription destination type: ${destinationType}`);
+}
 ```
 
-This is the destination whose push envelope your handler decodes in Pattern 1 (base64 `message.data`). Keep the two in sync.
+This is the destination whose envelope your handler decodes in Pattern 1. Public docs describe **one** event-app envelope (base64 `message.data`) without qualifying it per broker, so don't assume an SNS deployment needs different unwrapping — but don't assume it doesn't either: the documented example's `subscription` field is Pub/Sub-shaped, and no page states what an SNS-backed event app receives. **Verify the envelope against a real delivery before deploying an `event` app to an AWS region**, rather than trusting either reading.
 
-> This skill targets **GCP-hosted Connect deployments**, where the injected destination is Google Cloud Pub/Sub. Don't hardcode a connection string for another broker — always build the destination from the injected `CONNECT_GCP_*` vars.
+## Pattern 8: Reconciliation sweep for SLA-bound consumers
+
+Subscriptions promise at-least-once delivery with **no ordering and no delivery-time guarantee** — a multi-minute delay is normal platform behavior, not a defect. Patterns 2–5 make a handler *correct*; they don't make it *timely*. If a downstream system has an SLA ("every order reaches the OMS within 5 minutes"), the design is **hybrid, not either/or**:
+
+1. Keep the Subscription as the fast path.
+2. Add a `job` app ([job-applications.md](./job-applications.md)) that periodically polls `GET /{projectKey}/messages` for the same message types and processes anything the event path missed.
+3. Share one idempotent handler between both paths — the sweep must be able to re-process a message the Subscription already delivered (Pattern 4).
+
+**Prerequisites:**
+
+- Messages are *not persisted by default* — enable querying via Merchant Center *Settings → Developer Settings* or the [Change Messages Configuration](https://docs.commercetools.com/api/projects/project.md#change-messages-configuration) update action ([Messages](https://docs.commercetools.com/api/projects/messages.md#enable-querying-messages-via-the-api)).
+- The job's API client needs the read scope for the messages it sweeps (`view_messages` alongside the domain read scopes) — declare it in `inheritAs.apiClient.scopes` like any other.
+- Mind `deleteDaysAfterCreation`: a sweep stalled longer than the retention window can no longer see those messages, so alert on **sweep lag**, not only on sweep errors.
+
+**Page with a keyset cursor on `(createdAt, id)`, never `offset`** — `offset` maxes out at 10,000 and re-paginates unstably while new messages arrive. The predicate must be the compound form; a `createdAt >= X and id > Y` conjunction silently drops any message with a later timestamp but a lower `id`:
+
+```typescript
+const PAGE = 500;
+const TYPES = '"OrderCreated", "OrderStateChanged"';        // the same types the Subscription registers
+
+// Safety lag: `createdAt` is millisecond-granular and ids are not monotonic, so a
+// message can become queryable just after the cursor passed its timestamp. Never
+// sweep right up to now — trail behind and let idempotency absorb the overlap.
+const until = new Date(Date.now() - 60_000).toISOString();
+
+const buildWhere = (cursor) => [
+  cursor
+    ? `(createdAt > "${cursor.createdAt}" or (createdAt = "${cursor.createdAt}" and id > "${cursor.id}"))`
+    : null,
+  `createdAt <= "${until}"`,
+  `type in (${TYPES})`,
+].filter(Boolean).join(' and ');
+
+// `cursor` MUST be reassigned each page. Hoisting the predicate out of the loop
+// re-issues the same query forever — the sweep spins until the job's 30-minute
+// timeout, re-handling the same first page and never draining the backlog.
+let cursor = await loadCursor('message-sweep');             // e.g. a CustomObject
+
+for (;;) {
+  const { body: { results } } = await apiRoot.messages().get({ queryArgs: {
+    where: buildWhere(cursor),                             // rebuilt from the advancing cursor
+    sort: ['createdAt asc', 'id asc'],                     // must match the predicate's ordering
+    withTotal: false,                                      // cheaper; you don't need the count
+    limit: PAGE,
+  }}).execute();
+  if (!results.length) break;
+
+  for (const message of results) {
+    await handleMessage(message);                           // the same idempotent handler the event path uses
+  }
+  const last = results[results.length - 1];
+  cursor = { createdAt: last.createdAt, id: last.id };      // advance in memory…
+  await saveCursor('message-sweep', cursor);                // …and checkpoint per page
+  if (results.length < PAGE) break;
+}
+```
+
+Checkpoint *after* each page is fully handled, not per message — a mid-page crash then replays a few already-handled messages, which idempotency absorbs, rather than skipping them. Compute `until` once per run, not per page, so the upper bound can't drift forward while you drain.
+
+One caveat on sharing the handler: this works cleanly for a **MessageSubscription**, where both paths see the same Message types. A `ChangeSubscription` has no corresponding Message to sweep, and API-fetched Messages carry no delivery envelope — so the shared handler must key off `resource.id` and re-fetch (Pattern 5) rather than reading envelope fields.
 
 ---
 
@@ -204,7 +283,8 @@ This is the destination whose push envelope your handler decodes in Pattern 1 (b
 - [ ] Reprocessing is a no-op via stateless means (target's own idempotency, re-fetch-and-re-check, or upsert by stable key) — no local dedup store
 - [ ] Handler re-fetches the resource by ID; handles `payloadNotIncluded`
 - [ ] Self-change filtering prevents write-back loops
-- [ ] Subscription registers only the needed message types; destination built from the injected `CONNECT_GCP_*` vars
+- [ ] Subscription registers only the needed message types; destination built from the injected vars, branching on `CONNECT_SUBSCRIPTION_DESTINATION` rather than assuming Pub/Sub
 - [ ] Processing stays within the 10 s ack timeout (offload long work; ack fast)
+- [ ] For SLA-bound flows: a `job` reconciliation sweep polls `GET /messages` with a keyset `(createdAt, id)` cursor (never `offset`), sharing the event path's idempotent handler; Messages querying enabled and sweep lag alerted on
 
 **Next:** [lifecycle-scripts.md](./lifecycle-scripts.md) · [observability-operations.md](./observability-operations.md) · [testing.md](./testing.md)

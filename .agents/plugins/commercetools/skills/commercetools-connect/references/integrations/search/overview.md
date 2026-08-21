@@ -61,7 +61,7 @@ commercetools ships its **own** search: [Product Search](https://docs.commerceto
 
 ### Step 1.5 — Native, use, fork, or build?
 
-Once native is ruled out, decide the path — use a public connector, fork one, or scaffold from the Product export template — from **live** marketplace data, and watch the hosted-integration trap (an engine's own dashboard-configured integration is not a deployable Connect connector). Full procedure and fit table: [connector-selection.md](./connector-selection.md).
+Once native is ruled out, establish the landscape from **live** marketplace data — use a public connector, fork one, or scaffold from the Product export template — and watch the hosted-integration trap (an engine's own dashboard-configured integration is not a deployable Connect connector). **Present all three paths to the user with a recommendation and its reasoning, then let them choose** — "install the public connector", "fork it", and "build from the template" are materially different amounts of work and the choice is theirs, not yours. Do this even when the user named an engine they already run; naming the engine settles the *destination*, not the *path*. Full procedure and fit table: [connector-selection.md](./connector-selection.md).
 
 ### Step 2 — Data mapping (the heart)
 
@@ -107,7 +107,7 @@ Requirements
 Path (decide before wiring/building)
 - [ ] **Rung 0 ruled out explicitly** — native Product Search / Product Projection Search can't do it, and you said why
 - [ ] Checked **live** marketplace + docs (not memory); a hosted engine integration surfaced with the not-a-Connect-connector warning
-- [ ] Path chosen: use (1) · config-closes-gap (2) · fork (3) · build-from-template (4)
+- [ ] Path **presented to the user and chosen by them**: use (1) · config-closes-gap (2) · fork (3) · build-from-template (4)
 
 Mapping + sync (the deliverables)
 - [ ] Projection → flat document mapped; `objectID` keyed for idempotent upsert; price context and localization resolved → [data-mapping.md](./data-mapping.md)

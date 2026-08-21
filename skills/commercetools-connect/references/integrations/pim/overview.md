@@ -112,7 +112,7 @@ Connector fit (decide before wiring/building)
 - [ ] Checked the **live** marketplace (not memory); named the connector + version
 - [ ] Verified the candidate is a **deployable Connect connector**, not a partner/SaaS integration listing; a good-match non-connector surfaced with the not-a-Connect-solution warning
 - [ ] PIM, direction, and sync scope compared to the requirements; apparent gaps re-checked as config/attribute-mapping
-- [ ] Ladder rung chosen: configure (1) · config/mapping-closes-gap (2) · fork/extend (3) · build (4)
+- [ ] Ladder rung **presented to the user and chosen by them**: configure (1) · config/mapping-closes-gap (2) · fork/extend (3) · build (4)
 
 Data mapping (the deliverable that decides correctness)
 - [ ] Product Type strategy chosen (flexible attributes, **not** 1:1 with PIM families); search-critical attributes mapped, supplementary consolidated

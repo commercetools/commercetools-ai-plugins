@@ -57,7 +57,7 @@ Two forms; pick per the CRM's capability and your latency need.
 ### Form A — `service` inbound webhook (CRM pushes)
 
 - **Not an API Extension** — no Extension is registered; the CRM calls your endpoint directly. The **5-min service timeout** applies (not the 2 s extension limit).
-- **Authenticate the caller** — the CRM calls you, so validate *its* proof (webhook signature / shared secret / JWT) in-app before writing (parent [security.md](../../security.md)). Never trust an unauthenticated inbound write to Customers. (`AuthorizationHeaderAuthentication` is the separate mechanism for the reverse direction — commercetools calling *your* endpoint as an Extension destination — not inbound-caller auth.)
+- **Authenticate the caller** — the CRM calls you, so validate *its* proof (webhook signature / shared secret / JWT) in-app before writing (parent [security.md](../../security.md)). Never trust an unauthenticated inbound write to Customers. (`AuthorizationHeader` authentication on an Extension's `HTTP` destination is the separate mechanism for the reverse direction — commercetools calling *your* endpoint as an Extension destination — not inbound-caller auth.)
 - **Upsert the Customer by `externalId`** — look up by the CRM id, update or create. Use `manage_customers` scope.
 - **Idempotent** — the same webhook may arrive twice; the upsert must be a no-op the second time.
 - **Read-only mapped fields** — when the CRM masters these fields, store them in Custom Fields you treat as read-only elsewhere, so storefront/MC edits don't fight the master.

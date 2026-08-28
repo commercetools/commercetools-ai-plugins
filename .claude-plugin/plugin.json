@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "commercetools",
   "displayName": "commercetools",
-  "version": "0.28.0",
+  "version": "0.30.0",
   "description": "Build commercetools solutions faster",
   "author": {
     "name": "commercetools",

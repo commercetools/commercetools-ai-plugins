@@ -20,7 +20,6 @@ Start from the shared [recurring prices reference](../../core/optional/recurring
 ## Table of Contents
 - [B2C Extension: PDP Gate](#b2c-extension-pdp-gate)
 - [B2C Extension: Add to Cart with Recurrence](#b2c-extension-add-to-cart-with-recurrence)
-- [Legacy Note: Older SDK Cast Pattern](#legacy-note-older-sdk-cast-pattern)
 - [Checklist](#checklist)
 
 ---

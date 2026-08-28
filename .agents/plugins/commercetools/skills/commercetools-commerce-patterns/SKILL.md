@@ -17,9 +17,7 @@ when_to_use:
 metadata:
   contentType: SKILL
   area:
-    - commerce
-    - b2c
-    - b2b
+    - Foundations
 ---
 
 ## Workflow
@@ -104,7 +102,7 @@ When this skill is invoked, always follow these steps:
 
 | Topic | Reference |
 |-------|-----------|
-| Discount stacking rules, sortOrder, Direct Discount blocking Discount Codes | [references/discount-fundamentals.md](references/discount-fundamentals.md) | 
+| Discount stacking rules, sortOrder, Direct Discount blocking Discount Codes | [references/discount-fundamentals.md](references/discount-fundamentals.md) |
 | Buy/Get cart discount — triggerPattern, targetPattern, excludeCount | [references/bundle-discounting.md](references/bundle-discounting.md) |
 | Cart discount scenario cookbook — 12 named scenarios with full JSON | [references/cart-discount-scenarios.md](references/cart-discount-scenarios.md) |
 | Fixed-price combo discount — buy N of X+Y at fixed combined price | [references/fixed-price-combo.md](references/fixed-price-combo.md) |
@@ -115,23 +113,23 @@ When this skill is invoked, always follow these steps:
 | Discount Groups and Promotion Prioritization — best-deal selection | [references/discount-groups.md](references/discount-groups.md) |
 | Store credit & loyalty currency — external ledger pattern | [references/store-credit.md](references/store-credit.md) |
 | Limited-time pricing — validFrom/validUntil on embedded prices | [references/limited-time-pricing.md](references/limited-time-pricing.md) |
-| Discount code usage — code generation, redemption limits | [references/discount-code-usage.md](references/discount-code-usage.md) | 
+| Discount code usage — code generation, redemption limits | [references/discount-code-usage.md](references/discount-code-usage.md) |
 
 ### Shipping & Fulfillment
 
-| Topic | Reference | 
+| Topic | Reference |
 |-------|-----------|
 | Tiered rates, cart score setup, ScoreShippingRateInput | [references/tiered-rates-cart-score.md](references/tiered-rates-cart-score.md) |
 | Shipping predicates — predicate syntax, custom field workaround | [references/shipping-predicates.md](references/shipping-predicates.md) |
 | Price functions — priceFunction configuration, function syntax | [references/price-functions.md](references/price-functions.md) |
-| Dynamic shipping costs — external calculation, setCustomShippingMethod | [references/dynamic-shipping-costs.md](references/dynamic-shipping-costs.md) | 
+| Dynamic shipping costs — external calculation, setCustomShippingMethod | [references/dynamic-shipping-costs.md](references/dynamic-shipping-costs.md) |
 | BOPIS shipping — multiple shipping methods, delivery group setup | [references/bopis-shipping.md](references/bopis-shipping.md) |
 
 ### Payments & Tax
 
-| Topic | Reference | 
+| Topic | Reference |
 |-------|-----------|
-| Payments — Payment object model, transactions, PSP integration flow | [references/payments.md](references/payments.md) | 
+| Payments — Payment object model, transactions, PSP integration flow | [references/payments.md](references/payments.md) |
 | Taxes — cart tax modes (Platform/External/ExternalAmount/Disabled) | [references/taxes.md](references/taxes.md) |
 | Financing & installments — BNPL integration, CT payment modeling | [references/financing-options.md](references/financing-options.md) |
 
@@ -140,7 +138,7 @@ When this skill is invoked, always follow these steps:
 | Topic | Reference |
 |-------|-----------|
 | Custom Associate Roles — role definition, permission keys, assignment to BU | [references/custom-associate-roles.md](references/custom-associate-roles.md) |
-| Business Unit hierarchy — parent/child BUs, inherited roles, store assignment | [references/business-unit-hierarchy.md](references/business-unit-hierarchy.md) | 
+| Business Unit hierarchy — parent/child BUs, inherited roles, store assignment | [references/business-unit-hierarchy.md](references/business-unit-hierarchy.md) |
 | Approval rules — predicate design, approval flow lifecycle | [references/approval-rules.md](references/approval-rules.md) |
 | Quote lifecycle — QuoteRequest, StagedQuote, Quote, Order conversion | [references/quote-lifecycle.md](references/quote-lifecycle.md) |
 | as-associate API pattern — chain construction, scope | [references/as-associate-api.md](references/as-associate-api.md) |
@@ -155,12 +153,12 @@ When this skill is invoked, always follow these steps:
 
 | Topic | Reference |
 |-------|-----------|
-| Product data modeling — hierarchy, all 14 attribute types, Nested vs Custom Object | [references/product-data-modeling.md](../commercetools-platform/references/product-data-modeling.md) | 
-| Bundle product modeling — ProductType design, child SKU reference, BFF orchestration | [references/bundle-modeling.md](references/bundle-modeling.md) | 
-| Import API — containers, batching, async processing, delta imports | [references/import-api.md](../commercetools-extensibility/references/import-api.md) | 
-| Import API performance — 15M record pattern, container count, batch size | [references/import-performance.md](../commercetools-extensibility/references/import-performance.md) | 
-| Item substitutes — modeling substitute/replacement products | [references/item-substitutes.md](references/item-substitutes.md) | 
-| Inventory modeling — supply channels, inventory entries, backorder | [references/inventory-modeling.md](../commercetools-platform/references/inventory-modeling.md) |
+| Product data modeling — hierarchy, all 14 attribute types, Nested vs Custom Object | |
+| Bundle product modeling — ProductType design, child SKU reference, BFF orchestration | [references/bundle-modeling.md](references/bundle-modeling.md) |
+| Import API — containers, batching, async processing, delta imports | |
+| Import API performance — 15M record pattern, container count, batch size | |
+| Item substitutes — modeling substitute/replacement products | [references/item-substitutes.md](references/item-substitutes.md) |
+| Inventory modeling — supply channels, inventory entries, backorder | |
 
 ---
 

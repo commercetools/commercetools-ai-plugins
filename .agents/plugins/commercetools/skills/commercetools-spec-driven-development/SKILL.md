@@ -7,8 +7,7 @@ when_to_use:
 metadata:
   contentType: SKILL
   area:
-    - spec-driven-development
-    - workflow
+    - Foundations
 ---
 
 # commercetools Spec-Driven Development Overlay

@@ -15,19 +15,19 @@ Everything the `mail-sender` `event` app must do, and the pitfalls that silently
 
 ## What triggers it — one Subscription, several message types
 
-Register a **Subscription** in `postDeploy` (idempotently — the template deletes-by-key then recreates), keyed on a stable subscription key, with the destination built from the injected `CONNECT_GCP_*` vars ([event-applications.md](../../event-applications.md#pattern-7-register-the-pubsub-subscription-destination)). Subscribe to **only** the message types you send email for — the broker shouldn't deliver noise you'll just ack-and-ignore.
+Register a **Subscription** in `postDeploy` (idempotently — the template deletes-by-key then recreates), keyed on a stable subscription key, with the destination built from the injected `CONNECT_GCP_*` vars ([event-applications.md](https://docs.commercetools.com/dev-tooling/skills/commercetools-connect#event-applications-pattern-7-register-the-subscription-destination)). Subscribe to **only** the message types you send email for — the broker shouldn't deliver noise you'll just ack-and-ignore.
 
 The canonical message set (grounded in the template) and what each email is:
 
-| Email | `resourceTypeId` | Message `type` |
-|---|---|---|
-| Registration / welcome | `customer` | `CustomerCreated` |
-| Email verification (double opt-in) | `customer-email-token` | `CustomerEmailTokenCreated` |
-| Password reset | `customer-password-token` | `CustomerPasswordTokenCreated` |
-| Order confirmation | `order` | `OrderCreated` (and `OrderImported` if you email on imports) |
-| Order state / cancellation | `order` | `OrderStateChanged` |
-| Shipment | `order` | `OrderShipmentStateChanged` |
-| Refund / returns | `order` | `ReturnInfoAdded`, `ReturnInfoSet` |
+| Email                              | `resourceTypeId`          | Message `type`                                               |
+| ---------------------------------- | ------------------------- | ------------------------------------------------------------ |
+| Registration / welcome             | `customer`                | `CustomerCreated`                                            |
+| Email verification (double opt-in) | `customer-email-token`    | `CustomerEmailTokenCreated`                                  |
+| Password reset                     | `customer-password-token` | `CustomerPasswordTokenCreated`                               |
+| Order confirmation                 | `order`                   | `OrderCreated` (and `OrderImported` if you email on imports) |
+| Order state / cancellation         | `order`                   | `OrderStateChanged`                                          |
+| Shipment                           | `order`                   | `OrderShipmentStateChanged`                                  |
+| Refund / returns                   | `order`                   | `ReturnInfoAdded`, `ReturnInfoSet`                           |
 
 Register these as `messages: [{ resourceTypeId, types: [...] }]`. Message reference: [customer messages](https://docs.commercetools.com/api/projects/messages/customer-messages.md), [cart & order messages](https://docs.commercetools.com/api/projects/messages/cart-order-messages.md).
 
@@ -42,16 +42,16 @@ Keep the map from resource → ESP request a **pure function** (no network), so 
 
 ## The central decision: delivery semantics for a non-idempotent send
 
-An ESP send is **not idempotent** — two calls send two emails. Event delivery is **at-least-once**, so the same Message *will* occasionally be redelivered. Your acknowledgement choice decides the failure mode. There is no free lunch; pick per email type.
+An ESP send is **not idempotent** — two calls send two emails. Event delivery is **at-least-once**, so the same Message _will_ occasionally be redelivered. Your acknowledgement choice decides the failure mode. There is no free lunch; pick per email type.
 
-**A `2xx` ack for an event app means "don't redeliver" — including `202`.** (This is the opposite of an API Extension, where `202` *fails* the operation. Same number, different contract, because event ack semantics differ from extension response semantics. The tax *calculator* is an Extension; this email app is an `event` — don't carry the `202` rule across.)
+**A `2xx` ack for an event app means "don't redeliver" — including `202`.** (This is the opposite of an API Extension, where `202` _fails_ the operation. Same number, different contract, because event ack semantics differ from extension response semantics. The tax _calculator_ is an Extension; this email app is an `event` — don't carry the `202` rule across.)
 
 ### Option A — ack first, then send (at-most-once; the template's default)
 
 The template sends `202` at the **top** of the handler, before validation and before the ESP call:
 
 ```js
-response.status(HTTP_STATUS_SUCCESS_ACCEPTED).send();   // 202, immediately
+response.status(HTTP_STATUS_SUCCESS_ACCEPTED).send(); // 202, immediately
 // …then decode, route, re-fetch, sendMail — errors only get logged
 ```
 
@@ -82,10 +82,10 @@ try {
 
 ## Token emails (verification & password reset) — the value isn't always in the Message
 
-The token *value* rides the `CustomerEmailTokenCreated` / `CustomerPasswordTokenCreated` Message **only when the token's validity is ≤ 60 minutes** ([customer password reset](https://docs.commercetools.com/api/customers-overview.md#customer-password-reset)). Otherwise it's omitted. Two designs:
+The token _value_ rides the `CustomerEmailTokenCreated` / `CustomerPasswordTokenCreated` Message **only when the token's validity is ≤ 60 minutes** ([customer password reset](https://docs.commercetools.com/api/customers-overview.md#customer-password-reset)). Otherwise it's omitted. Two designs:
 
 - **Read from the Message** — create tokens with ≤ 60-min validity so the value is present; `view_customers` is enough. Simplest, and the emailed token is the one the user's action created.
-- **Mint in the handler** — call `POST .../password-token` (or email-token) yourself and email that value (what the template does). Works for any validity, but needs **`manage_customers`** (a write), and the emailed token differs from the triggering one. Under **at-least-once** this also means a redelivery mints *another* token — dedupe, or accept that older tokens stay valid until used (creating a token doesn't invalidate older ones by default).
+- **Mint in the handler** — call `POST .../password-token` (or email-token) yourself and email that value (what the template does). Works for any validity, but needs **`manage_customers`** (a write), and the emailed token differs from the triggering one. Under **at-least-once** this also means a redelivery mints _another_ token — dedupe, or accept that older tokens stay valid until used (creating a token doesn't invalidate older ones by default).
 
 Never log the token value (PII/secret) — see hygiene below.
 
@@ -95,7 +95,7 @@ Never log the token value (PII/secret) — see hygiene below.
 
 ```js
 const order = await getOrderById(id);
-if (order.shipmentState !== 'Shipped') return ack();     // only the shipment email
+if (order.shipmentState !== "Shipped") return ack(); // only the shipment email
 // or: if (order.orderState !== 'Cancelled') return ack();
 ```
 
@@ -113,28 +113,28 @@ The template hardcodes `DEFAULT_LOCALE = 'en-US'` for line-item names and picks 
 - **Don't log PII or tokens.** The template logs full message bodies and email addresses; scrub recipient addresses, names, and any token value from logs (log the `resource.id`/`sequenceNumber` correlation key instead). → [security.md](../../security.md), [observability-operations.md](../../observability-operations.md).
 - **Keep it transactional.** Transactional emails (order/account/token) generally don't require marketing opt-in; marketing/promotional email does and belongs in a marketing platform, not this connector. Don't quietly turn a transactional connector into a marketing sender.
 - **Sender must be verified.** `SENDER_EMAIL_ADDRESS` must be a verified sender/domain in the ESP or mail is rejected or spam-filed.
-- **Bounces/complaints** are the ESP's to report. If you need them reflected back into commercetools, that's a *separate* inbound-webhook `service` app consuming the ESP's event webhook — out of scope for the sender.
+- **Bounces/complaints** are the ESP's to report. If you need them reflected back into commercetools, that's a _separate_ inbound-webhook `service` app consuming the ESP's event webhook — out of scope for the sender.
 
 ## Pitfall catalog
 
-| Pitfall | Symptom | Fix |
-|---|---|---|
-| Ack-first + failed send | Email silently never arrives; no retry | Option B with dedupe for drop-intolerant emails, or add your own retry/DLQ |
-| At-least-once without dedupe | Customer gets 2+ copies | ESP idempotency key or a sent-marker on a stable key |
-| Emailing on every `OrderStateChanged` | Shopper spammed on internal transitions | Gate on the target state after re-fetch |
-| Trusting the payload | Wrong/missing data; throws on `payloadNotIncluded` | Re-fetch the Order/Customer by `resource.id` |
-| Token value read from a >60-min Message | Empty reset link | Use ≤60-min validity, or mint the token in the handler (`manage_customers`) |
-| Hardcoded `en-US` | Wrong-language emails | Localize by `customer.locale` + locale-specific template id |
-| Subscribing to whole resources | Broker delivers noise; every message hits a handler | Register only the exact message `types` |
-| Non-idempotent `postDeploy` | Duplicate/failed Subscription on redeploy | Delete-by-key then create, or get-then-skip |
-| Logging recipient/token | PII & secret leakage | Log the correlation id only; scrub addresses and token values |
-| Unverified sender | Sends rejected / spam-filed | Verify the sender domain in the ESP |
-| Legacy SDK | Fails the parent skill's pinned-version gate | `@commercetools/platform-sdk@^8` + `@commercetools/ts-client@^4` |
+| Pitfall                                 | Symptom                                             | Fix                                                                         |
+| --------------------------------------- | --------------------------------------------------- | --------------------------------------------------------------------------- |
+| Ack-first + failed send                 | Email silently never arrives; no retry              | Option B with dedupe for drop-intolerant emails, or add your own retry/DLQ  |
+| At-least-once without dedupe            | Customer gets 2+ copies                             | ESP idempotency key or a sent-marker on a stable key                        |
+| Emailing on every `OrderStateChanged`   | Shopper spammed on internal transitions             | Gate on the target state after re-fetch                                     |
+| Trusting the payload                    | Wrong/missing data; throws on `payloadNotIncluded`  | Re-fetch the Order/Customer by `resource.id`                                |
+| Token value read from a >60-min Message | Empty reset link                                    | Use ≤60-min validity, or mint the token in the handler (`manage_customers`) |
+| Hardcoded `en-US`                       | Wrong-language emails                               | Localize by `customer.locale` + locale-specific template id                 |
+| Subscribing to whole resources          | Broker delivers noise; every message hits a handler | Register only the exact message `types`                                     |
+| Non-idempotent `postDeploy`             | Duplicate/failed Subscription on redeploy           | Delete-by-key then create, or get-then-skip                                 |
+| Logging recipient/token                 | PII & secret leakage                                | Log the correlation id only; scrub addresses and token values               |
+| Unverified sender                       | Sends rejected / spam-filed                         | Verify the sender domain in the ESP                                         |
+| Legacy SDK                              | Fails the parent skill's pinned-version gate        | `@commercetools/platform-sdk@^8` + `@commercetools/ts-client@^4`            |
 
 ## Test-first checklist (mirror in the suite)
 
 - [ ] Decodes the base64 envelope; validates & branches on message type; acks unhandled types
-- [ ] **Delivery semantics asserted** — ack-first *or* ack-after-success + dedupe; the failure path proven (no silent drop / no double-send for the chosen mode)
+- [ ] **Delivery semantics asserted** — ack-first _or_ ack-after-success + dedupe; the failure path proven (no silent drop / no double-send for the chosen mode)
 - [ ] Re-fetches Order/Customer by id; handles `payloadNotIncluded`
 - [ ] Order-state/shipment emails gated on the target state (asserted)
 - [ ] Correct template id + recipient + personalization data per email type; money/date formatting

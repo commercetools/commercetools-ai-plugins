@@ -83,8 +83,6 @@ const productProjectionParameters = {
 
 **CORRECT — expand both `masterVariant` and `variants` discount references:**
 
-> See [product-search.md — Pattern 6: Discount Expansion](../../b2c/product-listing.md#pattern-6-discount-expansion) for the full explanation and mapper code.
-
 ```typescript
 // /<server>/ct/products
 const productProjectionParameters = {

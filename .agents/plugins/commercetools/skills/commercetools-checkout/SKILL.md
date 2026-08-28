@@ -11,9 +11,7 @@ when_to_use:
 metadata:
   contentType: SKILL
   area:
-    - checkout
-    - payments
-    - psp
+    - Foundations
 ---
 
 # Checkout

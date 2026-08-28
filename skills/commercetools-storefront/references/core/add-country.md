@@ -23,7 +23,6 @@ All locale data derives from one `COUNTRY_CONFIG` object. Update it once, then a
 - [Pattern 1: Single Source of Truth](#pattern-1-single-source-of-truth)
 - [Pattern 2: Routing Update](#pattern-2-routing-update)
 - [Pattern 3: Message File](#pattern-3-message-file)
-- [Pattern 4: Hero Config](#pattern-4-hero-config)
 
 ---
 
@@ -80,8 +79,8 @@ The `locale` value is used directly in commercetools search queries (`language: 
 
 The active-locale list the framework's i18n/locale routing uses must **derive from `COUNTRY_CONFIG` keys**, never be hardcoded — otherwise it drifts every time a country is added. In practice this is `Object.keys(COUNTRY_CONFIG)` fed into the routing configuration, with a default locale (e.g. `en-US`).
 
-1. Update the Merchant center by adding the new country, language and currency from **Settings** > **Project settings** 
-2. Update and add a new entry to `COUNTRY_CONFIG` is all that's needed — the locale list updates automatically. The COUNTRY_CONFIG key is the BCP-47 locale (e.g. `fr-FR`), the same format commercetools uses for API calls, and the URL segment matches the key exactly: `/fr-FR/`, `/de-DE/`. 
+1. Update the Merchant center by adding the new country, language and currency from **Settings** > **Project settings**
+2. Update and add a new entry to `COUNTRY_CONFIG` is all that's needed — the locale list updates automatically. The COUNTRY_CONFIG key is the BCP-47 locale (e.g. `fr-FR`), the same format commercetools uses for API calls, and the URL segment matches the key exactly: `/fr-FR/`, `/de-DE/`.
 > The routing wiring itself is framework-specific — find the adapter's `project-layout.md`.
 
 ---

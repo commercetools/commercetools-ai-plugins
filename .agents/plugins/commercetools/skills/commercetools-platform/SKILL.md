@@ -10,8 +10,7 @@ when_to_use:
 metadata:
   contentType: SKILL
   area:
-    - api
-    - sdk
+    - Foundations
 ---
 
 # commercetools TypeScript SDK

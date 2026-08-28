@@ -1,6 +1,6 @@
 {
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "commercetools",
-  "displayName": "commercetools",
   "version": "0.30.0",
   "description": "Build commercetools solutions faster",
   "author": {
@@ -15,12 +15,5 @@
     "commercetools",
     "commerce",
     "ecommerce"
-  ],
-  "skills": "./skills/",
-  "mcpServers": "./.mcp.json",
-  "interface": {
-    "displayName": "commercetools",
-    "category": "commerce",
-    "logo": "./assets/commercetools-symbol.svg"
-  }
+  ]
 }

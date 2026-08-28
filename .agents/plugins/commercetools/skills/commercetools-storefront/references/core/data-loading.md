@@ -20,7 +20,7 @@ metadata:
 ## Table of Contents
 - [Pattern 1: Server-rendered vs Client-fetched Decision](#pattern-1-server-rendered-vs-client-fetched-decision)
 - [Pattern 2: commercetools Type Boundary](#pattern-2-commercetools-type-boundary)
-- [Pattern 3: BFF API Route Shape](#pattern-3-bff-api-route-shape)
+- [Pattern 3: BFF Server Endpoint Shape](#pattern-3-bff-server-endpoint-shape)
 - [Pattern 4: Version Conflict](#pattern-4-version-conflict)
 - [Pattern 5: Server-Side Caching](#pattern-5-server-side-caching)
 - [Checklist](#checklist)
@@ -87,7 +87,7 @@ Never put raw SDK calls in a server endpoint. Never call the endpoint (`fetch('/
 
 commercetools uses optimistic locking — every cart mutation needs the current `version`. When two requests arrive simultaneously one will be rejected with `409 ConcurrentModification`. Re-fetch the entity's version before the action.
 
-The refetch logic belongs in `<server>/ct/<entity>.ts` (or a route-handler-level helper), not scattered across components. 
+The refetch logic belongs in `<server>/ct/<entity>.ts` (or a route-handler-level helper), not scattered across components.
 For example when updating cart fetch the cart version using the refetch logic in `<server>/ct/cart` and use it in the cart update.
 
 ---

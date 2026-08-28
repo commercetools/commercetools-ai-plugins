@@ -20,10 +20,10 @@ metadata:
 This reference covers the shared checkout structure used by both B2C and B2B storefronts: the multi-step page shell, shipping method selection, payment via the Checkout frontend SDK, and the confirmation page. Address step details and order placement are storefront-specific — see the relevant extension file.
 
 ## Table of Contents
-- [Pattern 1: Multi-Step Checkout Page Structure](#pattern-1-multi-step-checkout-page-structure)
+- [Pattern 1: Multi-Step Checkout Structure](#pattern-1-multi-step-checkout-structure)
 - [Pattern 2: Address Step](#pattern-2-address-step)
 - [Pattern 3: Shipping Method Selection](#pattern-3-shipping-method-selection)
-- [Pattern 4: Payment Step — Checkout Frontend SDK](#pattern-4-payment-step--commercetools-checkout-frontend-sdk)
+- [Pattern 4: Payment Step — Checkout Frontend SDK](#pattern-4-payment-step--checkout-frontend-sdk)
 - [Pattern 5: Confirmation Page](#pattern-5-confirmation-page)
 - [Checklist](#checklist)
 
@@ -61,7 +61,7 @@ Shipping methods are fetched via a server endpoint that filters by the **session
 
 On the client, a client state hook reads the shipping-methods server endpoint. Its cache key is keyed on the current `country` + `currency` (null until both are known, so it doesn't fetch prematurely). Configure it not to re-fetch on tab focus — shipping methods change rarely.
 
-When the user selects a method, call the cart update endpoint with `shippingMethodId` and update the client state-manager/cache/state from the response (no refetch). 
+When the user selects a method, call the cart update endpoint with `shippingMethodId` and update the client state-manager/cache/state from the response (no refetch).
 
 ---
 

@@ -23,7 +23,7 @@ This reference covers the shared patterns: the correct commercetools login endpo
 - [Pattern 1: commercetools Login Endpoint](#pattern-1-commercetools-login-endpoint)
 - [Pattern 2: Server Endpoint Structure](#pattern-2-server-endpoint-structure)
 - [Pattern 3: useAccount Client State Hook](#pattern-3-useaccount-client-state-hook)
-- [Pattern 4: Logout — Session and client state-manager/cache Clearing](#pattern-4-logout--session-and-client-cache-clearing)
+- [Pattern 4: Logout — Session and client state-manager/cache Clearing](#pattern-4-logout--session-and-client-state-managercache-clearing)
 - [Checklist](#checklist)
 
 ---

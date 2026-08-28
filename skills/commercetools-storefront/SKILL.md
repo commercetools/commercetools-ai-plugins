@@ -12,9 +12,7 @@ when_to_use:
 metadata:
   contentType: SKILL
   area:
-    - b2b
-    - b2c
-    - storefront
+    - Foundations
 ---
 
 # commercetools Storefront (framework-agnostic)

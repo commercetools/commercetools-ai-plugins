@@ -21,7 +21,7 @@ This reference covers parallel data fetching, server-side TTL caching for stable
 ## Table of Contents
 - [Pattern 1: Parallel Fetching on the Server](#pattern-1-parallel-fetching-on-the-server)
 - [Pattern 2: TTL Cache for Stable commercetools Data](#pattern-2-ttl-cache-for-stable-commercetools-data)
-- [Pattern 3: Hydrate the client state-manager/cache from the Server](#pattern-3-hydrate-the-client-cache-from-the-server)
+- [Pattern 3: Hydrate the client state-manager/cache from the Server](#pattern-3-hydrate-the-client-state-managercache-from-the-server)
 - [Pattern 4: Image Optimization](#pattern-4-image-optimization) → see [image-config.md](./image-config.md)
 - [Pattern 5: N+1 Anti-Patterns to Avoid](#pattern-5-n1-anti-patterns-to-avoid)
 - [Checklist](#checklist)

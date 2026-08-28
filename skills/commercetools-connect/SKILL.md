@@ -22,9 +22,8 @@ when_to_use:
 metadata:
   contentType: SKILL
   area:
-    - platform
-    - integration
-    - connect
+    - Foundations
+    - Integrations
 ---
 
 # commercetools Connect

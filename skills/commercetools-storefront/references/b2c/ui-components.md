@@ -24,11 +24,10 @@ The shared library lives at `<server>/../components/ui/`. Check it before writin
 ## Table of Contents
 - [Pattern 1: Check Before Writing](#pattern-1-check-before-writing)
 - [Pattern 2: Button Component](#pattern-2-button-component)
-- [Pattern 3: Input Component](#pattern-3-input-component)
+- [Pattern 3: Input Component](#pattern-3-input-components)
 - [Pattern 4: Drawer Component](#pattern-4-drawer-component)
-- [Pattern 5: Adding a New Component](#pattern-5-adding-a-new-component)
+- [Pattern 5: Adding a New Component](#pattern-5-adding-a-new-component-to-componentsui)
 - [Pattern 6: Link Component](#pattern-6-link-component)
-
 ---
 
 ## Pattern 1: Check Before Writing

@@ -21,7 +21,7 @@ If forking, change only the delta (a new resource type, a transform, a direction
 
 ## Decision 1 — Which ingestion API?
 
-commercetools offers two ways to write product data ([docs: choose your approach](https://docs.commercetools.com/tutorials/product-data-integrations.md#choose-your-integration-approach), [external product data patterns](https://docs.commercetools.com/learning-integrate-with-composable-commerce/integration-patterns/integrate-with-external-product-and-inventory-data.md)):
+commercetools offers two ways to write product data ([docs: choose your approach](https://docs.commercetools.com/tutorials/product-data-integrations.md#choose-your-integration-approach), [external product data patterns](https://docs.commercetools.com/learning-integrate-with-commercetools/integration-patterns/integrate-with-external-product-and-inventory-data.md)):
 
 | | **Import API** | **HTTP (Products) API** |
 |---|---|---|

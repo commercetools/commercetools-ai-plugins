@@ -15,7 +15,7 @@ This is the **CRM integration sub-area** of [commercetools-connect](../../../SKI
 
 A CRM integration is **not a fixed set of apps** the way tax or payment is. Its shape falls out of **two decisions you must make first** — direction and source of truth — and it is fundamentally **asynchronous**: syncing a customer profile must never block or fail a registration or checkout. Unlike a tax calculator, **nothing here runs synchronously on the cart hot path.**
 
-> **The mistake to internalize first: pick direction and source of truth before anything else.** Almost every CRM-integration failure — duplicated contacts, overwritten edits, infinite sync loops — traces back to not having decided *who masters customer data* and *which way it flows*. commercetools' own [integration guidance](https://docs.commercetools.com/learning-integrate-with-composable-commerce/integration-patterns/integration-planning-and-patterns.md) is explicit: pick a single source of truth per data domain, and **avoid bi-directional syncs** — they carry real conflict and loop risk.
+> **The mistake to internalize first: pick direction and source of truth before anything else.** Almost every CRM-integration failure — duplicated contacts, overwritten edits, infinite sync loops — traces back to not having decided *who masters customer data* and *which way it flows*. commercetools' own [integration guidance](https://docs.commercetools.com/learning-integrate-with-commercetools/integration-patterns/integration-planning-and-patterns.md) is explicit: pick a single source of truth per data domain, and **avoid bi-directional syncs** — they carry real conflict and loop risk.
 
 ## The three shapes (by direction)
 
@@ -25,7 +25,7 @@ A CRM integration is **not a fixed set of apps** the way tax or payment is. Its 
 | **CRM → commercetools** (pull profiles/segments in) | CRM masters | **`service`** inbound webhook *or* **`job`** poll | CRM pushes a webhook, or a schedule polls the CRM for deltas |
 | **Initial migration** (one-time bulk load) | either | **`job`** | On-demand / scheduled; separate from the ongoing sync |
 
-Most real integrations combine an **ongoing** shape (event or webhook/poll) with a **one-time migration** job — the docs [recommend separating them](https://docs.commercetools.com/learning-integrate-with-composable-commerce/integration-patterns/integration-planning-and-patterns.md), because bulk backfill and delta sync need different tools. When the CRM is the master, the canonical setup is **one-way CRM → commercetools**, with a Customer created in commercetools anyway (it owns permissions, Cart/Order ownership, and promotions) and linked back to the CRM record. See [config-from-requirements.md](./config-from-requirements.md).
+Most real integrations combine an **ongoing** shape (event or webhook/poll) with a **one-time migration** job — the docs [recommend separating them](https://docs.commercetools.com/learning-integrate-with-commercetools/integration-patterns/integration-planning-and-patterns.md), because bulk backfill and delta sync need different tools. When the CRM is the master, the canonical setup is **one-way CRM → commercetools**, with a Customer created in commercetools anyway (it owns permissions, Cart/Order ownership, and promotions) and linked back to the CRM record. See [config-from-requirements.md](./config-from-requirements.md).
 
 ## Workflow
 
@@ -44,7 +44,7 @@ node scripts/docs-search.mjs \
   --limit 10
 ```
 
-(Run it from the `commercetools-connect` skill root.) Use its output as primary grounding. You *may additionally* use the commercetools Knowledge MCP or the [integration planning and patterns](https://docs.commercetools.com/learning-integrate-with-composable-commerce/integration-patterns/integration-planning-and-patterns.md) guide for deeper follow-up.
+(Run it from the `commercetools-connect` skill root.) Use its output as primary grounding. You *may additionally* use the commercetools Knowledge MCP or the [integration planning and patterns](https://docs.commercetools.com/learning-integrate-with-commercetools/integration-patterns/integration-planning-and-patterns.md) guide for deeper follow-up.
 
 ### Step 1 — Extract requirements (before any config or code)
 
@@ -56,7 +56,7 @@ CRM behavior is downstream of business facts, and the wrong default silently pro
 4. **Ongoing sync, initial migration, or both?** A one-time backfill of existing customers is a `job`; ongoing delta sync is an `event` or webhook/poll — usually both, built separately.
 5. **Which events trigger an outbound sync?** Creation only, or every customer change and `OrderCreated` too? This maps to the two Subscription flavors: a **ChangeSubscription** on the `customer` resource fires on *all* changes (`ResourceCreated`/`ResourceUpdated`/`ResourceDeleted`); **MessageSubscriptions** target specific Customer messages (`CustomerCreated`, `CustomerEmailChanged`, `CustomerAddressAdded`, `CustomerFirstNameSet`, `CustomerDeleted`, …) when only certain changes matter. → decides which Subscriptions the connector registers.
 6. **Deletion / GDPR / consent?** Must a `CustomerDeleted` (or anonymize/erasure request) propagate to delete or anonymize the CRM record? Are there marketing-consent flags to carry? Customer data is **PII** — this is not optional to think about.
-7. **Volume and latency?** Near-real-time (event/webhook) vs batch (nightly job); expected record counts (drives rate-limit and pagination handling). The docs frame the [batch-vs-broadcast choice](https://docs.commercetools.com/learning-integrate-with-composable-commerce/integration-patterns/integration-planning-and-patterns.md) on exactly these axes.
+7. **Volume and latency?** Near-real-time (event/webhook) vs batch (nightly job); expected record counts (drives rate-limit and pagination handling). The docs frame the [batch-vs-broadcast choice](https://docs.commercetools.com/learning-integrate-with-commercetools/integration-patterns/integration-planning-and-patterns.md) on exactly these axes.
 8. **Anything special or non-standard? (always ask — open-ended)** Multi-brand/multi-store contact separation, B2B accounts/company hierarchies, loyalty tiers or segments flowing *in*, double-opt-in, region/data-residency. Capture each as its own requirement line; **don't force it into a slot above.**
 
 Write these as a short requirements block and **confirm with the user** before deriving config. If the user surfaces nothing special, a sane default is: CRM as master where it exists, **one-way** sync, Customer↔CRM-record linked by **`externalId`**, ongoing delta via events (or webhook), a separate migration job, deletion propagated — and say so explicitly.

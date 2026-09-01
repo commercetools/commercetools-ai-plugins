@@ -90,7 +90,7 @@ The Subscription is what makes the connector fire. Register it in `postDeploy` o
 
 Read [email-contract.md](./email-contract.md) and [providers.md](./providers.md), then build, test-first:
 
-1. **Subscription registration** (`postDeploy`) — idempotent (delete-then-create by a stable key, or get-then-skip); the exact message types; destination from the injected `CONNECT_GCP_*` vars.
+1. **Subscription registration** (`postDeploy`) — idempotent (delete-then-create by a stable key, or get-then-skip); the exact message types; destination from the injected vars for the broker `CONNECT_SUBSCRIPTION_DESTINATION` reports.
 2. **The handler** — decode the base64 envelope; validate & branch on Message type; ack per your chosen delivery semantics; re-fetch the Order/Customer by id; map to the ESP's send request (template id + personalization data); call the ESP behind a tight timeout.
 
 **Mock the outbound boundary** (the ESP, the CT APIs) and assert on what your code *decided* — which email type, which template, what recipient/data, what it did on failure. The suite must run with zero deployment and zero secrets. What to assert/mock is in [email-contract.md](./email-contract.md).
@@ -136,7 +136,7 @@ Config (the deliverable)
 - [ ] `connect.yaml` at the repo root; only documented envelope fields
 
 The one app (build test-first)
-- [ ] Subscription registered idempotently on only the needed message types; destination from injected `CONNECT_GCP_*` vars
+- [ ] Subscription registered idempotently on only the needed message types; destination from the injected vars for the broker `CONNECT_SUBSCRIPTION_DESTINATION` reports
 - [ ] Ack strategy implemented and asserted (no silent drop; no double-send)
 - [ ] Order-state emails gated on the target state; handlers re-fetch by id
 - [ ] Boundary mocked; suite runs with no deployment/secrets

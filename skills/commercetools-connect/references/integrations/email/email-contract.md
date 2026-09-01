@@ -15,7 +15,7 @@ Everything the `mail-sender` `event` app must do, and the pitfalls that silently
 
 ## What triggers it — one Subscription, several message types
 
-Register a **Subscription** in `postDeploy` (idempotently — the template deletes-by-key then recreates), keyed on a stable subscription key, with the destination built from the injected `CONNECT_GCP_*` vars ([event-applications.md](https://docs.commercetools.com/dev-tooling/skills/commercetools-connect#event-applications-pattern-7-register-the-subscription-destination)). Subscribe to **only** the message types you send email for — the broker shouldn't deliver noise you'll just ack-and-ignore.
+Register a **Subscription** in `postDeploy` (idempotently — the template deletes-by-key then recreates), keyed on a stable subscription key, with the destination built from the injected vars for whichever broker `CONNECT_SUBSCRIPTION_DESTINATION` reports ([event-applications.md](../../event-applications.md#pattern-7-register-the-subscription-destination)). Subscribe to **only** the message types you send email for — the broker shouldn't deliver noise you'll just ack-and-ignore.
 
 The canonical message set (grounded in the template) and what each email is:
 

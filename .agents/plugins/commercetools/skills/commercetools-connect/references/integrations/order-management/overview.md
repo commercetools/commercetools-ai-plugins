@@ -22,12 +22,12 @@ Unlike payment, order management has **no fixed connector contract** (no process
 
 ## Direction & source of truth (settle this first — it decides everything)
 
-Per commercetools' integration guidance, the **Order master record usually lives downstream** in the OMS/ERP; commercetools *captures* Orders and hands them off ([Plan integrations → Order](https://docs.commercetools.com/tutorials/implementation-guide/plan-integrations.md), [Integration patterns](https://docs.commercetools.com/learning-integrate-with-composable-commerce/integration-patterns/integration-planning-and-patterns.md)). That yields two one-way flows, not one bidirectional one:
+Per commercetools' integration guidance, the **Order master record usually lives downstream** in the OMS/ERP; commercetools *captures* Orders and hands them off ([Plan integrations → Order](https://docs.commercetools.com/tutorials/implementation-guide/plan-integrations.md), [Integration patterns](https://docs.commercetools.com/learning-integrate-with-commercetools/integration-patterns/integration-planning-and-patterns.md)). That yields two one-way flows, not one bidirectional one:
 
 - **Export (commercetools → OMS):** a placed Order is pushed to the OMS for routing/fulfillment. Triggered by the `OrderCreated` Message.
 - **Inbound (OMS → commercetools):** the OMS pushes status, shipment/tracking, fulfillment, and inventory back so the storefront and Merchant Center stay current.
 
-**Avoid a bidirectional sync of the same field** — the docs call this out explicitly as a source of conflicts and loops ([Integration patterns → Key takeaways](https://docs.commercetools.com/learning-integrate-with-composable-commerce/integration-patterns/integration-planning-and-patterns.md)). Assign each data domain (order status, shipment, inventory, customer) a single source of truth and make the other side read-only for that domain. Mark externally-mastered fields read-only in commercetools and store the reference to the external record on the right field per resource: `Customer` has an `externalId`; the `Order` does not — use its `SyncInfo` (the `updateSyncInfo` action) or a Custom Field (see [sync-architecture.md](./sync-architecture.md)). For architecture patterns on order replication, see the [ERP integration tutorial](https://docs.commercetools.com/tutorials/erp-integration.md).
+**Avoid a bidirectional sync of the same field** — the docs call this out explicitly as a source of conflicts and loops ([Integration patterns → Key takeaways](https://docs.commercetools.com/learning-integrate-with-commercetools/integration-patterns/integration-planning-and-patterns.md)). Assign each data domain (order status, shipment, inventory, customer) a single source of truth and make the other side read-only for that domain. Mark externally-mastered fields read-only in commercetools and store the reference to the external record on the right field per resource: `Customer` has an `externalId`; the `Order` does not — use its `SyncInfo` (the `updateSyncInfo` action) or a Custom Field (see [sync-architecture.md](./sync-architecture.md)). For architecture patterns on order replication, see the [ERP integration tutorial](https://docs.commercetools.com/tutorials/erp-integration.md).
 
 ## Workflow
 
@@ -106,7 +106,7 @@ Don't declare done until a real Order has traced end to end: place an Order → 
 | **Is a connector enough?** live fit-check against marketplace OMS connectors; installable-vs-vendor-hosted distinction; the use/configure/fork/build ladder | [connector-selection.md](./connector-selection.md) |
 | **Sync design**: direction & source of truth, export/inbound/reconcile flows, which Messages to subscribe to, OMS-status → CT-state mapping, idempotency per flow | [sync-architecture.md](./sync-architecture.md) |
 | **Build a new connector** for a user-defined OMS (rung 4): scaffold from the `fulfilment-integration` template, which applications to declare, connecting to the OMS API | [build-oms-connector.md](./build-oms-connector.md) |
-| Event app (export): envelope, ack, idempotency, re-fetch, Pub/Sub destination | [event-applications.md](../../event-applications.md) |
+| Event app (export): envelope, ack, idempotency, re-fetch, injected destination | [event-applications.md](../../event-applications.md) |
 | Service app (inbound webhook): authenticated inbound, idempotent upsert, timeout | [service-applications.md](../../service-applications.md) |
 | Job app (reconcile): schedule, timeout, concurrency, checkpointing | [job-applications.md](../../job-applications.md) |
 | Idempotent Subscription/custom-type registration in postDeploy/preUndeploy | [lifecycle-scripts.md](../../lifecycle-scripts.md) |

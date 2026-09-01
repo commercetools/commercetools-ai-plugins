@@ -33,7 +33,7 @@ Run the backfill/gap-repair `job` over a known `lastModifiedAt` window, then **r
 ## The traps (behavior that looks like a bug — or hides one)
 
 ### Trap 1 — no data at all → the Subscription isn't registered
-The most common "nothing is arriving": the `postDeploy` Subscription registration didn't run or failed, so no Messages are delivered. Confirm the Subscription exists (query Subscriptions), that it targets the right resource/message types, and that its destination is the injected Pub/Sub. A Subscription change takes up to a minute to take effect ([Subscriptions](https://docs.commercetools.com/api/projects/subscriptions.md)).
+The most common "nothing is arriving": the `postDeploy` Subscription registration didn't run or failed, so no Messages are delivered. Confirm the Subscription exists (query Subscriptions), that it targets the right resource/message types, and that its destination matches the injected broker (Pub/Sub or SNS). A Subscription change takes up to a minute to take effect ([Subscriptions](https://docs.commercetools.com/api/projects/subscriptions.md)).
 
 ### Trap 2 — duplicate rows are expected without a dedup key
 At-least-once delivery **and** a batch window overlapping the stream both produce the same change twice. Duplicates are not a delivery bug — they're the absence of a destination dedup/merge key. Verify by asserting the dedup key and re-running Check 1's redelivery.
@@ -52,7 +52,7 @@ A handler that returns `2xx` even when the destination delivery failed acks the 
 - [ ] One source change → exactly **one** destination row; dedup key present
 - [ ] Redelivering the same envelope adds no second row (idempotent)
 - [ ] Batch job over a window is idempotent on re-run; checkpoint advances; cursor pagination (no 10,000 cap)
-- [ ] Subscription confirmed registered (right resource/types, Pub/Sub destination) when nothing arrives
+- [ ] Subscription confirmed registered (right resource/types, destination matching the injected broker) when nothing arrives
 - [ ] `payloadNotIncluded` handled by re-fetch (no empty/partial rows)
 - [ ] Transient destination failure redelivers; terminal failure DLQ'd — not acked into a gap
 - [ ] No PII or destination credentials in logs; erasure propagates to the destination (if in scope)

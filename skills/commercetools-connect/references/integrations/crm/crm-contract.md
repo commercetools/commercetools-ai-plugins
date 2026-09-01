@@ -43,7 +43,7 @@ The payload shape depends on config, so don't hardcode one form (same as any eve
 
 ### Self-change filtering (only if bi-directional)
 
-If an inbound app also writes Customers, an inbound write raises a `ResourceUpdated` that this syncer would push straight back to the CRM — an infinite loop. Break it: mark connector-originated writes (e.g. a `syncSource` Custom Field, or compare against the last-synced hash/version) and **skip re-syncing your own changes**. This is the single nastiest CRM bug; a one-way design avoids it entirely, which is why the [integration-patterns guidance](https://docs.commercetools.com/learning-integrate-with-composable-commerce/integration-patterns/integration-planning-and-patterns.md) discourages bi-directional sync.
+If an inbound app also writes Customers, an inbound write raises a `ResourceUpdated` that this syncer would push straight back to the CRM — an infinite loop. Break it: mark connector-originated writes (e.g. a `syncSource` Custom Field, or compare against the last-synced hash/version) and **skip re-syncing your own changes**. This is the single nastiest CRM bug; a one-way design avoids it entirely, which is why the [integration-patterns guidance](https://docs.commercetools.com/learning-integrate-with-commercetools/integration-patterns/integration-planning-and-patterns.md) discourages bi-directional sync.
 
 ### Deletion & PII (GDPR)
 
@@ -70,7 +70,7 @@ Two forms; pick per the CRM's capability and your latency need.
 
 ## App 3 — the migration job (one-time backfill)
 
-Keep the initial bulk load **separate** from ongoing sync (the [integration-patterns guidance](https://docs.commercetools.com/learning-integrate-with-composable-commerce/integration-patterns/integration-planning-and-patterns.md) recommends separating migration from ongoing integration — different throughput/pagination needs). A `job` that pages the source (CRM or commercetools) in batches, upserts by `externalId`, and **checkpoints** progress so a failure resumes mid-run rather than restarting. Cleanse/validate records on the way (the migration guidance calls out cleansing Customer data). Respect CRM **rate limits** — batch and back off; a naive tight loop will get throttled or banned.
+Keep the initial bulk load **separate** from ongoing sync (the [integration-patterns guidance](https://docs.commercetools.com/learning-integrate-with-commercetools/integration-patterns/integration-planning-and-patterns.md) recommends separating migration from ongoing integration — different throughput/pagination needs). A `job` that pages the source (CRM or commercetools) in batches, upserts by `externalId`, and **checkpoints** progress so a failure resumes mid-run rather than restarting. Cleanse/validate records on the way (the migration guidance calls out cleansing Customer data). Respect CRM **rate limits** — batch and back off; a naive tight loop will get throttled or banned.
 
 ## Cross-cutting: mapping and rate limits
 

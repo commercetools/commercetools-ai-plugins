@@ -80,7 +80,7 @@ deployAs:
     configuration:
       standardConfiguration:
         - key: CONNECT_SUBSCRIPTION_DESTINATION
-          description: "Injected Pub/Sub on Connect (GoogleCloudPubSub)"
+          description: "Injected by Connect (GoogleCloudPubSub or SNS)"
   - name: analytics-backfill        # scheduled batch + one-time history
     applicationType: job
     endpoint: /analyticsBackfill

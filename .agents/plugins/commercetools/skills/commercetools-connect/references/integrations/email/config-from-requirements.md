@@ -81,7 +81,7 @@ deployAs:
         # …one template id per email type in scope
 ```
 
-> **Subscription destination is injected, not declared.** An `event` app's queue/topic is provisioned by Connect, which injects `CONNECT_SUBSCRIPTION_DESTINATION` and `CONNECT_GCP_TOPIC_NAME` / `CONNECT_GCP_PROJECT_ID` (or `CONNECT_AWS_TOPIC_ARN` for SNS) at deploy time. Build the Subscription destination from those in `postDeploy` — don't add them to `connect.yaml` and don't hardcode a broker ([event-applications.md](https://docs.commercetools.com/dev-tooling/skills/commercetools-connect#event-applications-pattern-7-register-the-subscription-destination)).
+> **Subscription destination is injected, not declared.** An `event` app's queue/topic is provisioned by Connect, which injects `CONNECT_SUBSCRIPTION_DESTINATION` and `CONNECT_GCP_TOPIC_NAME` / `CONNECT_GCP_PROJECT_ID` (or `CONNECT_AWS_TOPIC_ARN` for SNS) at deploy time. Build the Subscription destination from those in `postDeploy` — don't add them to `connect.yaml` and don't hardcode a broker ([event-applications.md](../../event-applications.md#pattern-7-register-the-subscription-destination)).
 
 ## Worked example (SendGrid, from-template build)
 

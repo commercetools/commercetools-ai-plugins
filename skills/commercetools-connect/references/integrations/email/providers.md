@@ -47,7 +47,7 @@ Pass an **idempotency key** wherever the ESP supports one — it's how Option B 
 
 - **Send:** `POST https://api.mailgun.net/v3/<domain>/messages`, HTTP basic auth (`api:<key>`), form-encoded.
 - **Template:** `template` = the stored template name; variables via `h:X-Mailgun-Variables` (JSON) or `v:` params.
-- Docs: [Mailgun sending](https://documentation.mailgun.com/docs/mailgun/api-reference/openapi-final/tag/Messages/).
+- Docs: [Mailgun sending](https://documentation.mailgun.com/docs/mailgun/user-manual/sending-messages/send-templates).
 
 ### AWS SES (templated email)
 
@@ -59,7 +59,7 @@ Pass an **idempotency key** wherever the ESP supports one — it's how Option B 
 
 - **Send:** `POST https://api.postmarkapp.com/email/withTemplate`, `X-Postmark-Server-Token: <key>`.
 - **Template:** `TemplateId` or `TemplateAlias` + `TemplateModel`; separate message streams for transactional vs broadcast.
-- Docs: [Postmark templated email](https://postmarkapp.com/developer/user-guide/send-email-with-api/send-with-templates).
+- Docs: [Postmark templated email](https://postmarkapp.com/developer/api/templates-api).
 
 ## Cross-provider summary
 

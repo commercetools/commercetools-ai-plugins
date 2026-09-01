@@ -38,7 +38,7 @@ TypeScript throughout; `avatax` npm SDK; Express; Jest. Both service+event run `
 
 ### Recording (the `event` app)
 
-- **Subscription** on `order`, destination **GoogleCloudPubSub**, message types `OrderCreated`, `OrderStateChanged`, `OrderStateTransition`, `OrderReturnShipmentStateChanged`.
+- **Subscription** on `order`, destination built from the injected broker (`GoogleCloudPubSub` or `SNS`), message types `OrderCreated`, `OrderStateChanged`, `OrderStateTransition`, `OrderReturnShipmentStateChanged`.
 - A transaction manager drives the lifecycle, mostly keyed on **merchant-configured order-state ID lists** (settings in a custom object), not hardcoded names:
   - `commitTransaction` — files the sale (on `OrderCreated` if the boolean `commitOnOrderCreation`, or when state ∈ `commitOrderStates`).
   - `voidOrRefundTransaction` — on state ∈ `cancelOrderStates` (plus a residual hardcoded `orderState === 'Cancelled'` check in the `OrderStateChanged` path).

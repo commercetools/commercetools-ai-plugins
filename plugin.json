@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "commercetools",
-  "version": "0.30.0",
+  "version": "0.31.0",
   "description": "Build commercetools solutions faster",
   "author": {
     "name": "commercetools",

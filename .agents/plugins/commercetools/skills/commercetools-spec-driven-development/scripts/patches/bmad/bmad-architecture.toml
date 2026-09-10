@@ -1,0 +1,19 @@
+# commercetools-spec-extension:file v=1 id=architecture
+# Sparse team override for the BMad skill `bmad-architecture`, written by the
+# commercetools-spec-driven-development skill. Overrides are sparse by contract:
+# only the keys below are set, everything else inherits from the skill's own
+# customize.toml. Never copy that file here — a full copy pins stale defaults.
+# Sets string arrays only (they append), so no shipped scalar is replaced.
+
+[workflow]
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/commercetools-spec-extension-rules.md",
+  "When the spine touches commercetools, record which commercetools-* skill governs each architectural unit, so every task generated downstream inherits its area's [SKILL: <name>] annotation.",
+]
+external_sources = [
+  "For any commercetools domain or business-logic question, query the commercetools-knowledge MCP (commercetools-documentation-search) before deciding, rather than relying on training-data knowledge.",
+  "Before committing a commercetools endpoint, GraphQL field, or update action to the spine, confirm it with commercetools-graphql-validate or commercetools-rest-validate, and look up types with commercetools-graphql-schemata or commercetools-oas-schemata.",
+]
+finalize_reviewers = [
+  "If the spine touches commercetools, verify every named endpoint, GraphQL field, and update action was confirmed against the commercetools-knowledge MCP rather than asserted from training data, and that each architectural unit records the commercetools-* skill that governs it. Flag anything unverified.",
+]

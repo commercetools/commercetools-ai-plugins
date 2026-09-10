@@ -1,0 +1,14 @@
+# commercetools-spec-extension:file v=1 id=build
+# Sparse team override for the BMad skill `bmad-build`, written by the
+# commercetools-spec-driven-development skill. Overrides are sparse by contract:
+# only the keys below are set, everything else inherits from the skill's own
+# customize.toml. Never copy that file here — a full copy pins stale defaults.
+# Sets string arrays only (they append), so no shipped scalar is replaced.
+
+[workflow]
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/commercetools-spec-extension-rules.md",
+  "When a task under ## Tasks & Acceptance touches commercetools, append a [SKILL: <name>] token to that task line, resolved by consulting the available commercetools-* skills and their descriptions, never a remembered mapping.",
+  "When the spec contains at least one [SKILL: ...] task, add {project-root}/_bmad/custom/commercetools-spec-extension-rules.md to the spec frontmatter context: list. The implementation subagent starts with no conversation context and loads only the spec and its context: files, so this is the only channel that carries the annotation rule across to it.",
+  "Before implementing a task annotated [SKILL: <name>], load that skill first.",
+]

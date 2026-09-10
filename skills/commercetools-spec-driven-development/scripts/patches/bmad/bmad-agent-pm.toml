@@ -1,0 +1,14 @@
+# commercetools-spec-extension:file v=1 id=agent-pm
+# Sparse team override for the BMad skill `bmad-agent-pm`, written by the
+# commercetools-spec-driven-development skill. Overrides are sparse by contract:
+# only the keys below are set, everything else inherits from the skill's own
+# customize.toml. Never copy that file here — a full copy pins stale defaults.
+# Sets string arrays only (they append), so no shipped scalar is replaced.
+
+[agent]
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/commercetools-spec-extension-rules.md",
+]
+principles = [
+  "Every task that touches commercetools carries a [SKILL: <name>] annotation, resolved while planning rather than left to the implementer.",
+]

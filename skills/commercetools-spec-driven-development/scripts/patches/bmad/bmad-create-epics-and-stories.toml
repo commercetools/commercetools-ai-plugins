@@ -1,0 +1,12 @@
+# commercetools-spec-extension:file v=1 id=epics-and-stories
+# Sparse team override for the BMad skill `bmad-create-epics-and-stories`, written by the
+# commercetools-spec-driven-development skill. Overrides are sparse by contract:
+# only the keys below are set, everything else inherits from the skill's own
+# customize.toml. Never copy that file here — a full copy pins stale defaults.
+# Sets string arrays only (they append), so no shipped scalar is replaced.
+
+[workflow]
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/commercetools-spec-extension-rules.md",
+  "A story that touches commercetools names the governing commercetools-* skill in its acceptance criteria, so the spec generated from it can annotate its tasks with [SKILL: <name>].",
+]

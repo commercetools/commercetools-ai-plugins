@@ -1,0 +1,12 @@
+# commercetools-spec-extension:file v=1 id=spec
+# Sparse team override for the BMad skill `bmad-spec`, written by the
+# commercetools-spec-driven-development skill. Overrides are sparse by contract:
+# only the keys below are set, everything else inherits from the skill's own
+# customize.toml. Never copy that file here — a full copy pins stale defaults.
+# Sets string arrays only (they append), so no shipped scalar is replaced.
+
+[workflow]
+persistent_facts = [
+  "file:{project-root}/_bmad/custom/commercetools-spec-extension-rules.md",
+  "When a capability touches commercetools, name the governing commercetools-* skill in its success criterion so downstream tasks inherit the [SKILL: <name>] annotation.",
+]

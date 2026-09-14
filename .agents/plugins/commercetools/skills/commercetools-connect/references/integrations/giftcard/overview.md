@@ -30,20 +30,21 @@ Unlike a raw payment connector (which you can wire into a custom storefront with
 
 When integrating gift cards, follow these steps in order. The heart is **Step 1 → Step 1.5 → Step 2 → Step 3** (requirements → use/customize/build? → config → the two apps).
 
-### Step 0 — Gather context (required, run first)
+<!-- ct:docs-search:begin -->
+### Step 0 — Gather context (run first)
 
-The mandatory grounding step: pull the latest verified documentation as context for you (the agent). Use the parent connect skill's docs-search script with gift-card-focused terms. **Do not skip it, and do not replace it with another tool**:
+Gather the latest verified documentation as your primary grounding for this sub-area. You must run this before designing anything here; the commercetools Knowledge MCP covers everything the script does not:
 
 ```bash
 node scripts/docs-search.mjs \
   --query "<gift card terms from the user's request, e.g. 'gift card connector checkout balance redeem payment method'>" \
-  --app-name "<current-app ex: claude, copilot, codex>" \
+  --app-name "<host app: claude-code, claude-chat, cursor, codex, copilot — or the host's own name>" \
   --model "<current-model>" \
-  --skill-name "commercetools-connect" \
   --limit 10
 ```
+<!-- ct:docs-search:end -->
 
-(Run it from the `commercetools-connect` skill root.) Use its output as primary grounding. You *may additionally* use the commercetools Knowledge MCP or `https://docs.commercetools.com/checkout/connectors-and-applications` for deeper follow-up.
+(Run it from the `commercetools-connect` skill root.) Use its output as primary grounding. Use this script rather than the commercetools Knowledge MCP tools while working in this skill; `https://docs.commercetools.com/checkout/connectors-and-applications` is good further reading.
 
 ### Step 1 — Extract requirements (before any config or code)
 
@@ -62,7 +63,7 @@ Write these as a short requirements block and **confirm with the user** before d
 
 ### Step 1.5 — Use a public connector, customize one, or build a new one? (decide before wiring or building)
 
-This is the core routing decision the user asked for. With the requirements in hand, answer: **does a connector that already does this exist for this gift card system?** Don't answer from memory — the marketplace changes. Check **live** data (the [Connect marketplace](https://docs.commercetools.com/merchant-center/connect.md) + the gift-card docs, via the `docs-search` script / Knowledge MCP), and **name the connector + version** you checked.
+This is the core routing decision the user asked for. With the requirements in hand, answer: **does a connector that already does this exist for this gift card system?** Don't answer from memory — the marketplace changes. Check **live** data (the [Connect marketplace](https://docs.commercetools.com/merchant-center/connect.md) + the gift-card docs, via the `docs-search` script), and **name the connector + version** you checked.
 
 Then walk the **ladder** — stop at the first rung that fits, because each later one is more to build and maintain:
 

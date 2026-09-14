@@ -25,24 +25,25 @@ This one-app shape is what the official [transactional email integration templat
 
 Follow these steps in order. **The connector fit-check is a hard, ordered gate — never skip it or jump ahead to ESP/provider details:** (1) list the public marketplace connectors, (2) confirm with the user whether to *use* a public one, *modify/fork* one, or *create* a new one, and only then (3) gather the detailed requirements. The heart is **Step 1 → Step 2 → Step 3 → Step 4** (list marketplace → use/modify/create → requirements → config).
 
-### Step 0 — Gather context (required, run first)
+<!-- ct:docs-search:begin -->
+### Step 0 — Gather context (run first)
 
-The mandatory grounding step: pull the latest verified documentation as context for you (the agent). Use this skill's docs-search script with email-focused terms. **Do not skip it, and do not replace it with another tool**:
+Gather the latest verified documentation as your primary grounding for this sub-area. You must run this before designing anything here; the commercetools Knowledge MCP covers everything the script does not:
 
 ```bash
 node scripts/docs-search.mjs \
   --query "<email terms from the user's request, e.g. 'transactional email connector subscription messages order confirmation customer registration'>" \
-  --app-name "<current-app ex: claude, copilot, codex>" \
+  --app-name "<host app: claude-code, claude-chat, cursor, codex, copilot — or the host's own name>" \
   --model "<current-model>" \
-  --skill-name "commercetools-integrations" \
   --limit 10
 ```
+<!-- ct:docs-search:end -->
 
-(Run it from the `commercetools-integrations` skill root.) Use its output as primary grounding. You *may additionally* use the commercetools Knowledge MCP or `https://docs.commercetools.com/tutorials/connect-email-integration` for deeper follow-up.
+(Run it from the `commercetools-integrations` skill root.) Use its output as primary grounding. Use this script rather than the commercetools Knowledge MCP tools while working in this skill; `https://docs.commercetools.com/tutorials/connect-email-integration` is good further reading.
 
 ### Step 1 — List the publicly available connectors (required — do this first, before ESP or requirements)
 
-Before asking anything about the ESP or which emails, find out **what already exists**. Don't answer from memory — the marketplace changes. Check **live** data (the Connect marketplace at `marketplace.commercetools.com/connectors` + the email docs, via the `docs-search` script / Knowledge MCP) and **present the user a concrete list** of the available email / messaging / marketing connectors — each with its **name, vendor, the service it integrates, and its certification/status**. Call out explicitly whether any is a *transactional* email connector or whether the listings are only *marketing/CRM* platforms (as of writing they are marketing-oriented; the classic transactional ESPs — SendGrid, Mailgun, AWS SES, Postmark — have **no dedicated connector** and are build-from-template). How to check and the current landscape: [connector-selection.md](./connector-selection.md).
+Before asking anything about the ESP or which emails, find out **what already exists**. Don't answer from memory — the marketplace changes. Check **live** data (the Connect marketplace at `marketplace.commercetools.com/connectors` + the email docs, via the `docs-search` script) and **present the user a concrete list** of the available email / messaging / marketing connectors — each with its **name, vendor, the service it integrates, and its certification/status**. Call out explicitly whether any is a *transactional* email connector or whether the listings are only *marketing/CRM* platforms (as of writing they are marketing-oriented; the classic transactional ESPs — SendGrid, Mailgun, AWS SES, Postmark — have **no dedicated connector** and are build-from-template). How to check and the current landscape: [connector-selection.md](./connector-selection.md).
 
 ### Step 2 — Confirm the approach: use, modify, or create (required — do not skip, do not assume)
 

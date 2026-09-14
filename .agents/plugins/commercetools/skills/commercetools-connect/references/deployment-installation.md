@@ -80,7 +80,7 @@ A redeploy that reports `Deployed` but behaves exactly as before is almost alway
 
 If the new version fails to build or deploy, the **previously deployed code keeps serving**. That is deliberate — a bad release doesn't take the integration down — so "still running the old behavior" is the expected outcome of a failed update, not a symptom of a stuck deployment.
 
-**The CLI is not the only automation path, and often not the best one.** The `deployment`/`connectorstaged` commands have no machine-readable output flag, so a script built on them parses console text. Every one of them has a REST equivalent against `https://connect.{region}.commercetools.com`, using the same OAuth token as the core API — the command-by-command mapping is published at [CLI and Connect API mapping](https://docs.commercetools.com/connect/cli.md#cli-and-connect-api-mapping); read exact request shapes from the Knowledge MCP (`connect-Deployment`, `connect-Connector`).
+**The CLI is not the only automation path, and often not the best one.** The `deployment`/`connectorstaged` commands have no machine-readable output flag, so a script built on them parses console text. Every one of them has a REST equivalent against `https://connect.{region}.commercetools.com`, using the same OAuth token as the core API — the command-by-command mapping is published at [CLI and Connect API mapping](https://docs.commercetools.com/connect/cli.md#cli-and-connect-api-mapping); read exact request shapes with `scripts/openApi-schemata.mjs --resource-name "connect-Deployment"` (and `connect-Connector`).
 
 What that mapping page doesn't give you, and what you need to script against it:
 

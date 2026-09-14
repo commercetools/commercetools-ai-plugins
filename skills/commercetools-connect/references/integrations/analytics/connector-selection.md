@@ -18,7 +18,7 @@ This answers Step 1.5 of [overview.md](./overview.md). Unlike tax (a certified c
 
 Even though we expect "build", run the check so you don't miss a destination-specific integration that *has* appeared:
 
-1. Search the [Connect marketplace](https://marketplace.commercetools.com/connectors) and the integration docs (via `docs-search` / the Knowledge MCP) for the user's **destination** (e.g. "Segment", "Snowflake", "BigQuery") — not for "analytics".
+1. Search the [Connect marketplace](https://marketplace.commercetools.com/connectors) and the integration docs (via `docs-search`) for the user's **destination** (e.g. "Segment", "Snowflake", "BigQuery") — not for "analytics".
 2. **Apply the marketplace-listing rule.** Analytics/CDP listings are *especially* likely to be **partner services, SaaS products, or iPaaS/ELT middleware** (Fivetran/Airbyte-style loaders, a CDP's own commercetools source) rather than a deployable Connect connector. Confirm a Connect affordance (public repo / `connect.yaml` / a Connect deploy action) before calling anything install/configure — full rule: [Marketplace listings are not all Connect connectors](../../../SKILL.md#marketplace-listings-are-not-all-connect-connectors--verify-before-recommending).
 3. **Name what you checked** (connector/product + version) or record "none exists", and **confirm the path with the user** before building.
 

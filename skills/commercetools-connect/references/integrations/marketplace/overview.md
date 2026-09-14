@@ -38,20 +38,21 @@ Then, per the parent skill's rule, name the source of truth **per domain**, not 
 
 The heart is **Step 1 → Step 1.5 → Step 2 (seller modeling) → Step 4**.
 
-### Step 0 — Gather context (required, run first)
+<!-- ct:docs-search:begin -->
+### Step 0 — Gather context (run first)
 
-The mandatory grounding step: pull the latest verified documentation as context for you (the agent). Use the parent skill's docs-search script with marketplace-focused terms. **Do not skip it, and do not replace it with another tool:**
+Gather the latest verified documentation as your primary grounding for this sub-area. You must run this before designing anything here; the commercetools Knowledge MCP covers everything the script does not:
 
 ```bash
 node scripts/docs-search.mjs \
   --query "<marketplace terms from the request, e.g. 'marketplace seller supply channel distribution channel store product selection order import syncInfo'>" \
-  --app-name "<current-app ex: claude, copilot, codex>" \
+  --app-name "<host app: claude-code, claude-chat, cursor, codex, copilot — or the host's own name>" \
   --model "<current-model>" \
-  --skill-name "commercetools-connect" \
   --limit 10
 ```
+<!-- ct:docs-search:end -->
 
-(Run it from the `commercetools-connect` skill root.) You *may additionally* use the commercetools Knowledge MCP for follow-up. There is **no marketplace module in the public docs** — the load-bearing references are [Channels](https://docs.commercetools.com/api/projects/channels.md), [Stores](https://docs.commercetools.com/api/projects/stores.md), [Product Selections](https://docs.commercetools.com/api/projects/product-selections.md), [Inventory](https://docs.commercetools.com/api/inventory-overview.md), and [Order Import](https://docs.commercetools.com/api/projects/orders-import.md). Read the ones your role needs.
+(Run it from the `commercetools-connect` skill root.) Use this script rather than the commercetools Knowledge MCP tools while working in this skill. There is **no marketplace module in the public docs** — the load-bearing references are [Channels](https://docs.commercetools.com/api/projects/channels.md), [Stores](https://docs.commercetools.com/api/projects/stores.md), [Product Selections](https://docs.commercetools.com/api/projects/product-selections.md), [Inventory](https://docs.commercetools.com/api/inventory-overview.md), and [Order Import](https://docs.commercetools.com/api/projects/orders-import.md). Read the ones your role needs.
 
 ### Step 1 — Extract requirements (before any config or code)
 

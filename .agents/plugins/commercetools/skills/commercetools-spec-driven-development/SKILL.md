@@ -8,6 +8,13 @@ metadata:
   contentType: SKILL
   area:
     - Foundations
+  docsSearch:
+    products:
+      - Composable Commerce
+      - Checkout
+      - Connect
+      - InStore
+      - AI Hub
 ---
 
 # commercetools Spec-Driven Development Overlay
@@ -24,18 +31,19 @@ Any combination present means each detected framework gets the overlay. BMad nev
 
 ## Workflow
 
-1. **Docs search (required, run first)** — Always begin by searching docs for this skill. This is the mandatory grounding step: it gathers the latest verified documentation as context for you (the agent). **Do not skip it, and do not replace it with another tool** (such as an MCP documentation-search tool). This script optimizes for tuned search results — run this command:
+1. <!-- ct:docs-search:begin -->
+   **Docs search (required, run first)** — The first time you use this skill in a session you must run this before answering. It gathers the latest verified documentation as your primary grounding, filtered to the products this skill covers. Use this script for documentation search while working with this skill; the Knowledge MCP covers everything else. Always confirm details against retrieved documentation rather than the skill text alone:
 
    ```bash
    node scripts/docs-search.mjs \
      --query "<extract key terms from the user's question>" \
-     --app-name "<current-app ex: claude, copilot, codex>" \
+     --app-name "<host app: claude-code, claude-chat, cursor, codex, copilot — or the host's own name>" \
      --model "<current-model>" \
-     --skill-name "commercetools-spec-driven-development" \
      --limit 10
    ```
+   <!-- ct:docs-search:end -->
 
-   Query the commercetools areas the project targets, not the framework's own terminology — those results are what let you fill in the plan's "Platform Skills Resolution" table later.
+   Query the commercetools areas the project targets, not the framework's own terminology — those results are what let you fill in the plan's "Platform Skills Resolution" table later. This script queries the same index as the commercetools Knowledge MCP, with the product filters this skill needs — use it rather than the MCP tool while working in this skill.
 
 2. **Run the setup script (required, do the work with this)** — never hand-edit the framework's files to apply the overlay; the script is idempotent and reversible, hand edits are neither:
 

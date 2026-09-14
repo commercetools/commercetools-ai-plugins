@@ -16,7 +16,7 @@ This answers **Steps 1–2** of [overview.md](./overview.md), the mandatory orde
 
 Marketplace listings change. Run these **before** any ESP/requirements questions:
 
-1. **List** the connectors from the **live** Connect marketplace (`marketplace.commercetools.com/connectors`) + the email docs via the `docs-search` script or the Knowledge MCP — the email / messaging / marketing listings.
+1. **List** the connectors from the **live** Connect marketplace (`marketplace.commercetools.com/connectors`) + the email docs via the `docs-search` script — the email / messaging / marketing listings.
 2. **Present them to the user**: name · vendor · service · certification/status, and flag whether any is a *transactional* email connector or only *marketing/CRM* platforms.
 3. **Confirm the approach with the user** — use as-is (rung 1) · config-closes-gap (rung 2) · modify/fork (rung 3) · create from template (rung 4). Do not presume the rung.
 4. **Record** platform/ESP · rung · connector + version checked · why.

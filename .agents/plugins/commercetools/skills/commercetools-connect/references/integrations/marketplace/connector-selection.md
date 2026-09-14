@@ -19,7 +19,7 @@ This answers Step 1.5 of [overview.md](./overview.md). It is a **question you pu
 
 The marketplace changes. Before recommending anything:
 
-1. Browse the live **[Marketplaces category](https://marketplace.commercetools.com/integrations/marketplaces)** and the **[connector list](https://marketplace.commercetools.com/connectors)**; run the parent skill's `docs-search` script / the Knowledge MCP for the service name.
+1. Browse the live **[Marketplaces category](https://marketplace.commercetools.com/integrations/marketplaces)** and the **[connector list](https://marketplace.commercetools.com/connectors)**; run the parent skill's `docs-search` script for the service name.
 2. For each candidate, capture: name, vendor, **is it a Connect connector**, direction, and what it syncs (sellers / offers / inventory / prices / orders / shipments).
 3. **Name the connector and version** you checked — or record that none exists — in the requirements block. Don't quote a listing's badge wording as a capability; badges describe the listing relationship, not what the code does.
 

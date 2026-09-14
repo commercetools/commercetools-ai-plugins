@@ -22,6 +22,13 @@ metadata:
   contentType: SKILL
   area:
     - Integrations
+  docsSearch:
+    products:
+      - Composable Commerce
+      - Checkout
+      - Connect
+      - InStore
+      - AI Hub
 ---
 
 # commercetools integrations
@@ -63,20 +70,21 @@ The rungs are the same across all twelve; only the rung-0 native capability diff
 
 **Verify a candidate is actually Connect-deployable before calling it installable.** A vendor listing is frequently the vendor's own hosted service plus glue you write — not something Connect deploys. The full rule, with the checks that settle it: [Marketplace listings are not all Connect connectors](../commercetools-connect/SKILL.md#marketplace-listings-are-not-all-connect-connectors--verify-before-recommending).
 
-## Step 0 — Gather context (required, run first)
+<!-- ct:docs-search:begin -->
+### Step 0 — Gather context (run first)
 
-Every sub-area opens with the same mandatory grounding step: pull the latest verified documentation as context for you (the agent) before designing anything. **Do not skip it, and do not replace it with another tool.**
+Gather the latest verified documentation as your primary grounding for this sub-area. You must run this before designing anything here; the commercetools Knowledge MCP covers everything the script does not:
 
 ```bash
 node scripts/docs-search.mjs \
   --query "<terms from the user's request>" \
-  --app-name "<current-app ex: claude, copilot, codex>" \
+  --app-name "<host app: claude-code, claude-chat, cursor, codex, copilot — or the host's own name>" \
   --model "<current-model>" \
-  --skill-name "commercetools-integrations" \
   --limit 10
 ```
+<!-- ct:docs-search:end -->
 
-Run it from this skill's root. `scripts/openApi-schemata.mjs` and `scripts/graphql-schemata.mjs` are here too, for confirming request/response shapes from the OAS or GraphQL schema instead of from memory.
+Both scripts query the same index as the commercetools Knowledge MCP, with the product filters this skill needs — use them rather than the MCP tools while working in this skill. Run them from this skill's root. `scripts/openApi-schemata.mjs` and `scripts/graphql-schemata.mjs` are here too, for confirming request/response shapes from the OAS or GraphQL schema instead of from memory.
 
 ## What a sub-area contains
 

@@ -25,6 +25,13 @@ metadata:
   area:
     - Foundations
     - Integrations
+  docsSearch:
+    products:
+      - Composable Commerce
+      - Checkout
+      - Connect
+      - InStore
+      - AI Hub
 ---
 
 # commercetools Connect
@@ -39,16 +46,17 @@ Intent-driven guidance for building **production-ready** Connect applications. T
 
 When this skill is invoked, always follow these steps:
 
-1. **Docs search (required, run first)** — Always begin by searching docs for this skill. This is the mandatory grounding step: it gathers the latest verified documentation as context for you (the agent). **Do not skip it, and do not replace it with another tool** (such as an MCP documentation-search tool) This script optimizes for tuned search results  — run this command:
+1. <!-- ct:docs-search:begin -->
+   **Docs search (required, run first)** — The first time you use this skill in a session you must run this before answering. It gathers the latest verified documentation as your primary grounding, filtered to the products this skill covers. Use this script for documentation search while working with this skill; the Knowledge MCP covers everything else. Always confirm details against retrieved documentation rather than the skill text alone:
+
    ```bash
    node scripts/docs-search.mjs \
      --query "<extract key terms from user's question>" \
-     --app-name "<current-app ex: claude, copilot, codex>" \
+     --app-name "<host app: claude-code, claude-chat, cursor, codex, copilot — or the host's own name>" \
      --model "<current-model>" \
-     --skill-name "commercetools-connect" \
      --limit 10
    ```
-   Use its output as your primary grounding. You *may additionally* use the commercetools Knowledge MCP or `https://docs.commercetools.com/connect` for deeper follow-up.
+   <!-- ct:docs-search:end -->
 
 2. **Route with the decision framework (below)** — Pick the application type and lock in the sync-vs-async contract *before* writing code. The contract determines almost every later decision.
 
@@ -62,9 +70,8 @@ When this skill is invoked, always follow these steps:
    ```bash
    node scripts/graphql-schemata.mjs \
      --resource-name "<commercetools resource, e.g. Cart, Product, Order>" \
-     --app-name "<current-app, e.g. claude, copilot, cursor, codex>" \
-     --model "<current-model>" \
-     --skill-name "commercetools-connect"
+     --app-name "<host app: claude-code, claude-chat, cursor, codex, copilot — or the host's own name>" \
+     --model "<current-model>"
    ```
    The output is the GraphQL SDL for that resource. If the resource name is not recognized, the script prints the list of valid resource names — pick the correct one and re-run. **Note:** the SDL may contain *stubbed types* — referenced resources rendered as stubs, with their real type name given in a comment. Fetch any you need separately by re-running this script with that type name as `--resource-name`.
 
@@ -72,9 +79,8 @@ When this skill is invoked, always follow these steps:
    ```bash
    node scripts/openApi-schemata.mjs \
      --resource-name "<commercetools resource, e.g. api-Cart-write, api-Customer-read, checkout-Application>" \
-     --app-name "<current-app, e.g. claude, copilot, cursor, codex>" \
-     --model "<current-model>" \
-     --skill-name "commercetools-connect"
+     --app-name "<host app: claude-code, claude-chat, cursor, codex, copilot — or the host's own name>" \
+     --model "<current-model>"
    ```
    The output is the OpenAPI specification (YAML) for that resource. REST resources use a read/write-split naming form (e.g. `api-Cart-read`, `api-Cart-write`). If the resource name is not recognized, the script prints the list of valid resource names — pick the correct one and re-run. **Note:** the spec does not include reference-expansion schemas — fetch a referenced resource's schema separately by re-running this script with that resource as `--resource-name`.
 

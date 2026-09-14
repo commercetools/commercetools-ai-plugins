@@ -28,7 +28,7 @@ The common-but-tricky case: **a certified connector exists for the PSP, but the 
 
 The set of supported PSPs, payment methods, integration types, and capabilities **changes over time** (new methods via Adyen, new public connectors, new connector versions). So do not rely on a memorized matrix. Determine fit from current sources, in order:
 
-1. Run the skill's `docs-search` step and/or query the commercetools Knowledge MCP for "supported PSPs payment methods payment connectors".
+1. Run the skill's `docs-search` step for "supported PSPs payment methods payment connectors".
 2. Read the live **Supported PSPs, Payment Integration Types, and payment methods** table: [connectors-and-applications.md](https://docs.commercetools.com/checkout/connectors-and-applications.md#supported-psps-payment-integration-types-and-payment-methods).
 3. Browse the live **Connect marketplace** for installable connectors and their versions: [merchant-center/connect.md](https://docs.commercetools.com/merchant-center/connect.md). For a third-party connector (e.g. Stripe), its own repo/README is the source of truth for capabilities and config keys.
 

@@ -31,20 +31,21 @@ Most real integrations combine an **ongoing** shape (event or webhook/poll) with
 
 When integrating a CRM, follow these steps in order. The heart is **Step 1 → Step 1.5 → Step 2 → Step 4** (requirements → is a public connector enough? → config → build the sync apps).
 
-### Step 0 — Gather context (required, run first)
+<!-- ct:docs-search:begin -->
+### Step 0 — Gather context (run first)
 
-The mandatory grounding step: pull the latest verified documentation as context for you (the agent). Use the parent connect skill's docs-search script with CRM-focused terms. **Do not skip it, and do not replace it with another tool**:
+Gather the latest verified documentation as your primary grounding for this sub-area. You must run this before designing anything here; the commercetools Knowledge MCP covers everything the script does not:
 
 ```bash
 node scripts/docs-search.mjs \
   --query "<CRM terms from the user's request, e.g. 'CRM customer sync subscription CustomerCreated externalId integration patterns'>" \
-  --app-name "<current-app ex: claude, copilot, codex>" \
+  --app-name "<host app: claude-code, claude-chat, cursor, codex, copilot — or the host's own name>" \
   --model "<current-model>" \
-  --skill-name "commercetools-connect" \
   --limit 10
 ```
+<!-- ct:docs-search:end -->
 
-(Run it from the `commercetools-connect` skill root.) Use its output as primary grounding. You *may additionally* use the commercetools Knowledge MCP or the [integration planning and patterns](https://docs.commercetools.com/learning-integrate-with-commercetools/integration-patterns/integration-planning-and-patterns.md) guide for deeper follow-up.
+(Run it from the `commercetools-connect` skill root.) Use its output as primary grounding. Use this script rather than the commercetools Knowledge MCP tools while working in this skill; the [integration planning and patterns](https://docs.commercetools.com/learning-integrate-with-commercetools/integration-patterns/integration-planning-and-patterns.md) guide is good further reading.
 
 ### Step 1 — Extract requirements (before any config or code)
 
@@ -63,7 +64,7 @@ Write these as a short requirements block and **confirm with the user** before d
 
 ### Step 1.5 — Is a public connector enough? (decide before wiring or building)
 
-With the requirements in hand, answer the question the rest of the flow assumes: **does a connector that already does this exist for this CRM?** Don't answer from memory — the marketplace changes. Check **live** data (the Connect marketplace + the integration docs, via the `docs-search` script / Knowledge MCP), and **name the connector + version** you checked.
+With the requirements in hand, answer the question the rest of the flow assumes: **does a connector that already does this exist for this CRM?** Don't answer from memory — the marketplace changes. Check **live** data (the Connect marketplace + the integration docs, via the `docs-search` script), and **name the connector + version** you checked.
 
 The CRM landscape differs sharply from tax: **classic CRMs (Salesforce, HubSpot, Dynamics, Zoho) generally have no certified commercetools connector** — the marketplace leans toward marketing/CDP/personalization platforms (Klaviyo, Bloomreach, Mailchimp, …). So a request to "integrate Salesforce/HubSpot" is usually a **build** job, not a marketplace install. There is also **no `crm-integration` template** — you scaffold plain apps and adapt. See [connector-selection.md](./connector-selection.md).
 

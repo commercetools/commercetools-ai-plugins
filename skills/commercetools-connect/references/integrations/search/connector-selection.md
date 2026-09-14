@@ -34,7 +34,7 @@ Also check the **converse**: if the customer already owns an engine licence and 
 
 Listings and engine capabilities change. Before deciding among rungs 1/3/4:
 
-1. Search the **Connect marketplace** ([`marketplace.commercetools.com/connectors`](https://marketplace.commercetools.com/connectors)) and the search/discovery listings, plus the docs via the `docs-search` script or the Knowledge MCP.
+1. Search the **Connect marketplace** ([`marketplace.commercetools.com/connectors`](https://marketplace.commercetools.com/connectors)) and the search/discovery listings, plus the docs via the `docs-search` script.
 2. **Distinguish an installable Connect connector from a vendor-hosted integration** — apply the parent skill's [Marketplace listings are not all Connect connectors](../../../SKILL.md#marketplace-listings-are-not-all-connect-connectors--verify-before-recommending) rule; don't re-derive it here. It bites hard in search specifically (below).
 3. Compare the requirement engine-by-capability (indexing, merchandising, synonyms, recommendations, analytics, per-Store scope, locales).
 4. **Name the connector/engine and version** you checked, and record it in the requirements block.

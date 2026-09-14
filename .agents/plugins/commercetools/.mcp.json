@@ -10,7 +10,7 @@
       "args": [
         "-y",
         "@commercetools/commerce-mcp",
-        "--tools=all.read",
+        "--tools=read_all",
         "--dynamicToolLoadingThreshold=650"
       ]
     }

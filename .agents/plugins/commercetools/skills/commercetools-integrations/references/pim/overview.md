@@ -22,20 +22,21 @@ This is the **PIM integration sub-area** of this skill: getting product data out
 
 Follow these steps in order. The heart is **Step 1 → Step 1.5 → Step 3 (data mapping)** — mapping is where PIM integrations succeed or rot, whether you configure a public connector or build your own.
 
-### Step 0 — Gather context (required, run first)
+<!-- ct:docs-search:begin -->
+### Step 0 — Gather context (run first)
 
-The mandatory grounding step: pull the latest verified documentation as context for you (the agent). Use this skill's docs-search script with PIM-focused query terms. **Do not skip it, and do not replace it with another tool:**
+Gather the latest verified documentation as your primary grounding for this sub-area. You must run this before designing anything here; the commercetools Knowledge MCP covers everything the script does not:
 
 ```bash
 node scripts/docs-search.mjs \
   --query "<PIM terms from the request, e.g. 'product data integration import API product type attribute mapping categories'>" \
-  --app-name "<current-app ex: claude, copilot, codex>" \
+  --app-name "<host app: claude-code, claude-chat, cursor, codex, copilot — or the host's own name>" \
   --model "<current-model>" \
-  --skill-name "commercetools-integrations" \
   --limit 10
 ```
+<!-- ct:docs-search:end -->
 
-(Run it from the `commercetools-integrations` skill root, where `scripts/docs-search.mjs` lives.) The two most load-bearing docs for this sub-area are the [Integrate product data tutorial](https://docs.commercetools.com/tutorials/product-data-integrations.md) and the [Import API overview](https://docs.commercetools.com/api/import-export/overview.md) — read them. You *may additionally* use the commercetools Knowledge MCP for deeper follow-up.
+(Run it from the `commercetools-integrations` skill root, where `scripts/docs-search.mjs` lives.) The two most load-bearing docs for this sub-area are the [Integrate product data tutorial](https://docs.commercetools.com/tutorials/product-data-integrations.md) and the [Import API overview](https://docs.commercetools.com/api/import-export/overview.md) — read them. Use this script rather than the commercetools Knowledge MCP tools while working in this skill: it queries the same index, with this skill's product filters applied.
 
 ### Step 1 — Extract requirements (before any config or code)
 

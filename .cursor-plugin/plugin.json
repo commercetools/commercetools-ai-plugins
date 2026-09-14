@@ -1,7 +1,7 @@
 {
   "name": "commercetools",
   "displayName": "commercetools",
-  "version": "0.32.0",
+  "version": "0.33.0",
   "description": "Build commercetools solutions faster",
   "author": {
     "name": "commercetools",
@@ -17,5 +17,6 @@
     "ecommerce"
   ],
   "logo": "assets/commercetools-symbol.svg",
-  "mcpServers": "./.cursor-plugin/mcp.json"
+  "mcpServers": "./.cursor-plugin/mcp.json",
+  "hooks": "./hooks/cursor-hooks.json"
 }

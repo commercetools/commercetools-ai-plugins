@@ -64,7 +64,7 @@ if (results.length === 0) {
 }
 ```
 
-**Don't guess an update-action name from a sibling action's verb.** commercetools update actions don't follow one verb per resource: the Extension's triggers use `changeTriggers` and its timeout uses `setTimeoutInMs` — not the more guessable `setTriggers`/`changeTimeoutInMs`, which fail with `InvalidJsonInput` — even though `changeDestination` sits right next to them on the same resource. Confirm the exact action name against the resource's `UpdateAction` discriminator (Knowledge MCP `api-Extension`, or [API Extensions](https://docs.commercetools.com/api/projects/api-extensions.md)) before writing `diffToUpdateActions()`; never extrapolate from another action on the same or a different resource.
+**Don't guess an update-action name from a sibling action's verb.** commercetools update actions don't follow one verb per resource: the Extension's triggers use `changeTriggers` and its timeout uses `setTimeoutInMs` — not the more guessable `setTriggers`/`changeTimeoutInMs`, which fail with `InvalidJsonInput` — even though `changeDestination` sits right next to them on the same resource. Confirm the exact action name against the resource's `UpdateAction` discriminator (`scripts/openApi-schemata.mjs --resource-name "api-Extension"`, or [API Extensions](https://docs.commercetools.com/api/projects/api-extensions.md)) before writing `diffToUpdateActions()`; never extrapolate from another action on the same or a different resource.
 
 ## Pattern 2: Schema-as-code for custom types
 

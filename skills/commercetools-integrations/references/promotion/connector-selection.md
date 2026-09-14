@@ -37,7 +37,7 @@ Also check the **converse**: if the customer already owns an engine licence and 
 
 Listings and their capabilities change. Before deciding among rungs 1/3/4:
 
-1. Search the **Connect marketplace** ([`marketplace.commercetools.com/connectors`](https://marketplace.commercetools.com/connectors)) and the [Promotions & Loyalty](https://marketplace.commercetools.com/integrations/promotions-and-loyalty) listings, plus the docs via the `docs-search` script or the Knowledge MCP.
+1. Search the **Connect marketplace** ([`marketplace.commercetools.com/connectors`](https://marketplace.commercetools.com/connectors)) and the [Promotions & Loyalty](https://marketplace.commercetools.com/integrations/promotions-and-loyalty) listings, plus the docs via the `docs-search` script.
 2. **Distinguish an installable Connect connector from a partner integration you self-host** — apply the commercetools-connect skill's [Marketplace listings are not all Connect connectors](../../../commercetools-connect/SKILL.md#marketplace-listings-are-not-all-connect-connectors--verify-before-recommending) rule; don't re-derive it here. It bites especially hard in this category: promotions & loyalty is crowded with partner-operated SaaS, so a listing is *weak* evidence that anything is deployable via Connect. Treating one as installable is a planning error, not a detail.
 3. Compare the requirements engine-by-capability (evaluation, coupon codes, loyalty, rollback on cancel, POS, regions).
 4. **Name the connector and version** you checked, and record it in the requirements block.

@@ -16,7 +16,7 @@ This answers Step 1.5 of [overview.md](./overview.md): given the requirements, d
 
 Supported systems and connectors change. Before deciding:
 
-1. Search the **Connect marketplace** (via the Merchant Center [Connect](https://docs.commercetools.com/merchant-center/connect.md) view) and the gift-card docs via the `docs-search` script or the Knowledge MCP. Filter for Public Connectors of type **Gift Cards**.
+1. Search the **Connect marketplace** (via the Merchant Center [Connect](https://docs.commercetools.com/merchant-center/connect.md) view) and the gift-card docs via the `docs-search` script. Filter for Public Connectors of type **Gift Cards**.
 2. Compare the requirements system-by-capability (balance, redeem, partial redemption, multiple cards, refund/reverse, currency, region).
 3. **Name the connector and version** you checked, and record it in the requirements block.
 

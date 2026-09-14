@@ -16,7 +16,7 @@ This answers Step 1.5 of [overview.md](./overview.md): given the requirements, d
 
 Supported engines and their capabilities change. Before deciding:
 
-1. Search the **Connect marketplace** (`marketplace.commercetools.com/connectors`) and the tax docs via the `docs-search` script or the Knowledge MCP.
+1. Search the **Connect marketplace** (`marketplace.commercetools.com/connectors`) and the tax docs via the `docs-search` script.
 2. Compare the requirements engine-by-capability (calculation, recording/filing, void/refund, exemptions, address validation, regions).
 3. **Name the connector and version** you checked, and record it in the requirements block.
 

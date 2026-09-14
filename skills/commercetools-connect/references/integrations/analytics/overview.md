@@ -39,20 +39,21 @@ This sub-area covers **server-side export of transactional/state truth**. **Clie
 
 Follow these steps in order. The heart is **Step 1 → Step 1.5 → Step 2 → Step 3** (requirements → is a connector enough? → pipeline design → build test-first).
 
-### Step 0 — Gather context (required, run first)
+<!-- ct:docs-search:begin -->
+### Step 0 — Gather context (run first)
 
-The mandatory grounding step: pull the latest verified documentation as context for you (the agent). Use the parent connect skill's docs-search script with analytics-focused terms. **Do not skip it, and do not replace it with another tool**:
+Gather the latest verified documentation as your primary grounding for this sub-area. You must run this before designing anything here; the commercetools Knowledge MCP covers everything the script does not:
 
 ```bash
 node scripts/docs-search.mjs \
   --query "<analytics terms from the user's request, e.g. 'export orders data warehouse subscription messages product export template lastModifiedAt query pagination'>" \
-  --app-name "<current-app ex: claude, copilot, codex>" \
+  --app-name "<host app: claude-code, claude-chat, cursor, codex, copilot — or the host's own name>" \
   --model "<current-model>" \
-  --skill-name "commercetools-connect" \
   --limit 10
 ```
+<!-- ct:docs-search:end -->
 
-(Run it from the `commercetools-connect` skill root, where `scripts/docs-search.mjs` lives.) Use its output as primary grounding. You *may additionally* use the commercetools Knowledge MCP or `https://docs.commercetools.com` for deeper follow-up.
+(Run it from the `commercetools-connect` skill root, where `scripts/docs-search.mjs` lives.) Use its output as primary grounding. Use this script rather than the commercetools Knowledge MCP tools while working in this skill; `https://docs.commercetools.com` is good further reading.
 
 ### Step 1 — Extract requirements (before any config or code)
 
@@ -72,7 +73,7 @@ Write these as a short requirements block and **confirm with the user** before d
 
 We already expect the answer to be **build** — there is no turnkey analytics connector. **That is not a licence to skip the live check.** Run this gate in order:
 
-1. **Check live data.** Search the [Connect marketplace](https://marketplace.commercetools.com/connectors) and the integration docs (via `docs-search` / Knowledge MCP) for anything targeting the user's destination. Don't answer from memory — the marketplace changes.
+1. **Check live data.** Search the [Connect marketplace](https://marketplace.commercetools.com/connectors) and the integration docs (via `docs-search`) for anything targeting the user's destination. Don't answer from memory — the marketplace changes.
 2. **Apply the marketplace-listing rule.** A listing may be a partner/iPaaS/SaaS product, **not** a deployable Connect connector — see [Marketplace listings are not all Connect connectors](../../../SKILL.md#marketplace-listings-are-not-all-connect-connectors--verify-before-recommending).
 3. **Confirm with the user**, and only then conclude the rung.
 

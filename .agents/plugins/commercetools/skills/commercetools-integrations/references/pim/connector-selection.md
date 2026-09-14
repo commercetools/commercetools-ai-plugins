@@ -30,7 +30,7 @@ The common-but-tricky case (once you've confirmed it *is* a Connect connector): 
 
 The set of PIM connectors, their versions, and their capabilities **changes over time**. Do not rely on a memorized matrix. Determine fit from current sources, in order:
 
-1. Run the skill's `docs-search` step and/or query the commercetools Knowledge MCP for "PIM connector product data integration".
+1. Run the skill's `docs-search` step for "PIM connector product data integration".
 2. Browse the live **Connect marketplace — Product Information Management** category for listings and versions: [marketplace PIM integrations](https://marketplace.commercetools.com/integrations/product-information-management).
 3. For a partner listing, its own marketplace page / repo / docs is the source of truth for what it maps and how it's configured (e.g. the [Akeneo listing](https://marketplace.commercetools.com/integration/akeneo)).
 4. **Confirm it's a Connect connector, not just an integration** — the category mixes both. See [the verification step below](#not-every-marketplace-listing-is-a-connect-connector--verify-it) before counting a listing as a rung-1/2 option.

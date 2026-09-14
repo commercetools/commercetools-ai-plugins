@@ -29,20 +29,21 @@ Two things make promotions **harder than tax**, and both are decided before you 
 
 Follow these steps in order. The heart is **Step 1 → Step 1.5 → Step 2 → Step 4** (requirements → which path → config → the two apps).
 
-### Step 0 — Gather context (required, run first)
+<!-- ct:docs-search:begin -->
+### Step 0 — Gather context (run first)
 
-The mandatory grounding step: pull the latest verified documentation as context for you (the agent). Use this skill's docs-search script with promotion-focused terms. **Do not skip it, and do not replace it with another tool**:
+Gather the latest verified documentation as your primary grounding for this sub-area. You must run this before designing anything here; the commercetools Knowledge MCP covers everything the script does not:
 
 ```bash
 node scripts/docs-search.mjs \
   --query "<promotion terms from the user's request, e.g. 'cart discount direct discounts discount codes external promotion engine API extension'>" \
-  --app-name "<current-app ex: claude, copilot, codex>" \
+  --app-name "<host app: claude-code, claude-chat, cursor, codex, copilot — or the host's own name>" \
   --model "<current-model>" \
-  --skill-name "commercetools-integrations" \
   --limit 10
 ```
+<!-- ct:docs-search:end -->
 
-(Run it from the `commercetools-integrations` skill root.) Use its output as primary grounding. You *may additionally* use the commercetools Knowledge MCP or [`pricing-and-discounts-overview`](https://docs.commercetools.com/api/pricing-and-discounts-overview.md) for deeper follow-up.
+(Run it from the `commercetools-integrations` skill root.) Use its output as primary grounding. Use this script rather than the commercetools Knowledge MCP tools while working in this skill; [`pricing-and-discounts-overview`](https://docs.commercetools.com/api/pricing-and-discounts-overview.md) is good further reading.
 
 ### Step 1 — Extract requirements (before any config or code)
 
@@ -62,7 +63,7 @@ Write these as a short requirements block and **confirm with the user** before d
 
 ### Step 1.5 — Native, use, customise, or build? (decide before wiring or building)
 
-This is the decision the rest of the flow assumes. Don't answer from memory — the marketplace changes. Check **live** data (the [Connect marketplace](https://marketplace.commercetools.com/connectors) and the promotions/loyalty listings, via the `docs-search` script / Knowledge MCP), and **name the connector + version** you checked. Details, the live-check procedure, and the per-engine landscape are in [connector-selection.md](./connector-selection.md).
+This is the decision the rest of the flow assumes. Don't answer from memory — the marketplace changes. Check **live** data (the [Connect marketplace](https://marketplace.commercetools.com/connectors) and the promotions/loyalty listings, via the `docs-search` script), and **name the connector + version** you checked. Details, the live-check procedure, and the per-engine landscape are in [connector-selection.md](./connector-selection.md).
 
 Then walk the **ladder** — stop at the first rung that fits, because each later one is more to build and maintain:
 

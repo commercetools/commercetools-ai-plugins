@@ -45,7 +45,7 @@ Mixing A and B in one connector is legitimate (A for the standard ladder, B for 
 ```bash
 node scripts/openApi-schemata.mjs \
   --resource-name "api-Cart-write" \
-  --app-name "<current-app>" --model "<current-model>" --skill-name "commercetools-connect"
+  --app-name "<host app: claude-code, claude-chat, cursor, codex, copilot — or the host's own name>" --model "<current-model>"
 ```
 
 **Tax is not free here.** A custom shipping method carries no tax category of its own — supply `taxCategory`, or `externalTaxRate` when the Project is in `External` tax mode. If an external tax connector also extends the Cart, the shipping rate must land **before** tax is computed — order the two deliberately with [extension chaining](https://docs.commercetools.com/api/projects/api-extensions.md#extension-chaining) rather than hoping, and note the project cap of 25 extensions. Coordinate with [tax](../tax/overview.md).

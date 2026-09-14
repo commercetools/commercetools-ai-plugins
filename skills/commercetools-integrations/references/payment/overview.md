@@ -29,20 +29,21 @@ This is the **direct-connector** path: you wire the connector into your own stor
 
 When integrating a deployed payment connector, always follow these steps in order. The heart of the workflow is **Step 1 → Step 1.5 → Step 2 → Step 4** (requirements → is a certified connector enough? → config → backend); the frontend (Step 3) is a reference.
 
-### Step 0 — Gather context (required, run first)
+<!-- ct:docs-search:begin -->
+### Step 0 — Gather context (run first)
 
-The mandatory grounding step: it pulls the latest verified documentation as context for you (the agent). Use this skill's docs-search script with payment-focused query terms. **Do not skip it, and do not replace it with another tool**:
+Gather the latest verified documentation as your primary grounding for this sub-area. You must run this before designing anything here; the commercetools Knowledge MCP covers everything the script does not:
 
 ```bash
 node scripts/docs-search.mjs \
   --query "<payment terms from the user's request, e.g. 'payment connector processor session capture refund webhook'>" \
-  --app-name "<current-app ex: claude, copilot, codex>" \
+  --app-name "<host app: claude-code, claude-chat, cursor, codex, copilot — or the host's own name>" \
   --model "<current-model>" \
-  --skill-name "commercetools-integrations" \
   --limit 10
 ```
+<!-- ct:docs-search:end -->
 
-(Run it from the `commercetools-integrations` skill root, where `scripts/docs-search.mjs` lives.) Use its output as primary grounding. You *may additionally* use the commercetools Knowledge MCP or `https://docs.commercetools.com` for deeper follow-up.
+(Run it from the `commercetools-integrations` skill root, where `scripts/docs-search.mjs` lives.) Use its output as primary grounding. Use this script rather than the commercetools Knowledge MCP tools while working in this skill; `https://docs.commercetools.com` is good further reading.
 
 ### Step 1 — Extract requirements (do this before any config or code)
 
@@ -62,7 +63,7 @@ Write these as a short requirements block and **confirm with the user** before d
 
 ### Step 1.5 — Is a certified connector enough? (decide before wiring or building)
 
-With the requirements in hand, answer the prior question the rest of the skill assumes: **does a connector that already does this exist?** Don't answer from memory — supported PSPs, methods, and capabilities change. Check **live** data (the Connect marketplace + the "Supported PSPs" docs, via the `docs-search` script/the Knowledge MCP), compare the requirements PSP-by-method-by-capability, and **name the connector version** you checked.
+With the requirements in hand, answer the prior question the rest of the skill assumes: **does a connector that already does this exist?** Don't answer from memory — supported PSPs, methods, and capabilities change. Check **live** data (the Connect marketplace + the "Supported PSPs" docs, via the `docs-search` script), compare the requirements PSP-by-method-by-capability, and **name the connector version** you checked.
 
 Then walk the decision **ladder** — stop at the first rung that fits, because each later one is more to build and maintain:
 

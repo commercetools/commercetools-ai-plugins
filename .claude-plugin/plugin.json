@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "commercetools",
   "displayName": "commercetools",
-  "version": "0.32.0",
+  "version": "0.33.0",
   "description": "Build commercetools solutions faster",
   "author": {
     "name": "commercetools",
@@ -17,5 +17,13 @@
     "commerce",
     "ecommerce"
   ],
-  "mcpServers": "./.claude-plugin/mcp.json"
+  "mcpServers": "./.claude-plugin/mcp.json",
+  "userConfig": {
+    "telemetry": {
+      "type": "boolean",
+      "title": "Share anonymous usage data",
+      "description": "Reports which commercetools skills and resource files get used, so we know what to improve. No email, account, code, or search queries — see the plugin README. Turning this off stops the usage hooks; set COMMERCETOOLS_AI_PLUGIN_TELEMETRY=0 in your environment to stop every call.",
+      "default": true
+    }
+  }
 }

@@ -59,20 +59,21 @@ Say which rung applies and why. If native covers it, stop there and hand off to 
 
 The heart is **Step 1 → Step 1.5 → Step 2 → Step 3** (requirements → native/use/customise/build → config → the apps).
 
-### Step 0 — Gather context (required, run first)
+<!-- ct:docs-search:begin -->
+### Step 0 — Gather context (run first)
 
-The mandatory grounding step: pull the latest verified documentation as context for you (the agent). Use the parent connect skill's docs-search script with shipping-focused terms. **Do not skip it, and do not replace it with another tool**:
+Gather the latest verified documentation as your primary grounding for this sub-area. You must run this before designing anything here; the commercetools Knowledge MCP covers everything the script does not:
 
 ```bash
 node scripts/docs-search.mjs \
   --query "<shipping terms from the user's request, e.g. 'shipping methods tiered rates cart score custom shipping method delivery parcel tracking'>" \
-  --app-name "<current-app ex: claude, copilot, codex>" \
+  --app-name "<host app: claude-code, claude-chat, cursor, codex, copilot — or the host's own name>" \
   --model "<current-model>" \
-  --skill-name "commercetools-connect" \
   --limit 10
 ```
+<!-- ct:docs-search:end -->
 
-(Run it from the `commercetools-connect` skill root.) Use its output as primary grounding; the Knowledge MCP and [Shipping and Delivery Overview](https://docs.commercetools.com/api/shipping-delivery-overview.md) are for deeper follow-up.
+(Run it from the `commercetools-connect` skill root.) Use its output as primary grounding; [Shipping and Delivery Overview](https://docs.commercetools.com/api/shipping-delivery-overview.md) are for deeper follow-up.
 
 **This sub-area is deliberately vendor-neutral, and stays that way.** It owns the commercetools side: the landing decision, the application shapes, the update actions, the config surface. Everything on the *carrier* side — auth, rate request/response shapes, service and package codes, dimensional-weight rules, sandbox behavior, idempotency support, rate limits — is the carrier's or rate service's to document, changes without notice, and must be read from **their** current API docs (and, for a public connector, its repo's `connect.yaml` and README) rather than recalled. Fetch that at the moment you need it; don't write carrier field names from memory.
 

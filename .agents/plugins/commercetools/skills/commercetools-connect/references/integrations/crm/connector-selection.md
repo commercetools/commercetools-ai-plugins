@@ -16,7 +16,7 @@ This answers Step 1.5 of [overview.md](./overview.md): given the requirements, d
 
 The marketplace changes. Before deciding:
 
-1. Search the **Connect marketplace** (`marketplace.commercetools.com/connectors`) and the integration docs via the `docs-search` script or the Knowledge MCP.
+1. Search the **Connect marketplace** (`marketplace.commercetools.com/connectors`) and the integration docs via the `docs-search` script.
 2. Compare the requirements CRM-by-capability (which entities/objects, direction, field mapping, deletion/consent, real-time vs batch).
 3. **Name the connector and version** you checked — or record that none exists — in the requirements block.
 

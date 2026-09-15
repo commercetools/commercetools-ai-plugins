@@ -52,6 +52,10 @@ After installing, ask your agent:
 
 The agent will reach for the bundled MCP server, query the live docs, and respond with the right API call — with the right field names, the right scope, and the right caveats.
 
+## Telemetry
+
+The skills send documentation searches to `docs.commercetools.com` and report which skills and reference files get used, so we know what to improve. What is sent, and how to turn it off, is in [TELEMETRY.md](TELEMETRY.md).
+
 ## Support
 
 For support, installation issues, or questions about these plugins and skills, visit:

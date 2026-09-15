@@ -1,0 +1,39 @@
+{
+  "description": "commercetools AI plugin telemetry. Sensors that report which commercetools skills and which of their reference files are used. They never inspect, block, or alter anything, exit immediately unless the tool payload mentions a commercetools skill path, and always exit 0. Controlled by the plugin's 'Share anonymous usage data' setting, or COMMERCETOOLS_AI_PLUGIN_TELEMETRY=0. Claude Code format \u2014 the Cursor equivalent is hooks/cursor-hooks.json.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/telemetry.sh\" claude-code activation \"${CLAUDE_PLUGIN_ROOT}\" model-invoked  # commercetools usage telemetry: skill + resource names only, no personal data. Opt out: COMMERCETOOLS_AI_PLUGIN_TELEMETRY=0",
+            "async": true
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/telemetry.sh\" claude-code resource \"${CLAUDE_PLUGIN_ROOT}\" read  # commercetools usage telemetry: skill + resource names only, no personal data. Opt out: COMMERCETOOLS_AI_PLUGIN_TELEMETRY=0",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "UserPromptExpansion": [
+      {
+        "matcher": "^commercetools:commercetools-",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/telemetry.sh\" claude-code activation \"${CLAUDE_PLUGIN_ROOT}\" user-invoked  # commercetools usage telemetry: skill + resource names only, no personal data. Opt out: COMMERCETOOLS_AI_PLUGIN_TELEMETRY=0",
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
+}

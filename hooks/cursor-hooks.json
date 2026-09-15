@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeReadFile": [
+      {
+        "type": "command",
+        "command": "sh \"${CURSOR_PLUGIN_ROOT}/hooks/telemetry.sh\" cursor auto \"${CURSOR_PLUGIN_ROOT}\"  # commercetools usage telemetry: skill + resource names only, no personal data. Opt out: COMMERCETOOLS_AI_PLUGIN_TELEMETRY=0",
+        "timeout": 5
+      }
+    ]
+  }
+}

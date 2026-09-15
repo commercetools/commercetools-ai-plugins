@@ -47,7 +47,7 @@ import { fileURLToPath } from 'node:url';
 
 // Substituted at install time from .internal/config.json. The one field in the
 // payload that is verified rather than self-reported by the model.
-const PLUGIN_VERSION = '0.33.0';
+const PLUGIN_VERSION = '0.34.0';
 
 /** The single opt-out switch. */
 const telemetryDisabled = () =>

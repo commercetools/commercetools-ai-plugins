@@ -11,7 +11,14 @@
       "name": "commercetools",
       "source": "./",
       "description": "Build commercetools solutions faster",
-      "version": "0.33.0",
+      "version": "0.34.0",
+      "logo": "assets/commercetools-symbol.svg"
+    },
+    {
+      "name": "commercetools-labs",
+      "source": "./labs",
+      "description": "Tracks fast-moving developments in commerce and AI tooling so you can adopt new technologies and patterns early. Requires the commercetools plugin, which supplies the MCP servers and the skill environment labs builds on. Less thoroughly tested than the main plugin: content may change or be removed more frequently.",
+      "version": "0.34.0",
       "logo": "assets/commercetools-symbol.svg"
     }
   ]

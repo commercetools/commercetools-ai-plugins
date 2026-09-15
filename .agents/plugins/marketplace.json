@@ -15,6 +15,17 @@
         "installation": "AVAILABLE"
       },
       "category": "commerce"
+    },
+    {
+      "name": "commercetools-labs",
+      "source": {
+        "source": "local",
+        "path": "./.agents/plugins/commercetools-labs"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "commerce"
     }
   ]
 }

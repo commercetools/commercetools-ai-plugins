@@ -1,0 +1,118 @@
+{
+  "skill_name": "commercetools-catalog-migration",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "We're loading our apparel catalog into commercetools. Most products are fine, but our made-to-measure shirts have around 300 size/collar/sleeve combinations each. The project is on the Classic model. Can you get the adapter started?",
+      "expected_output": "Stops before adapter work and resolves the catalog model first: the Classic model caps a Product at 100 Variants, so this catalog cannot be loaded as-is and the project has to move to Modular. Names what Modular costs (Standalone Prices only, an extra scope, no importable defaultVariant) rather than presenting it as a free switch, and does not reshape the catalog to fit the tool.",
+      "files": [],
+      "expectations": [
+        "Identifies the Classic limit of 100 Product Variants as a hard blocker for the 300-combination products",
+        "States the project has to move to the Modular catalog model, which allows up to 10,000 Variants per Product",
+        "Does not suggest splitting the made-to-measure products into several Products to fit under the Classic cap",
+        "Surfaces that Modular allows only Standalone Prices, and that manage_standalone_prices is not granted by manage_products",
+        "Raises and resolves the catalog-model question before starting adapter work, rather than after",
+        "Notes that defaultVariant cannot be set through the Import API, so products load with no default variant"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Our source has colour and size per SKU, plus a 'care instructions' field that's identical for every SKU of a style. What attributeConstraint should each of those get in the ProductType?",
+      "expected_output": "Assigns CombinationUnique to the two variant axes and SameForAll to the invariant field, and treats the choice as irreversible: changeAttributeConstraint accepts only None, so a constraint can be relaxed but never tightened or switched. Also establishes that axis identity must be a language-independent code, with display text carried separately.",
+      "files": [],
+      "expectations": [
+        "Assigns CombinationUnique to colour and size as variant axes, and SameForAll to care instructions",
+        "States that changeAttributeConstraint accepts only None, so a constraint can be relaxed but never tightened or switched",
+        "Explains that getting it wrong means recreating the attribute and rewriting its data, so it has to be decided before the first load",
+        "States that axis values must be language-independent codes, with display text kept separately — a localized value can never be variant identity",
+        "Notes that SameForAll enforces that variants agree rather than distributing a value, so the value is written onto every variant",
+        "Does not describe the constraint as something correctable later with an update action"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Quick sanity check — our price feed has amounts like 19.99 (GBP), 4500 (JPY) and 12.345 (BHD). I'll just multiply each by 100 and round to get centAmount. That's right, isn't it?",
+      "expected_output": "Rejects the premise. Minor-unit digit counts are not 2 everywhere — JPY is 0 and BHD is 3 — so a blanket multiply by 100 silently loads a JPY price 100x too high. Recommends string-based conversion rather than float arithmetic, and refusing excess precision rather than rounding it away.",
+      "files": [],
+      "expectations": [
+        "Rejects multiplying by 100 as a universal rule, stating fraction digits are 0 for JPY, 3 for BHD, and 2 for most currencies",
+        "States that 4500 JPY converts to 4500, not 450000",
+        "Warns that defaulting to 2 digits does not error — it loads a price 100x wrong with no failure signal",
+        "Recommends converting on the decimal string rather than through a binary float, because a float cannot represent most decimal amounts exactly",
+        "States that an amount with more decimal places than its currency allows should be refused rather than silently rounded",
+        "Does not endorse the multiply-and-round approach with only a minor caveat attached"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Our load finished and every import operation reports 'imported', but the storefront shows no price on any product. A few category pages are also coming up empty. What's going on?",
+      "expected_output": "Separates two root causes. The absent prices point at a priceMode disagreement — a product declaring Embedded whose prices were imported as Standalone Prices, or the reverse — which imports cleanly and reports imported while showing no price anywhere. The empty categories are a different problem, and in both cases the load's own report cannot settle it; verify reads the project back.",
+      "files": [],
+      "expectations": [
+        "Identifies a priceMode disagreement between the products and where the prices actually are as the cause of prices being absent despite every operation reporting imported",
+        "States that this combination imports cleanly and reports imported, so the load report cannot detect it",
+        "Treats the missing prices and the empty category pages as two separate root causes rather than one fix",
+        "Explains that an accepted Import Request is not an imported resource, because the Import API validates asynchronously",
+        "Recommends running verify to read the project back and reconcile against the plan",
+        "Does not conclude the load simply failed and should be re-run from the start"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "I ran verify straight after the load and it reports 98 categories and 8 products missing. Did the load fail? Should I re-run it?",
+      "expected_output": "Probably not a failure. Operations whose KeyReferences have not resolved yet leave their resources absent, and --wait drains processing without waiting out reference resolution. Recommends waiting, re-running verify, and comparing the in-flight count between runs before believing the absences — and re-running the load only if the count stops falling.",
+      "files": [],
+      "expectations": [
+        "States that verify run immediately after a load can report resources missing while their operations are still unresolved",
+        "Explains that --wait drains processing but does not wait out KeyReference resolution, which has a 48-hour window",
+        "Recommends waiting and re-running verify, comparing the in-flight operation count between runs before concluding the absences are real",
+        "Notes that a deep category tree lengthens the cascade, because children wait on their parents",
+        "States that only rejected operations are worth resubmitting, since other states are retried internally",
+        "Does not recommend re-running the load immediately or treat the absences as a confirmed failure"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Import rejected one of our ProductTypes with AttributeDefinitionTypeConflict, and then every product using it failed with AttributeNameDoesNotExist. The ProductType looks correct to me and nothing else in our plan declares that attribute.",
+      "expected_output": "Explains that an attribute name holds exactly one type across the whole Project, so the conflict can come from a ProductType the migration never touches — an internally consistent plan can still be refused. Treats the second error as a downstream consequence of the first, and states there is no update action that changes an attribute's type.",
+      "files": [],
+      "expectations": [
+        "Explains that an attribute name may hold exactly one type across the whole Project, not one per ProductType",
+        "States the conflict can come from an existing ProductType the migration never touches, so an internally consistent plan can still be refused",
+        "Explains AttributeNameDoesNotExist on the products as a downstream consequence of the rejected ProductType, not a second independent defect",
+        "States there is no update action that changes an attribute's type, and that removing and re-adding it deletes its values on every product using it",
+        "Notes that enum values may differ freely between ProductTypes — only the type is constrained",
+        "Identifies preflight as the stage that catches this before a load, since audit is offline and cannot see the project",
+        "Does not diagnose the two errors as independent defects needing separate fixes, and does not propose an update action to change the existing attribute's type"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "derive is reporting 14 slug collisions — 'Accessories' appears under both Menswear and Womenswear, that kind of thing. Can I just auto-append the category code and carry on?",
+      "expected_output": "The disambiguation works, but the decision isn't the migration's to make: a forced suffix is a changed URL, which is information loss and an SEO decision with an owner. Asks for the policy and the named owner, records it, and produces the slug report from the plan while the old URL structure still exists.",
+      "files": [],
+      "expectations": [
+        "Confirms slugs are unique per locale across the whole Project, so collisions in a retail taxonomy are normal rather than a data defect",
+        "States that a forced suffix changes a URL, which is information loss and an SEO decision rather than a migration one",
+        "Asks for both the disambiguation policy and the name of whoever owns it, not only the policy",
+        "Recommends recording the decision and the resulting URLs in the engagement decision log",
+        "Recommends generating the slug report from the plan before cutover, while the old URL structure still exists to compare against",
+        "Does not simply auto-append and proceed without surfacing the changed URLs for sign-off"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "We need to migrate our catalog to the Modular model. There are already about 80k products live in the project. Where do we start?",
+      "expected_output": "Recognises this as a Classic-to-Modular migration of an existing Project rather than a load from a source system, and redirects to the staged migration path instead of starting adapter or feed work. Names the Standalone Prices prerequisite, and offers the source-to-commercetools load as the separate thing this skill does cover.",
+      "files": [],
+      "expectations": [
+        "Recognises this as a Classic-to-Modular migration of an existing Project, not a catalog load from a source system",
+        "Does not propose writing a source adapter or a canonical feed for this request",
+        "Points to the staged Modular Catalog migration path rather than a single setProductCatalogModel action on a project holding live data",
+        "States that Modular does not support Embedded Prices, so Products must be on Standalone Prices first",
+        "Mentions at least one stage of the staged path — dual-write, the InMigration state, the Variant copy job, or the cleanup step",
+        "Offers the source-system catalog load as the separate scope this skill does cover, in case that is the actual need"
+      ]
+    }
+  ]
+}

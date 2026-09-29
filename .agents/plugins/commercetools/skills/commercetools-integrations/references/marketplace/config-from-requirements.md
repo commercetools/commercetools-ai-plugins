@@ -32,7 +32,7 @@ commercetools has no "seller" resource. Sellers are modeled with Channels, Store
 ### Two limits that kill naive designs
 
 - **[50 Subscriptions and 25 Extensions per Project](https://docs.commercetools.com/api/limits.md).** Never one per seller. Register **one** Subscription per message type and fan out to sellers inside your handler.
-- **Store-scoped connectors don't scale per-seller either.** The `product-export` template deploys one Deployment *per Store*; with many sellers, one Deployment per seller is an operational trap — build a single app that resolves the seller from the resource instead.
+- **Store-scoped connectors don't scale per-seller either.** The Product export template deploys one Deployment *per Store*; with many sellers, one Deployment per seller is an operational trap — build a single app that resolves the seller from the resource instead.
 
 ## Role + direction → app composition
 
@@ -46,7 +46,7 @@ Build only what the role needs ([overview.md](./overview.md)). Keep each directi
 - **`job`** reconciliation — full sweep for drift (missed offers, stock divergence, orders the event path dropped), checkpointed.
 
 **Seller role (commercetools → marketplace, orders in):**
-- **`event`** app on Product/Product Selection/Store/price/inventory messages — export listing, price, and stock deltas (the [`product-export` template](https://docs.commercetools.com/connect/templates/product-export.md) is the closest starting shape).
+- **`event`** app on Product/Product Selection/Store/price/inventory messages — export listing, price, and stock deltas (the [Product export template](https://docs.commercetools.com/connect/templates/product-export.md) is the closest starting shape).
 - **`job`** — full/batch feed export when the marketplace wants scheduled files instead of deltas.
 - **`service`** webhook or **`job`** — import marketplace orders (Order Import, keyed on `orderNumber`).
 - **`event`** app — push shipment/tracking/cancellation back to the marketplace.

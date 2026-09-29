@@ -52,4 +52,4 @@ is written:
 - `commercetools-documentation-search` — domain and business-logic questions
 
 Never assert an endpoint, field, or update action from memory. When the MCP is
-unavailable, say so and cite <https://docs.commercetools.com> instead of guessing.
+unavailable, say so and cite \<https://docs.commercetools.com> instead of guessing.

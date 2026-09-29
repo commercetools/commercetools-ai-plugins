@@ -20,7 +20,7 @@ metadata:
 
 ---
 
-## as-associate Chain in <server>/ct/
+## as-associate Chain in \<server>/ct/
 
 Every function in `<server>/ct/` that reads or writes a cart, order, or quote must go through the as-associate chain — not the project-level `apiRoot`. This applies to the version conflict logic in Pattern 4 as well: the re-fetch (version) logic use `asAssociateInStore(associateId, businessUnitKey)`. See [reference](./cart.md) for the helper.
 

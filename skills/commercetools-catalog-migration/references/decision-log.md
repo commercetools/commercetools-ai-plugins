@@ -84,7 +84,7 @@ embedded repository that `git add -A` records as a gitlink — pinned in your
 index, unexplained by any `.gitmodules`, and empty for anyone who clones the
 engagement later. So the engagement's own `.gitignore` starts as:
 
-```gitignore
+```text
 /ct-catalog-migration-pipeline/
 feed/
 out/

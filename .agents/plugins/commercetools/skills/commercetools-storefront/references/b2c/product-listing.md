@@ -38,7 +38,7 @@ This reference covers category data fetching, the commercetools Product Search A
 - `getCategoryById(id, locale)`: fetch a category by ID
 - `getCategoryTree(locale)`: fetch all categories (limit: 500, sorted by `orderHint`) and return as a nested tree
 
-> **commercetools slug query format:** `where: \`slug(${locale}="${slug}")\`` — locale is BCP-47 (e.g. `en-US`), matching both the URL segment and the COUNTRY_CONFIG key. commercetools stores slugs as `{ "en-US": "my-slug" }`.
+> **commercetools slug query format:** `where: \`slug(${locale}="${slug}")\`` — locale is BCP-47 (e.g. `en-US`), matching both the URL segment and the COUNTRY_CONFIG key. commercetools stores slugs as `\{ "en-US": "my-slug" }`.
 
 ---
 

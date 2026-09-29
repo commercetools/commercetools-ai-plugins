@@ -35,7 +35,20 @@ Create the project from an official template. Pick the closest template to the u
 ```bash
 commercetools connect init my-connector            # add: --template <name> to start from a template
 ```
-Templates: `tax-integration`, `product-ingestion`, `email-integration`, `payment-integration`, `fulfilment-integration`.
+**The `--template` value is not the docs page slug.** The docs name templates by page title; the CLI has its own enum, and two of them differ. Passing a docs slug fails with `Expected --template=<x> to be one of: …`. Always take the value from the middle column:
+
+| Template (docs name) | `--template` value | Repo |
+|---|---|---|
+| [Payment integration](https://docs.commercetools.com/connect/templates/payment-integration.md) | `payment-integration` | [connect-payment-integration-template](https://github.com/commercetools/connect-payment-integration-template) |
+| [Tax integration](https://docs.commercetools.com/connect/templates/tax-integration.md) | `tax-integration` | [connect-tax-integration-template](https://github.com/commercetools/connect-tax-integration-template) |
+| [Product export](https://docs.commercetools.com/connect/templates/product-export.md) | **`product-ingestion`** | [connect-product-export-template](https://github.com/commercetools/connect-product-export-template) |
+| [Transactional email](https://docs.commercetools.com/connect/templates/transactional-emails.md) | **`email-integration`** | [connect-email-integration-template](https://github.com/commercetools/connect-email-integration-template) |
+| *(not on the docs templates page)* | `fulfilment-integration` | [connect-fulfilment-integration-template](https://github.com/commercetools/connect-fulfilment-integration-template) |
+
+Two traps in that table:
+
+- **`product-ingestion` is the Product *export* template.** The name is the repo's old name, which now redirects — the CLI value did not follow the rename. It scaffolds a `service` full-export endpoint plus an `event` incremental updater that read commercetools and write **outward** — so it is the wrong base for an inbound load. For inbound, `fulfilment-integration` is the only template that ships inbound apps (`inventory-import` and `order-updates`, both `service`). **No template ships a `job` app at all**, so a scheduled pull starts from the plain starter template.
+- **`fulfilment-integration` is CLI-only.** It is absent from the docs templates page, so "the templates are payment, product-export, tax, and transactional email" is a statement about the docs page, not about what you can scaffold.
 
 Add another application to an existing connector later:
 ```bash

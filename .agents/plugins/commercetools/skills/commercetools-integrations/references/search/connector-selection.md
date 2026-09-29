@@ -54,7 +54,7 @@ As checked 2026-08:
 | **Engine dashboard integrations** (e.g. "Algolia for commercetools") | Vendor-hosted, dashboard-configured — **not** a Connect connector | outside this skill — surface with the not-a-Connect-solution warning |
 | Bespoke / unsupported engine | Nothing to install | **4 (build)** — scaffold from the Product export template |
 
-Unlike promotion/marketplace/CRM, search is a **templated** sub-area: the [Product export template](https://docs.commercetools.com/connect/templates/product-export.md) hands you both app stubs (it is one of the four current [Connect templates](https://docs.commercetools.com/connect/templates/templates-overview.md) — `payment-integration`, `product-export`, `tax-integration`, `transactional-emails`). So even a from-scratch engine is rung 4 *from a scaffold*, not from nothing. Budget accordingly — the plumbing exists; what you write is the engine's SDK calls and the mapping.
+Unlike promotion/marketplace/CRM, search is a **templated** sub-area: the [Product export template](https://docs.commercetools.com/connect/templates/product-export.md) hands you both app stubs (it is one of the four on the [Connect templates page](https://docs.commercetools.com/connect/templates/templates-overview.md), alongside Payment integration, Tax integration, and Transactional email). Scaffold it with **`--template product-ingestion`** — that is its CLI value; the page slug `product-export` is rejected by the CLI ([connect-cli.md](../../../commercetools-connect/references/connect-cli.md)). So even a from-scratch engine is rung 4 *from a scaffold*, not from nothing. Budget accordingly — the plumbing exists; what you write is the engine's SDK calls and the mapping.
 
 ## The ladder (stop at the first rung that fits)
 

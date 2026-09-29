@@ -50,7 +50,7 @@ Webhooks and Subscription messages are **at-least-once**: every payload can arri
 
 ### Outbound (seller role): commercetools → marketplace
 
-- Driven by **Subscription messages** on products, prices, inventory, Product Selections, and Stores — the [`product-export` template](https://docs.commercetools.com/connect/templates/product-export.md) is the closest existing shape (full export endpoint + incremental updater).
+- Driven by **Subscription messages** on products, prices, inventory, Product Selections, and Stores — the [Product export template](https://docs.commercetools.com/connect/templates/product-export.md) is the closest existing shape (full export endpoint + incremental updater).
 - **Re-fetch the resource by id** from `resource.id`; don't map from a possibly-stale or truncated payload. With no ordering guarantee, re-fetching makes the export converge on current state instead of replaying old deltas.
 - **Scope what you export** — which Store / Product Selection / channel defines "listed on this marketplace". Exporting the whole catalog to a marketplace that only sells a subset is a compliance and delisting problem.
 - **Delist explicitly.** Unpublish, removal from a Product Selection, and stock hitting zero each need a defined outbound action; otherwise you keep selling items you no longer carry.

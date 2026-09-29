@@ -21,7 +21,7 @@ metadata:
 
 An `event` application receives commercetools [Subscription](https://docs.commercetools.com/api/projects/subscriptions.md) notifications through a Connect-provisioned message broker. The connector registers the Subscription in `postDeploy` (see [lifecycle-scripts.md](./lifecycle-scripts.md)) and exposes an HTTP endpoint (`endpoint: /event`) that the broker pushes to.
 
-> The **transactional email** sub-area ([integrations/email/overview.md](./integrations/email/overview.md)) is a worked, end-to-end `event` app built on the patterns below — including the at-most-once vs at-least-once decision for a non-idempotent ESP send.
+> The **transactional email** sub-area in the sibling commercetools-integrations skill ([references/email/overview.md](../../commercetools-integrations/references/email/overview.md)) is a worked, end-to-end `event` app built on the patterns below — including the at-most-once vs at-least-once decision for a non-idempotent ESP send.
 
 ## Table of Contents
 - [Contract facts (verified)](#contract-facts-verified)

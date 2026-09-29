@@ -30,7 +30,7 @@ Marketplace platforms that appear in the category include **Marketplacer**, **Mi
 Two structural facts shape almost every marketplace engagement:
 
 - **Most marketplace listings are partner integrations, not Connect connectors.** A vendor-operated integration, an iPaaS pipeline, or a cloud-function accelerator can be an excellent functional match and still have nothing Connect can deploy.
-- **There is no marketplace Connect template.** The [templates](https://docs.commercetools.com/connect/templates/templates-overview.md) are `payment-integration`, `product-export`, `tax-integration`, and `transactional-emails`. A build therefore starts from plain apps — though for the **seller role** (pushing your catalog out to a marketplace) the [`product-export` template](https://docs.commercetools.com/connect/templates/product-export.md) is a genuinely close starting shape: it already does Store-scoped full export plus an incremental updater driven by Product/Product Selection/Store messages.
+- **There is no marketplace Connect template.** The [documented templates](https://docs.commercetools.com/connect/templates/templates-overview.md) are Payment integration, Product export, Tax integration, and Transactional email, plus the CLI-only `fulfilment-integration`; pass the `--template` values from [connect-cli.md](../../../commercetools-connect/references/connect-cli.md), since two differ from the page titles. A build therefore starts from plain apps — though for the **seller role** (pushing your catalog out to a marketplace) the [Product export template](https://docs.commercetools.com/connect/templates/product-export.md) (`--template product-ingestion`) is a genuinely close starting shape: it already does Store-scoped full export plus an incremental updater driven by Product/Product Selection/Store messages.
 
 So the realistic outcome for marketplace work is usually **path 2 (customise/fork)** or **path 3 (build)**. Say so early — it changes the effort estimate.
 
@@ -87,7 +87,7 @@ Pointers so you know a fork is even possible, not a substitute for reading the r
 
 ### Path 3 — Build a new connector for the marketplace service they define
 
-No listing fits, the service is bespoke, or the user explicitly wants their own. Scaffold with the Connect CLI (`commercetools connect init`, then `connect application add --type service|event|job`) — or start from `product-export` for the seller-role outbound direction and adapt. What you write is the marketplace API client, the mapping, and the keying; Connect scaffolds the plumbing.
+No listing fits, the service is bespoke, or the user explicitly wants their own. Scaffold with the Connect CLI (`commercetools connect init`, then `connect application add --type service|event|job`) — or start from the Product export template (`--template product-ingestion`) for the seller-role outbound direction and adapt. What you write is the marketplace API client, the mapping, and the keying; Connect scaffolds the plumbing.
 
 The apps to build follow from **role and direction** ([overview.md](./overview.md)), and their contracts are in [marketplace-contract.md](./marketplace-contract.md):
 
@@ -100,7 +100,7 @@ The apps to build follow from **role and direction** ([overview.md](./overview.m
 1. **Connect-deployable connector covers the requirements** → install + configure (path 1).
 2. **Right service, gap looks like a capability** → prove it isn't **config/mapping** first → back to rung 1.
 3. **Right service, genuine gap config can't close, and it's open source** → **fork** (path 2). Don't rebuild a working sync engine.
-4. **No usable connector for the service** → **build** (path 3). No marketplace template; `product-export` is the closest shape for outbound.
+4. **No usable connector for the service** → **build** (path 3). No marketplace template; the Product export template (`--template product-ingestion`) is the closest shape for outbound.
 
 Only rungs 3–4 leave this sub-area (hand off to the commercetools-connect skill for build/publish); the flow resumes here once the connector is deployed.
 
@@ -117,5 +117,5 @@ Note in the requirements block: **service · role · path/rung · connector name
 - [ ] **Presented all three paths to the user** (use as-is · customise/fork · build for their service) and let them choose
 - [ ] Apparent gaps re-checked as **config/mapping** before proposing code
 - [ ] Fork chosen over from-scratch whenever an open-source connector for the service exists
-- [ ] Told the user there is no marketplace template (and that `product-export` is the closest shape for outbound)
+- [ ] Told the user there is no marketplace template (and that the Product export template, `--template product-ingestion`, is the closest shape for outbound)
 - [ ] Decision + rung + version recorded in the requirements block

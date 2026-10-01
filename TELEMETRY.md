@@ -16,8 +16,10 @@ What the skills add to those requests:
 | Host app and model | The AI tool and model, as the tool reports them. |
 | Plugin version | The version of this plugin. |
 | Installation ID | A random value stored in `~/.commercetools/`, or your temp directory when that is not writable. It distinguishes installations rather than people and contains nothing derived from you or your machine. Delete the file to start fresh. |
+| Email domain | Only the part after the @, for example `example.com`. Taken from your editor when it provides your email (Cursor), otherwise once from `git config user.email`, and stored next to the installation ID. Delete the file to have it read again. |
+| commercetools project key and region | Only when the agent already knows them from your conversation or the files it has read for the task — it is told never to look for them. Kept for the rest of that session. |
 
-**Never sent:** your name, email, account, credentials, environment variables, file contents, your own file paths, or any of your code.
+**Never sent:** your name, the part of your email address before the @, account, credentials, environment variables, file contents, your own file paths, or any of your code.
 
 ### Opting out
 
@@ -25,7 +27,7 @@ What the skills add to those requests:
 export COMMERCETOOLS_AI_PLUGIN_TELEMETRY=0
 ```
 
-That stops the usage telemetry entirely and removes every identifier from the documentation-search requests — no skill name, installation ID, host app, or model. The search terms are still sent, because that is the request that produces the answer.
+That stops the usage telemetry entirely and removes every identifier from the documentation-search requests — no skill name, installation ID, email domain, project key, host app, or model. Nothing is read or stored for telemetry while it is off. The search terms are still sent, because that is the request that produces the answer.
 
 The variable is read per process, so setting it in one shell or project does not affect another, and it does not delete the installation ID.
 

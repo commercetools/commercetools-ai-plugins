@@ -1,6 +1,6 @@
 ---
 name: writing-an-adapter
-description: "Writing the per-engagement adapter that turns a source export into the canonical feed: what to establish first, the rules that matter, media handling, and what good output looks like."
+description: "Writing the per-engagement adapter that turns a source export into the canonical feed: what to establish first, the rules that matter, stock and media handling, and what good output looks like."
 metadata:
   contentType: REFERENCE
 ---
@@ -72,7 +72,18 @@ it is trying to answer.
 - Are prices net or gross? This is often a setting elsewhere in the source, not
   a property of the price row, and getting it backwards changes every price by
   the tax rate with nothing in the data to contradict you.
-- Quantity breaks have no embedded-price equivalent. Expect to report them.
+- Quantity breaks: the feed contract has no field for price `tiers`, in either
+  price mode. Expect to report them.
+
+**Tax**
+
+- Does a product carry a tax class — a group, code or category it is taxed
+  under? That is the product's `taxCategory`. The rates almost never sit on
+  the product: they are in a tax configuration keyed by that class, often by
+  customer group as well, and sometimes only in the storefront or an ERP.
+- Is tax computed by the platform today, or by an external service? A class
+  that is only a code handed to a tax engine carries across as that code, and
+  its rates do not exist in the export at all.
 
 **Media**
 
@@ -168,6 +179,68 @@ If the source has any signal — a display order, a hero image, a "default
 colour" — map it to `isMaster`. If it has none, that is a question for whoever
 owns merchandising, and it is cheap to ask at step 0 and expensive to change
 after the first load.
+
+## Stock
+
+Emit `inventoryEntry` records **from the stock file, on its own pass** — not
+by folding a quantity onto each variant as you build it. The two are joined
+only by SKU, and keeping the passes separate is what lets a stock refresh be
+regenerated without rebuilding the catalog.
+
+Three things go wrong here, and none of them errors:
+
+- **A stock row for a SKU the catalog does not have.** Extracts routinely
+  carry discontinued lines. `validate` rejects these, which is the point —
+  the Import API would accept them.
+- **An emitted zero versus an omitted row.** They mean different things: zero
+  is "none in stock", absent is "no entry at all", and most storefronts render
+  the second as available. If the source distinguishes them, preserve the
+  distinction; if it does not, say which reading you chose in the adapter
+  report.
+- **A warehouse column read as project-wide stock.** Summing per-warehouse
+  rows into one figure is a decision, not an aggregation: it makes stock
+  count in every store rather than the ones that list the channel. Either map
+  each warehouse to a `supplyChannel`, or record the collapse as lossy.
+
+## Tax
+
+Emit one `taxCategory` record per tax class the catalog uses, and set
+`taxCategory` on each product from its class. Most sources hold the class on
+the product and the rates in a separate table keyed by class; join them in the
+adapter, the same way stock is joined by SKU.
+
+Five things go wrong here, and none of them errors:
+
+- **A percentage emitted as a rate.** Sources store `20`, the contract takes
+  `0.2`. The schema refuses anything above 1, so `20` is caught — but a rate
+  under one percent is not: `0.5` meaning 0.5% passes as 50%. Convert every
+  rate in one place, and check the smallest one by eye.
+- **`includedInPrice` taken from the wrong place.** It is rarely on the rate
+  row. Look for the store-level net/gross setting — a hybris `BaseStore.net`,
+  a "prices include tax" flag — and state it on every rate. It has no default
+  because guessing it shifts every price by the rate.
+- **Rates scoped by customer group.** commercetools selects a rate by country
+  and state only. A source with separate trade and retail rows for one class
+  cannot express both on one category: pick the one the storefront charges,
+  and record the other as lossy.
+- **A tax class per variant.** Some sources tax each SKU on its own — Magento
+  taxes a configurable's child simples, not the parent — and commercetools
+  holds the tax category on the **product**. A product whose variants carry
+  different classes (a children's jacket whose largest size is standard-rated)
+  cannot be expressed. Check for it explicitly: taking the parent's class, or
+  the first child's, silently charges the wrong rate on the others. The
+  options are to split the product by class, hold the odd SKUs back, or pick
+  one class and record the rest as lossy — and which one is a question for
+  whoever owns tax and merchandising, not a mapping detail.
+- **A class the project already has, under another key.** A category that
+  exists is never modified, and its *name* is unique per project. If the
+  project's tax setup predates the migration, use its keys as the codes —
+  `preflight` refuses a new category whose name another one already holds.
+
+If the source has no tax classes at all, emit no `taxCategory` records and say
+so in the adapter report. `validate` then warns once that no product can be
+taxed under `Platform` mode, which is the right warning to accept under
+`External` mode and the wrong one to accept otherwise.
 
 ## Media
 

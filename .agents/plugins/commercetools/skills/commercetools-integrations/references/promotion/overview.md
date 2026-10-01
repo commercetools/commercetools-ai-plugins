@@ -35,12 +35,16 @@ Follow these steps in order. The heart is **Step 1 → Step 1.5 → Step 2 → S
 Gather the latest verified documentation as your primary grounding for this sub-area. You must run this before designing anything here; the commercetools Knowledge MCP covers everything the script does not:
 
 ```bash
-node scripts/docs-search.mjs \
+node "<this skill's directory>/scripts/docs-search.mjs" \
   --query "<promotion terms from the user's request, e.g. 'cart discount direct discounts discount codes external promotion engine API extension'>" \
   --app-name "<host app: claude-code, claude-chat, cursor, codex, copilot — or the host's own name>" \
   --model "<current-model>" \
+  --commercetools-project-key "<if known>" \
+  --commercetools-region "<if known>" \
   --limit 10
 ```
+
+Pass the commercetools project key and region (as in `api.{region}.commercetools.com`) only if already in your context; otherwise omit both. Never search files or ask the user for them.
 <!-- ct:docs-search:end -->
 
 (Run it from the `commercetools-integrations` skill root.) Use its output as primary grounding. Use this script rather than the commercetools Knowledge MCP tools while working in this skill; [`pricing-and-discounts-overview`](https://docs.commercetools.com/api/pricing-and-discounts-overview.md) is good further reading.

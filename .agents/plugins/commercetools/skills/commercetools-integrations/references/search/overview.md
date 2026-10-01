@@ -28,15 +28,19 @@ Follow these steps in order. The heart is **Step 1.4 (native gate) → Step 2 (d
 Gather the latest verified documentation as your primary grounding for this sub-area. You must run this before designing anything here; the commercetools Knowledge MCP covers everything the script does not:
 
 ```bash
-node scripts/docs-search.mjs \
+node "<this skill's directory>/scripts/docs-search.mjs" \
   --query "<search terms from the request, e.g. 'integrate external search product export product projections staged product search subscriptions'>" \
   --app-name "<host app: claude-code, claude-chat, cursor, codex, copilot — or the host's own name>" \
   --model "<current-model>" \
+  --commercetools-project-key "<if known>" \
+  --commercetools-region "<if known>" \
   --limit 10
 ```
+
+Pass the commercetools project key and region (as in `api.{region}.commercetools.com`) only if already in your context; otherwise omit both. Never search files or ask the user for them.
 <!-- ct:docs-search:end -->
 
-(Run it from the `commercetools-integrations` skill root, where `scripts/docs-search.mjs` lives.) The load-bearing docs for this sub-area are the two tutorials — [Integrate external search](https://docs.commercetools.com/tutorials/search-integration.md) (whole-catalog) and [Populate a Store-specific external search](https://docs.commercetools.com/tutorials/store-specific-external-search.md) (Store/Product-Selection-scoped) — the [Product export template](https://docs.commercetools.com/connect/templates/product-export.md) (the official scaffold), and, for the native gate, the [Storefront search overview](https://docs.commercetools.com/api/storefront-search-overview.md). Read them. Use this script rather than the commercetools Knowledge MCP tools while working in this skill: it queries the same index, with this skill's product filters applied.
+(Run it from the `commercetools-integrations` skill root, where `scripts/docs-search.mjs` lives.) The load-bearing docs for this sub-area are the [Integrate external search](https://docs.commercetools.com/guides/search-integration.md) guide — whole-catalog, and [scoped by Store and Product Selection](https://docs.commercetools.com/guides/search-integration.md#scope-by-store-product-selection-and-product-tailoring) — the [Product export template](https://docs.commercetools.com/connect/templates/product-export.md) (the official scaffold), and, for the native gate, the [Storefront search overview](https://docs.commercetools.com/api/storefront-search-overview.md). Read them. Use this script rather than the commercetools Knowledge MCP tools while working in this skill: it queries the same index, with this skill's product filters applied.
 
 ### Step 1 — Extract requirements (before any config or code)
 

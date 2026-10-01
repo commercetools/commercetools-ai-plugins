@@ -54,8 +54,9 @@ price, and nobody reviews a price they were not told changed:
 **Trailing zeros beyond the currency's precision are not a loss.** `"29.9900"`
 is exactly `29.99` and is accepted.
 
-Verify after mapping: `plan --payloads` writes every price decoded back from
-minor units to a decimal, so the numbers can be checked against the source.
+Verify after mapping: `plan --payloads` writes the prices of one sample
+product per variant shape, embedded or standalone, decoded back from minor
+units to a decimal, so the numbers can be checked against the source.
 
 ## Price scope
 
@@ -167,13 +168,15 @@ Keep the embedded price count low by leaning on price-selection fallback: one
 price for a currency with no country beats one price per country, and a
 channel-less base price beats a price per channel.
 
-## Things with no embedded-price equivalent
+## Things to report rather than approximate
 
 Report these as information loss rather than approximating them:
 
-- **Quantity breaks / tiered pricing.** Native `tiers` exist on Standalone
-  Prices; an embedded price has no tiered equivalent. A quantity break usually
-  becomes a Cart Discount, which is a modelling decision, not a translation.
+- **Quantity breaks / tiered pricing.** Embedded and Standalone Prices both
+  support native `tiers`, but **the feed contract has no field for them**, so
+  the pipeline cannot load one in either price mode. Until it can, a quantity
+  break is information loss, or becomes a Cart Discount, which is a modelling
+  decision, not a translation.
 - **An unmappable customer-group price.** Loading a trade or staff price
   unscoped shows it to every shopper *and* collides with the base price as a
   duplicate scope. Skip and report. Skipping is recoverable; wrong data in
@@ -182,9 +185,25 @@ Report these as information loss rather than approximating them:
   elsewhere in the source, not a property of the price row, so a price read on
   its own does not tell you what its number means. Getting it backwards changes
   every price on the site by the tax rate and nothing in the data contradicts
-  you. It maps to a tax mode, which is a modelling decision.
+  you. Under `Platform` tax mode it lands as `includedInPrice` on each rate of a
+  [`taxCategory`](catalog-feed-contract.md#taxcategory--how-products-are-taxed-per-country)
+  record, which has no default for exactly this reason — find the store-level
+  setting in the source and state it per rate. Which tax mode applies at all is
+  a modelling decision, asked in step 0.
+
+  "Gross" is also not the whole answer: **gross at which country's rate?** A
+  source can treat every price as including its *home* country's tax and
+  re-gross it for a foreign destination — Magento does exactly that with
+  tax-inclusive prices and cross-border trade switched off, so an Irish
+  €21.00 entered under a UK default is charged at about €21.53. commercetools
+  applies the destination's rate to the price as given, so the same figure
+  comes out as €21.00. Look for the setting that decides this whenever prices
+  are gross and more than one country is sold into, and have whoever owns
+  tax confirm the foreign prices are the intended shelf prices.
 - **A tax code is not a tax rate.** A product tax code is a reference into an
   external tax engine. Carry it across verbatim; never derive a rate from it.
+  The rates on a `taxCategory` come from whoever owns tax, not from a code —
+  and a rate is a fraction, `0.2` for 20%, which the schema enforces.
 
 ## Currency and locale acceptance
 

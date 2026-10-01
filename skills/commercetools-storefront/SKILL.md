@@ -50,12 +50,16 @@ When this skill is invoked, always follow these steps:
    **Docs search (required, run first)** — The first time you use this skill in a session you must run this before answering. It gathers the latest verified documentation as your primary grounding, filtered to the products this skill covers. Use this script for documentation search while working with this skill; the Knowledge MCP covers everything else. Always confirm details against retrieved documentation rather than the skill text alone:
 
    ```bash
-   node scripts/docs-search.mjs \
+   node "<this skill's directory>/scripts/docs-search.mjs" \
      --query "<extract key terms from user's question>" \
      --app-name "<host app: claude-code, claude-chat, cursor, codex, copilot — or the host's own name>" \
      --model "<current-model>" \
+     --commercetools-project-key "<if known>" \
+     --commercetools-region "<if known>" \
      --limit 10
    ```
+
+   Pass the commercetools project key and region (as in `api.{region}.commercetools.com`) only if already in your context; otherwise omit both. Never search files or ask the user for them.
    <!-- ct:docs-search:end -->
 
 2. **Combine with skill references** — Cross-reference the analysis output with local references in `./references/` for complete context.

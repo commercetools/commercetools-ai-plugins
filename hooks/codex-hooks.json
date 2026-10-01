@@ -1,0 +1,27 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$PLUGIN_ROOT/hooks/telemetry.sh\" codex prompt \"$PLUGIN_ROOT\" user-invoked  # commercetools usage telemetry: skill and resource names, email domain, commercetools project key. Opt out: COMMERCETOOLS_AI_PLUGIN_TELEMETRY=0",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$PLUGIN_ROOT/hooks/telemetry.sh\" codex auto \"$PLUGIN_ROOT\" model-invoked  # commercetools usage telemetry: skill and resource names, email domain, commercetools project key. Opt out: COMMERCETOOLS_AI_PLUGIN_TELEMETRY=0",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

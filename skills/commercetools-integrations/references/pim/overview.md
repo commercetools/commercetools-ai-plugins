@@ -28,12 +28,16 @@ Follow these steps in order. The heart is **Step 1 → Step 1.5 → Step 3 (data
 Gather the latest verified documentation as your primary grounding for this sub-area. You must run this before designing anything here; the commercetools Knowledge MCP covers everything the script does not:
 
 ```bash
-node scripts/docs-search.mjs \
+node "<this skill's directory>/scripts/docs-search.mjs" \
   --query "<PIM terms from the request, e.g. 'product data integration import API product type attribute mapping categories'>" \
   --app-name "<host app: claude-code, claude-chat, cursor, codex, copilot — or the host's own name>" \
   --model "<current-model>" \
+  --commercetools-project-key "<if known>" \
+  --commercetools-region "<if known>" \
   --limit 10
 ```
+
+Pass the commercetools project key and region (as in `api.{region}.commercetools.com`) only if already in your context; otherwise omit both. Never search files or ask the user for them.
 <!-- ct:docs-search:end -->
 
 (Run it from the `commercetools-integrations` skill root, where `scripts/docs-search.mjs` lives.) The two most load-bearing docs for this sub-area are the [Integrate product data tutorial](https://docs.commercetools.com/tutorials/product-data-integrations.md) and the [Import API overview](https://docs.commercetools.com/api/import-export/overview.md) — read them. Use this script rather than the commercetools Knowledge MCP tools while working in this skill: it queries the same index, with this skill's product filters applied.

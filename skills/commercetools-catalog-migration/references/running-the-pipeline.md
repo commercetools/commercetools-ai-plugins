@@ -19,7 +19,7 @@ an unloadable plan says so on a laptop with no `.env`.
 - [plan](#plan)
 - [audit](#audit) — including [the freshness digest](#reading-from-disk-has-one-cost-and-it-is-checked)
 - [preflight](#preflight) — [unprefixed ProductType keys](#a-project-loaded-before-producttype-keys-were-prefixed), [the project-wide attribute constraint](#the-one-project-wide-constraint-only-preflight-can-see)
-- [load](#load) — [platform stages](#two-platform-stages-at-opposite-ends-of-the-run), [prerequisites](#prerequisites-run-first-and-not-through-the-import-api), [catalog size ceiling](#how-large-a-catalog-this-handles), [batching](#batching), [failure states](#which-states-are-failures), [SDKs](#the-official-sdks), [credentials and scopes](#credentials)
+- [load](#load) — [platform stages](#platform-stages-at-opposite-ends-of-the-run), [prerequisites](#prerequisites-run-first-and-not-through-the-import-api), [catalog size ceiling](#how-large-a-catalog-this-handles), [batching](#batching), [failure states](#which-states-are-failures), [SDKs](#the-official-sdks), [credentials and scopes](#credentials)
 - [verify](#verify)
 - [Configuration](#configuration)
 - [What shapes the load](#what-shapes-the-load)
@@ -85,11 +85,30 @@ These pages were checked against `main` on 2026-09-24. If a stage, flag,
 diagnostic code or fixture named here is absent from your checkout, trust the
 checkout and treat this page as the stale half of the pair.
 
-One line is enough:
+One line is enough for a clean checkout:
 
 ```
 Pipeline: ct-catalog-migration-pipeline @ <short sha> (git rev-parse --short HEAD)
 ```
+
+**Check `git status --short` before writing it.** If the checkout carries local
+changes — a patch applied to get past a defect, an unmerged branch, untracked
+files — the sha names a commit that is not what ran, and anyone re-running from
+that line gets different behaviour with no way to tell why. Record what makes
+the tree differ, and the test result on that tree:
+
+```
+Pipeline: ct-catalog-migration-pipeline @ <short sha> + uncommitted changes
+  (<n> files, +<added>/−<removed> from git diff --stat HEAD; untracked: <paths>);
+  npm test: <n> passing
+```
+
+List untracked files by name: `git diff` and its stat leave them out, so a
+new source file would otherwise vanish from the record. Keep the change itself
+beside `DECISIONS.md` (`git diff HEAD > pipeline.patch`, plus copies of the
+untracked files), since a stat says how much changed, not what.
+If you can commit the change to a branch instead, record that sha and the line
+goes back to one.
 
 ## The stages
 
@@ -164,6 +183,16 @@ but is something only this stage can see early:
   price with it. A price channel also needs the `ProductDistribution` role —
   an error under standalone pricing, which the API rejects outright, a warning
   under embedded.
+- **Tax.** A product referencing an undeclared `taxCategory` is an error: the
+  whole product draft would wait on it and expire. Two rates for one
+  `(country, state)` in a category are an error too. The rest are warnings,
+  because the feed cannot know the cart tax mode:
+  `products-without-tax-category` (once, with a count — under `Platform` those
+  products cannot be taxed), `tax-category-without-rates`,
+  `tax-rate-country-missing` (a country the category's products are priced in,
+  or a store trades in, with no rate), and `tax-category-never-referenced`.
+  A feed with no tax categories at all gets the first one on every run; under
+  `External` tax mode, accept it and record why.
 - **A dangling or self-defeating assortment.** A product assigned to an
   undeclared selection (the assignment is silently dropped — nothing fails, the
   assortment is just wrong); a store listing an undeclared channel, or one
@@ -230,7 +259,7 @@ Output:
 | `out/plan.json` | what the load stage consumes |
 | `out/key-map.json` | source identifier → key, for delta runs and rollback |
 | `out/decisions.json` | the full decision log |
-| `out/sample-payloads.md` | with `--payloads`: one product per variant shape, prices decoded back to decimal |
+| `out/sample-payloads.md` | with `--payloads`: one product per variant shape as it will be sent — with its `VariantImport` resources under `Modular`, and a `StandalonePriceImport` body under `standalone` — and every price of its SKUs decoded back to decimal, marked embedded or standalone |
 
 Products are always planned with `publish: false`. Import staged, review in the
 Merchant Center, publish deliberately.
@@ -295,7 +324,7 @@ The digest covers file **names** as well as contents — a rename changes what
 the plan claims provenance from — but not the directory path, so moving an
 engagement or reading it through a different relative path keeps the plan valid.
 
-Thirty-four codes block the load. The count was stale here for a while, and a
+Forty codes block the load. The count was stale here for a while, and a
 list that has stopped matching the code is worse than no list — this one is
 generated from `severity: 'error'` in `audit/gate.ts`:
 
@@ -307,6 +336,8 @@ generated from `severity: 'error'` in `audit/gate.ts`:
 | Constraints (2) | `same-for-all-violation` (values disagreeing, or present on only some variants), `combination-unique-violation` |
 | Prices (4) | `duplicate-price-scope`, `overlapping-price-validity`, `currency-not-configured`, `fraction-digits-mismatch` |
 | Price mode (5) | `product-price-mode-mismatch`, `embedded-prices-in-standalone-mode`, `standalone-prices-in-embedded-mode`, `duplicate-standalone-price-scope`, `standalone-price-orphan` |
+| Inventory (3) | `inventory-sku-not-in-plan` (the Import API accepts stock for a SKU that does not exist), `inventory-quantity-invalid`, `duplicate-inventory-scope` (unique per `(sku, supplyChannel)`) |
+| Tax (3) | `dangling-tax-category` (a product referencing a category the prerequisites do not declare), `tax-rate-invalid` (an amount outside [0, 1] — the message does the arithmetic on a percentage — a missing name, a country that is not ISO alpha-2), `duplicate-tax-rate-scope` |
 | Assets (4) | `asset-without-source`, `asset-without-name`, `duplicate-asset-key` (per variant or category, **not** per project), `duplicate-asset-source-key` (within one asset) |
 | Limits (2) | `variant-limit-exceeded` (100 per Product under `Classic`, 10,000 under `Modular`), `price-limit-exceeded` (100 embedded per Variant, embedded mode only) |
 
@@ -331,7 +362,7 @@ reported for every missing required attribute.
 
 A handful of GETs that answer one question: will this project accept this plan?
 Four always — project settings, and counts of product types, categories and
-products — plus one each for channels and customer groups when the feed
+products — plus one each for channels, customer groups and tax categories when the feed
 declares any, and a paginated read of every ProductType with its attributes.
 Every failure it catches would otherwise surface as a wall of rejected Import
 Operations, hours into a load, one error per record.
@@ -351,7 +382,10 @@ currency the plan needs; the default locale is not accepted; a price country the
 project does not list, which the API rejects outright; a declared channel that
 exists **without a role the plan needs**, since that is the one thing `load`
 will not fix for itself; an attribute name the plan defines with a **different
-type** from the one the project already has for that name. Advisory: a non-empty project, counts that could not be
+type** from the one the project already has for that name; a tax category the
+project lacks by key while **another already holds its name**
+(`tax-category-name-taken`) — names are unique per project, so `load` could not
+create it. Advisory: a non-empty project, counts that could not be
 read (a client with project-settings scope but no product scope still gets a
 useful preflight), a channel or customer group that is simply missing — that one
 is a warning because `load` creates it — an attribute name whose type matches
@@ -360,6 +394,10 @@ under the plan's key *without* `keys.prefix`, a product selection or store that
 is simply missing (both get created), and — as errors — a product selection
 whose **mode** already differs, or a store whose wiring already differs, or a
 store declaring a language or country the project does not accept.
+A tax category that is missing is advance notice (`tax-category-will-be-created`,
+with its rate count — confirm the rates with whoever owns tax); one that exists
+with **other rates** is a warning (`tax-category-rates-differ`), because `load`
+will not change them and the products will be taxed at the project's rates.
 
 A selection's mode is the sharpest of those: there is no `changeMode` action,
 so importing over an existing selection cannot apply the plan, and the
@@ -452,20 +490,33 @@ A dry run writes `out/load-requests.json` with the exact request bodies, and
 the prerequisites it would create. Read that before executing — it is what
 will be sent, not a summary.
 
+Then ask before executing, as `SKILL.md` step 5 sets out: consent has to come
+after the user has seen what `load-requests.json` holds — the project key, the
+counts, the prerequisites — so a request made before the dry run does not
+cover it.
+
 The audit gate runs again inside `load` rather than trusting it was run. It is
 free, and the alternative is finding a rejected invariant one request at a time
 after part of the catalog has landed.
 
-### Two platform stages, at opposite ends of the run
+### Platform stages, at opposite ends of the run
 
-Three stages do not go through the Import API at all, and they do not all run
+Four stages do not go through the Import API at all, and they do not all run
 at the same time:
 
 | Stage | When | Why |
 | :--- | :--- | :--- |
 | `channel` | **first** | prices reference them, and an unresolved price expires after 48 hours |
 | `customer-group` | **first** | same |
+| `tax-category` | **first** | a product draft references it, and an unresolved one holds up the **whole product** — variants and prices — until it expires |
 | `store` | **last** | it references product selections, which the Import API creates *asynchronously* |
+
+Inventory is **not** one of them — it has an Import API resource, and runs as
+a stage after the variants whose SKUs it names. That ordering is soft, like
+`standalone-price`: the Import API does not check the SKU, so it prevents an
+orphan nobody notices rather than an error. Its dependency on `channel` is
+not soft — an entry naming a supply channel that does not exist yet expires
+unresolved after 48 hours.
 
 `platformStages(order, phase)` takes the phase explicitly rather than
 defaulting, because a caller that forgot it would create stores before the
@@ -484,15 +535,19 @@ nothing about. Both `preflight` and `load` report the difference
 
 ### Prerequisites run first, and not through the Import API
 
-The Import API has no channel or customer-group resource, so `load` creates
-those two through the **platform API**, before the first import request. A
+The Import API has no channel, customer-group or tax-category resource, so
+`load` creates those three through the **platform API**, before the first
+import request. A
 price whose channel does not exist yet becomes an operation that expires
 unresolved after 48 hours, so the ordering is load-bearing rather than tidy.
 
 The rule is read first, then create only what is missing:
 
-- an absent channel or group is **created**;
-- an existing one is **left untouched** — not patched to match the plan;
+- an absent channel, group or tax category is **created** — a tax category
+  with the feed's rates;
+- an existing one is **left untouched** — not patched to match the plan. For a
+  tax category that includes its rates, which also tax shipping and belong to
+  whoever owns tax;
 - an existing channel lacking a role the plan needs is an **error**: roles
   govern stores and inventory as well as prices, so widening them is a project
   decision, not something a catalog load does in passing;
@@ -519,7 +574,9 @@ unknown* — an unreachable project should not cost you the request bodies.
 
 Two asymmetries worth knowing: these are the only resources keyed **verbatim**
 rather than `<prefix>-<key>`, and therefore the only ones a prefix-scoped
-teardown leaves behind. If `load` created a channel, removing it is manual.
+teardown leaves behind. If `load` created a channel or a tax category, removing
+it is manual — and a tax category cannot be deleted while a product or shipping
+method still references it.
 
 ### How large a catalog this handles
 
@@ -611,6 +668,9 @@ plainly when it times out.
 
 A failed request records the keys it carried instead of aborting the stage, and
 keys are deterministic — so resubmitting is running `load --execute` again.
+That is a new write, so dry-run it first. A new yes from the user covers it only
+if that dry run matches the one they saw; if anything differs, show the
+difference and ask.
 
 ### The official SDKs
 
@@ -699,8 +759,11 @@ anything.
 Scopes: `view_project_settings` for preflight, `manage_project_settings` for
 `--apply`, `manage_products` plus `manage_import_containers` for the load.
 `manage_products` also grants the Import Requests for categories, product types,
-products, variants and embedded prices, and it covers reading and creating
-channels. Two more are conditional on the feed:
+products, variants, embedded prices and **inventory**, and it covers reading and
+creating channels and — for backward compatibility — tax categories. So stock
+and tax need no scope of their own, in either direction: `view_products` covers
+reading InventoryEntries and tax categories back. Two more are conditional
+on the feed:
 
 | Scope | Needed when |
 | :--- | :--- |
@@ -792,6 +855,15 @@ instruction to wait and re-run before believing the absences. If the count does
 not fall between runs, something the plan referenced was never imported and the
 absences are real.
 
+**While the count is falling, re-run `verify`, not `load --execute`.** Pending
+operations are the Import API's to retry: its
+[best practices](https://docs.commercetools.com/api/import-export/best-practices.md#handle-retries)
+say to retry only `rejected` operations, and warn that duplicate import
+requests sent concurrently can collide in a concurrent modification error. A
+second load in the middle of a cascade is exactly that. Resubmit for `rejected`
+operations, or once the count has stopped falling and the missing reference is
+found and fixed — and either way it is a new write, so ask first.
+
 It reads stores and product selections back too, but only when the plan
 declares them — most engagements have neither, and an unconditional read costs
 two requests and two scopes for nothing. Two findings there are worth knowing
@@ -802,8 +874,26 @@ in advance:
   store referencing it re-wired. Until then the assortment means the opposite
   of the plan.
 - **Store drift is reported per list**, because the API replaces rather than
-  merges each one. Supply-channel drift is only a *warning*: this pipeline
-  imports no inventory, so that wiring affects nothing it loaded.
+  merges each one. Supply-channel drift is only a *warning*: the entries are
+  reconciled separately and by key, so a store's wiring is not the evidence
+  that stock arrived.
+- **Stock is compared on `quantityOnStock` and the channel scope, never on
+  `availableQuantity`** — the platform computes that as stock minus
+  reservations, so comparing it would report every cart in flight as a defect.
+  An entry is also *eventually* consistent for up to 10 seconds after a write,
+  so re-read a difference before believing it. `inventory-entry-missing` and
+  `inventory-quantity-differs` are errors; `inventory-supply-channel-differs`
+  catches the dangerous direction, an entry that lost its channel and now
+  counts everywhere.
+
+Tax categories are read back whenever the plan declares any, because a
+product's `taxCategory` comes back as an id and the category read is what
+turns it into a key. `tax-category-missing` is reported **first**: every
+product referencing it was held up behind it, so the products reported missing
+after it are missing because of it. `product-tax-category-differs` is an error
+— it decides what a shopper is charged, or whether they can be — and
+`tax-category-rates-differ` a warning, since `load` never changes an existing
+category's rates.
 
 A store's key is matched **verbatim**, not prefixed — asking for
 `mig-northwind-uk` would find nothing and report the store missing.
@@ -842,14 +932,13 @@ The field-by-field shape:
 | `load` | `batchSize` (max 20), `maxOperationsPerContainer` |
 
 The loader refuses, up front, four things that would otherwise fail deep into a
-run — or, in the first case, not fail at all: a `Modular` `catalogModel`, a
-currency with no `currencyFractionDigits` entry, a `batchSize` above the Import
-API's limit of 20, and a `defaultLocale` absent from `requiredLocales`.
+run — or, in the first case, not fail at all: `Modular` with `embedded` prices,
+a currency with no `currencyFractionDigits` entry, a `batchSize` above the
+Import API's limit of 20, and a `defaultLocale` absent from `requiredLocales`.
 
-Both catalog models are supported. What the loader refuses is `Modular` with
-`embedded` prices — Modular has no embedded prices at all, and a
-`VariantImport` has no price field, so that pair cannot be honoured whatever
-the pipeline does.
+Both catalog models are supported. The `Modular`/`embedded` pair is refused
+because Modular has no embedded prices at all, and a `VariantImport` has no
+price field, so that pair cannot be honoured whatever the pipeline does.
 
 The catalog model decides the import shape and is fixed at map time: Classic
 emits a `ProductDraftImport` carrying its variants, Modular emits a container
@@ -877,11 +966,12 @@ and [best practices](https://docs.commercetools.com/api/import-export/best-pract
 - Import Resources accept only KeyReferences, never ids.
 - `ProductVariantImport` and `StandalonePriceImport` delete omitted fields on
   update. `ProductVariantPatch` is the only partial update.
-- Load in dependency order — channels and customer groups, then product types,
-  then categories, then products, then Standalone Prices if the price mode
-  calls for them — and tear down in reverse, scoped to `keys.prefix`. Channels
-  and customer groups are outside that scope and outside the Import API
-  entirely: created through the platform API, and removable only by hand.
+- Load in dependency order — channels, customer groups and tax categories,
+  then product types, then categories, then products, then Standalone Prices if
+  the price mode calls for them — and tear down in reverse, scoped to
+  `keys.prefix`. Channels, customer groups and tax categories are outside that
+  scope and outside the Import API entirely: created through the platform API,
+  and removable only by hand.
 - Standalone Prices need `manage_standalone_prices` and customer groups need
   `manage_customer_groups`; `manage_products` covers every other request here.
 - Containers, Operations and Summaries are generally available; the per-resource

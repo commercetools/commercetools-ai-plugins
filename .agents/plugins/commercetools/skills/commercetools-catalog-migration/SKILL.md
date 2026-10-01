@@ -1,6 +1,6 @@
 ---
 name: commercetools-catalog-migration
-description: Migrates a product catalog from any source system into commercetools through a canonical NDJSON feed contract — the pipeline never parses the source, so each engagement writes only a small adapter. Covers the feed contract, writing an adapter, ProductType derivation and its irreversible attribute constraints, decimal-to-minor-unit money conversion, project-wide slug allocation, category order hints, and the offline audit gate. Use when migrating or bulk-loading a product catalog into commercetools, writing an adapter for a source export, deciding SameForAll versus CombinationUnique, converting prices to centAmount, or diagnosing rejected Import API operations. Covers loading a catalog from a source system into commercetools — not the Classic-to-Modular catalog model migration of an existing project, which is the staged Modular Catalog migration guide. Not for ongoing sync after cutover, and not for customers, orders, carts, inventory, or promotions.
+description: Migrates a product catalog from any source system into commercetools through a canonical NDJSON feed contract — the pipeline never parses the source, so each engagement writes only a small adapter. Covers the feed contract, writing an adapter, ProductType derivation and its irreversible attribute constraints, decimal-to-minor-unit money conversion, project-wide slug allocation, category order hints, opening stock per SKU and supply channel, tax categories, and the offline audit gate. Use when migrating or bulk-loading a product catalog into commercetools, writing an adapter for a source export, deciding SameForAll versus CombinationUnique, converting prices to centAmount, or diagnosing rejected Import API operations. Covers loading a catalog from a source system into commercetools — not the Classic-to-Modular catalog model migration of an existing project, which is the staged Modular Catalog migration guide. Not for ongoing sync after cutover, and not for customers, orders, carts, or promotions.
 when_to_use:
   - "Migrating or bulk-loading a product catalog from a source system into a commercetools project"
   - "Writing an adapter that turns a source export (hybris ImpEx, PIM extract, CSV) into a catalog feed"
@@ -51,12 +51,16 @@ the API.
    **Docs search (required, run first)** — The first time you use this skill in a session you must run this before answering. It gathers the latest verified documentation as your primary grounding, filtered to the products this skill covers. Use this script for documentation search while working with this skill; the Knowledge MCP covers everything else. Always confirm details against retrieved documentation rather than the skill text alone:
 
    ```bash
-   node scripts/docs-search.mjs \
+   node "<this skill's directory>/scripts/docs-search.mjs" \
      --query "<extract key terms: Import API, ProductType attributes, catalog model, Standalone Prices, Category slug>" \
      --app-name "<host app: claude-code, claude-chat, cursor, codex, copilot — or the host's own name>" \
      --model "<current-model>" \
+     --commercetools-project-key "<if known>" \
+     --commercetools-region "<if known>" \
      --limit 10
    ```
+
+   Pass the commercetools project key and region (as in `api.{region}.commercetools.com`) only if already in your context; otherwise omit both. Never search files or ask the user for them.
    <!-- ct:docs-search:end -->
 
    The limits and constraints in [Critical](#critical) were verified in
@@ -170,6 +174,15 @@ the API.
    npm run pipeline -- load --config ../migration/migration.config.json --execute
    ```
 
+   **Ask before every `--execute`.** Show the user what the dry run will send —
+   the target project key, counts per stage, the prerequisites it will create —
+   and wait for an explicit yes. A goal in the opening request ("get the catalog
+   into the project", even "load it") is not consent for this write: the user
+   has not yet seen what it sends. A yes covers one `--execute`. A later one,
+   such as a resubmission, needs a new yes, and that counts only if a fresh dry
+   run matches what the user saw; if anything differs, show it and ask again.
+   `preflight --apply` needs its own yes.
+
    Log one entry per `--execute`: project key, timestamp, what was sent, the
    outcome. `out/load-result.json` holds the detail but is regenerated and
    gitignored.
@@ -186,6 +199,10 @@ the API.
 
    It needs `view_products` and, under standalone pricing,
    `view_standalone_prices` — reading is a different scope set from writing.
+
+   If it leads with `operations-in-flight`, wait and re-run `verify`, not
+   `load`: the Import API retries pending operations itself, and only
+   `rejected` ones need resubmitting.
 
    Log the result as the closing entry for the run, **including a clean one**.
    "Reconciled, no differences" is the sentence someone needs months later when
@@ -238,8 +255,21 @@ public documentation in September 2026; re-check any limit before relying on it.
   everything worth keeping. `ProductVariantPatch` is the only partial update.
   → [running-the-pipeline.md](references/running-the-pipeline.md)
 - **An unresolved KeyReference expires after 48 hours**, taking its price with
-  it: a green load and a partly priced catalog.
+  it: a green load and a partly priced catalog. An inventory entry naming a
+  missing supply channel goes the same way, taking the stock — and a product
+  naming a missing tax category goes **whole**, variants and prices with it.
   → [running-the-pipeline.md](references/running-the-pipeline.md)
+- **Stock for a SKU that does not exist imports successfully.** The Import API
+  does not check `InventoryImport.sku` against anything, so a typo becomes
+  stock nothing sells and no stage of the platform ever reports it. `validate`
+  and the audit gate check it because nothing else will.
+  → [catalog-feed-contract.md](references/catalog-feed-contract.md)
+- **A product without a tax category loads, verifies, and cannot be taxed.**
+  Under the default `Platform` tax mode a cart takes its rate from the
+  product's tax category; with none, checkout cannot compute tax and nothing
+  earlier says so. `validate` warns rather than refuses, because `External`
+  tax mode needs no category — which mode applies is a step-0 question.
+  → [catalog-feed-contract.md](references/catalog-feed-contract.md)
 - **`publish: false` unpublishes.** It is an instruction, not "leave
   publication alone", and the pipeline plans it on every product. Correct on a
   first load; on a re-load into a live project it takes every product it
@@ -269,11 +299,12 @@ public documentation in September 2026; re-check any limit before relying on it.
 - **A store with no product selections offers everything**; one whose
   selections are all inactive, with an `Individual` among them, offers
   **nothing**. → [catalog-feed-contract.md](references/catalog-feed-contract.md)
-- **Channels and customer groups cannot be imported — `load` creates them**
-  through the platform API before any import, with keys used **verbatim**: the
-  one exception to the prefix rule, and the one thing a prefix-scoped teardown
-  leaves behind. A price channel needs `ProductDistribution` or the API refuses
-  the price. `productSelection` *is* importable and prefixed; `store` is not,
+- **Channels, customer groups and tax categories cannot be imported — `load`
+  creates them** through the platform API before any import, with keys used
+  **verbatim**: the one exception to the prefix rule, and the one thing a
+  prefix-scoped teardown leaves behind. An existing one is **never modified** —
+  a tax category keeps the project's rates, whatever the feed says. A price
+  channel needs `ProductDistribution` or the API refuses the price. `productSelection` *is* importable and prefixed; `store` is not,
   and runs last. → [catalog-feed-contract.md](references/catalog-feed-contract.md)
 - **Import Resources accept only KeyReferences, never ids.** Key everything
   `<prefix>-<sourceCode>`, ProductTypes included — though a ProductType's
@@ -318,10 +349,16 @@ Out of scope, and deliberately so. **Ongoing sync after cutover** and delta
 feeds as a running service are integration, not migration. **Customers, orders,
 carts and payments** are a different migration with different invariants.
 **Promotions and discounts** are usually a re-modelling exercise rather than a
-translation, and **attribute modelling in the abstract**, tax modes and pricing
-strategy are product data modelling, upstream of this. **Inventory and supply
-channels**, and **cutover sequencing**, freeze windows and rollback, are planned
-and not built.
+translation, and **attribute modelling in the abstract**, the choice of tax mode
+and pricing strategy are product data modelling, upstream of this — though the
+tax categories a `Platform` mode needs are loaded, as prerequisites. **Cutover sequencing**,
+freeze windows and rollback are out of scope too.
+
+**Opening stock is in scope; inventory as a running concern is not.** An
+`inventoryEntry` record loads the figure a project opens on, and whatever owns
+inventory afterwards will move it within the hour. Migrating stock does not
+make this a sync tool, and a catalog loaded without stock is a perfectly
+normal outcome.
 
 Never migrate credentials, payment tokens or PSP references. They are not
 portable, and re-keying them silently breaks reconciliation with the provider.
@@ -345,9 +382,19 @@ Before running the pipeline:
       pricing also needs `manage_standalone_prices` on the API Client, which
       `manage_products` does not grant.
 - [ ] `keys.prefix` names this engagement, so teardown can scope itself. Every
-      resource carries it, ProductTypes included. Channels and customer groups
-      are the only exception: `load` creates the missing ones with their keys
-      **verbatim**, and teardown will not remove them.
+      resource carries it, ProductTypes included. Channels, customer groups and
+      tax categories are the only exception: `load` creates the missing ones
+      with their keys **verbatim**, and teardown will not remove them.
+- [ ] Whether opening stock is in scope was **asked**, not assumed either way.
+      A catalog loaded without it is normal; a catalog loaded with stock nobody
+      agreed to is a figure the business did not sign off. If it is in scope,
+      every `inventoryEntry` names a SKU the feed declares, and a deliberate
+      zero is emitted rather than omitted.
+- [ ] The tax mode was asked of whoever owns tax. Under `Platform`, every
+      product has a `taxCategory`, every category has a rate for each country
+      it sells into, and each rate's `includedInPrice` was confirmed, not
+      inferred. Under `External`, `products-without-tax-category` is accepted
+      in `DECISIONS.md`.
 - [ ] `preflight` reports no `product-type-keys-unprefixed`. If it does, the
       project was loaded before ProductType keys were prefixed, and a Product's
       ProductType cannot be changed after creation.
@@ -378,10 +425,13 @@ Before loading:
       later.
 - [ ] Each recorded information loss is accepted, or the adapter is fixed.
 - [ ] Sample payloads have been eyeballed, money values checked against the
-      source.
+      source — in either price mode; standalone prices are listed per SKU.
 - [ ] Slug changes forced by project-wide uniqueness have been shown to whoever
       owns SEO.
 - [ ] Attribute names shared across ProductTypes agree on `isSearchable`.
+- [ ] `preflight` reports no `tax-category-name-taken`, and any
+      `tax-category-rates-differ` has been shown to whoever owns tax — the
+      project's rates are the ones that will apply.
 - [ ] `preflight` reports no `attribute-type-conflict`. An attribute name may
       hold one type per Project, and the conflict can come from a ProductType
       the migration never touches.

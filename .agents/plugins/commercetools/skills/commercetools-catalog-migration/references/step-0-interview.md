@@ -15,6 +15,7 @@ conversation, not a form.
 - [0a. Can this pipeline serve the catalog at all?](#0a-can-this-pipeline-serve-the-catalog-at-all)
 - [0b. Discover the source](#0b-discover-the-source)
 - [0c. The remaining judgements](#0c-the-remaining-judgements)
+- [0c-conditional. If the source carries stock, ask whether it is in scope](#0c-conditional-if-the-source-carries-stock-ask-whether-it-is-in-scope)
 - [0c-conditional. If slugs collide, ask who owns the URLs](#0c-conditional-if-slugs-collide-ask-who-owns-the-urls)
 - [0c-conditional. If 0b found relative media URLs, ask about the host](#0c-conditional-if-0b-found-relative-media-urls-ask-about-the-host)
 - [0d. The project facts](#0d-the-project-facts)
@@ -123,6 +124,7 @@ wrong-but-consistent choice passes every offline stage:
 | How does the storefront read prices? | `target.priceMode`: `embedded` / `standalone` | a product whose `priceMode` disagrees with where its prices are imports cleanly, reports `imported`, and shows no price at all |
 | Which search API does the storefront use? | `productTypes.productLevelStrategy`: `sameForAll` / `native` | `native` Product-level attributes are invisible to Product Projection Search |
 | Should attributes be searchable unless stated otherwise? | `productTypes.searchableByDefault`: `true` / `false` | ProductTypes that disagree on a shared attribute name make it unavailable for search, filters and facets everywhere — and the import still succeeds |
+| How are carts taxed — by the platform from tax categories, or by an external service? And does the project already hold its tax categories? | nothing in the config — the adapter's `taxCategory` records and each product's `taxCategory` | under the default `Platform` tax mode a product with no tax category loads, verifies, and **cannot be taxed at checkout**. An existing category is never modified, so the project's keys become the codes |
 | Will this catalog be **re-exported and re-loaded**, or is this one-shot? | nothing — `DECISIONS.md` only | every derived code becomes a key on the first load and cannot move afterwards. One-shot permits deriving from whatever is readable; repeatable requires deriving only from fields the source guarantees are stable, which is usually a smaller set |
 | Which variant should be the **shop window**, if the source does not say? | nothing — the adapter's `isMaster` | absent `isMaster` falls back to the lowest SKU by sort order. Deterministic, and arbitrary as merchandising: it decides what a category listing shows. Most sources have no master-variant concept, so this is the normal case, not an edge case |
 
@@ -134,9 +136,36 @@ system — and then expect every inferred type to need review, because each
 one becomes an attribute constraint that cannot be changed afterwards.
 
 The first two are storefront decisions with no evidence in the source, so they
-stay questions for whoever owns the implementation. The last two are the ones
+stay questions for whoever owns the implementation. The tax row is a question
+for whoever owns **tax**, which is often someone else: they decide the mode,
+confirm the rates and each rate's net/gross setting, and know whether the
+project's tax categories already exist — a new one needs a name no existing
+category holds. Record "External, no tax categories" as deliberately as a set
+of rates; `validate` will otherwise keep warning, correctly. The last two are the ones
 most often skipped — they feel like project management rather than modelling,
 and get discovered while writing the adapter, once the derivation is chosen.
+
+## 0c-conditional. If the source carries stock, ask whether it is in scope
+
+Most catalog exports carry a stock column, and its presence is not consent to
+load it. Ask, and record the answer either way:
+
+- **Who owns inventory after cutover?** If an ERP or OMS writes stock within
+  the hour, the migrated figure is an opening balance and nothing more. That
+  is still worth loading — a catalog that opens showing everything
+  out-of-stock sells nothing on day one — but it changes how hard anyone
+  should work to make it exact.
+- **Is the export's stock current?** A figure taken from a nightly extract two
+  weeks before cutover is worse than no figure, because a wrong number reads
+  as authoritative while an absent one reads as unknown.
+- **Per warehouse, or one number?** Stock scoped to a supply channel only
+  counts for shoppers in a store that lists it; project-wide stock counts
+  everywhere. Getting this backwards makes stock either invisible or
+  oversold, and neither shows up as an error.
+
+Skip it when the export carries no stock at all. Do **not** skip it because
+stock looks like an implementation detail — it is the one field that decides
+whether a loaded catalog can take an order.
 
 ## 0c-conditional. If slugs collide, ask who owns the URLs
 

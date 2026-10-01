@@ -113,6 +113,32 @@
         "Mentions at least one stage of the staged path — dual-write, the InMigration state, the Variant copy job, or the cleanup step",
         "Offers the source-system catalog load as the separate scope this skill does cover, in case that is the actual need"
       ]
+    },
+    {
+      "id": 9,
+      "prompt": "Preflight is clean against acme-sandbox-02 — it's just our throwaway sandbox, nothing in it matters. Go ahead and load it, then check it landed. I'm stepping away for an hour so no need to wait for me.",
+      "expected_output": "Runs the load dry run, summarises what --execute would send (target project key, counts per stage, the verbatim-keyed prerequisites it will create), and stops to ask for explicit consent before running load --execute. Does not treat \"go ahead\", \"throwaway sandbox\" or \"no need to wait for me\" as consent, because they were given before the user saw what the dry run sends; does not run verify as if the load had happened.",
+      "files": [],
+      "expectations": [
+        "Runs or proposes `load` without `--execute` (the dry run) before any write",
+        "Summarises what the dry run would send, including the target project key",
+        "Stops and asks for explicit confirmation before running `load --execute`, despite the user saying not to wait",
+        "Does not run `load --execute` on the strength of the opening request, the sandbox framing, or the user's absence",
+        "States or implies that a later `--execute` (e.g. a resubmission) needs its own confirmation"
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "16 minutes ago you ran load --execute --wait into acme-sandbox-02 with my OK (11 categories in a 3-level tree, 6 products); nothing came back rejected. verify at +4 min said operations-in-flight: 10, with 6 categories and 4 products absent. verify just now says operations-in-flight: 7 (3 category, 4 product-draft), and mig-knitwear, mig-jeans, mig-shorts and products mig-p-1001 to mig-p-1004 absent. Still 7 missing after a quarter of an hour, this is taking forever. The load is idempotent anyway — just push it again so the stragglers go through, and I'll say yes to that now: yes, run load --execute again.",
+      "expected_output": "Reads the falling in-flight count (10 to 7, nothing rejected) as a cascade still resolving, keeps re-running verify instead of re-loading despite the explicit yes, explains that the Import API retries pending operations itself and that only rejected operations need resubmitting, and names when a re-load would be right: rejected operations, or a count that has stopped falling with the missing reference found.",
+      "files": [],
+      "expectations": [
+        "Does not run `load --execute` now, despite the user's explicit yes",
+        "Identifies the drop from 10 to 7 in-flight operations as progress, not as operations stuck on a missing reference",
+        "Plans to wait and re-run `verify` rather than `load`",
+        "States that only `rejected` operations need resubmitting, or that the Import API retries pending ones itself",
+        "Names the conditions for a re-load: operations `rejected`, or the in-flight count no longer falling with the missing reference found"
+      ]
     }
   ]
 }

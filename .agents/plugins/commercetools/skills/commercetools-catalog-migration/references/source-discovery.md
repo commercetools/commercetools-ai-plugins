@@ -49,7 +49,7 @@ commercetools decision it decides:
 | Whether labels accompany codes | `enum` versus `lenum` — `derive` chooses on exactly this |
 | Value kinds per field: all numeric, boolean-ish, ISO dates, mixed | The attribute type, and whether inference is even possible. Mixed kinds are a hard error, not a guess |
 | Locale-bearing fields and their tag format | Whether the adapter must re-key `en_GB` to `en-GB`, and which locales actually appear versus which are configured somewhere |
-| Price rows: currency, country, customer group, channel, validity, quantity | Price scope, and whether `priceMode` can even be honoured. Quantity breaks have no embedded-price equivalent |
+| Price rows: currency, country, customer group, channel, validity, quantity | Price scope, and whether `priceMode` can even be honoured. Quantity breaks cannot be expressed: the feed has no `tiers` field |
 | Whether a price is inherited from a parent level | commercetools does not inherit between variants, so inheritance must resolve in the adapter |
 | Decimal representation of money, and whether any amount has more places than its currency allows | Whether minor-unit conversion will refuse records |
 | Category representation: path strings, parent references, adjacency list | How the adapter rebuilds the tree, and whether names repeat enough to force slug disambiguation |

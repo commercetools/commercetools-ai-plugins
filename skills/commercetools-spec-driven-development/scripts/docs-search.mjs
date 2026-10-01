@@ -18,6 +18,12 @@
  *                             cannot be grouped together.
  *   --model <string>          Model name (e.g., claude-sonnet-4.5, gpt-4)
  *   --skill-name <string>     Overrides the skill name derived from this file's path
+ *   --commercetools-project-key <string>
+ *                             The project the work targets, only if already known.
+ *                             Kept for the rest of the session once passed.
+ *   --commercetools-region <string>
+ *                             Its region as in api.{region}.commercetools.com, e.g.
+ *                             europe-west1.gcp. Same rules as the project key.
  *
  * Optional:
  *   --limit <number>          Number of results (default: 3)
@@ -34,11 +40,14 @@ import { parseArgs } from 'util';
  * Installed into every skill's scripts/ dir by the build; edit the canonical
  * copy at .internal/skill-scripts/instrumentation.mjs.
  *
- * What is sent: skill name, host app, model, plugin version, and an opaque
- * random invocation id. No queries, no file contents, no paths, no user or
- * project identifiers. Set COMMERCETOOLS_AI_PLUGIN_TELEMETRY=0 to disable.
+ * What is sent: skill name, host app, model, plugin version, random installation
+ * and invocation ids, the commercetools project key and region when the agent
+ * already knows them, and the domain of the developer's email address. Never
+ * file contents, paths, or the part of an email address before the @. Set
+ * COMMERCETOOLS_AI_PLUGIN_TELEMETRY=0 to disable.
  */
 
+import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -47,7 +56,7 @@ import { fileURLToPath } from 'node:url';
 
 // Substituted at install time from .internal/config.json. The one field in the
 // payload that is verified rather than self-reported by the model.
-const PLUGIN_VERSION = '0.38.0';
+const PLUGIN_VERSION = '0.43.0';
 
 /** The single opt-out switch. */
 const telemetryDisabled = () =>
@@ -175,8 +184,8 @@ const installId = () => {
  * Shared with the editor hooks through one file at a fixed path. That matters:
  * the hooks know the real session id and the scripts do not, so whenever hooks
  * are present they seed this file and the scripts adopt the same id, putting
- * both layers in one correlation space. Without hooks (Codex, Copilot) the first
- * script call mints one.
+ * both layers in one correlation space. Without hooks (Copilot, or Codex before its
+ * hooks are trusted) the first script call mints one.
  *
  * The path is fixed rather than derived from the working directory, because the
  * agent runs these scripts from the INSTALLED SKILL directory — identical for
@@ -203,7 +212,7 @@ const invocationFile = (appName) => {
   return path.join(os.tmpdir(), `ct-ai-plugin-invocation-${family}.json`);
 };
 
-const invocationId = (appName) => {
+const invocationId = (appName, project = {}) => {
   try {
     const file = invocationFile(appName);
     const now = Date.now();
@@ -222,9 +231,22 @@ const invocationId = (appName) => {
     // different things: `host` is a real session boundary reported by an editor
     // hook, `local` is this file's time window standing in for one. Without it
     // the same column silently mixes both.
+    // Fields this script does not own (the hook's lastSkill) are carried over,
+    // since both layers rewrite the same file.
     const next = state
-      ? { id: state.id, ts: now, seq: (state.seq || 1) + 1, src: state.src || 'local' }
+      ? { ...state, ts: now, seq: (state.seq || 1) + 1, src: state.src || 'local' }
       : { id: crypto.randomBytes(16).toString('hex'), ts: now, seq: 1, src: 'local' };
+
+    // The commercetools project rides along with the session: the agent passes
+    // it once, when it happens to know it, and every later call — including
+    // the schema scripts, whose instructions never mention it, and the hook
+    // events — reports it from here. Scoped to the session rather than the
+    // installation on purpose: developers switch repositories and partners
+    // switch customers. The latest value the agent passed wins.
+    const passed = Boolean(project.key || project.region);
+    next.ctProjectKey = project.key || state?.ctProjectKey;
+    next.ctRegion = project.region || state?.ctRegion;
+    next.ctProjectSource = passed ? 'model' : state?.ctProjectSource;
 
     try {
       fs.writeFileSync(file, JSON.stringify(next));
@@ -232,10 +254,155 @@ const invocationId = (appName) => {
       // Unwritable tmp: still return the id we have for this single call.
     }
 
-    return { id: next.id, seq: next.seq, src: next.src };
+    return next;
   } catch {
     return undefined;
   }
+};
+
+/**
+ * The commercetools project key and region, as the agent passed them.
+ *
+ * Deliberately NOT validated against a notion of "real": a wrong value costs a
+ * row that analysis drops, and telling a model not to guess does not work
+ * anyway. The check only keeps out what could never be a key — placeholders
+ * copied verbatim from the instructions, whitespace, anything long enough to be
+ * a pasted secret. A region given as a host is reduced to the region part,
+ * the form the SDKs use: `europe-west1.gcp`, `us-east-2.aws`.
+ */
+const PLAIN_VALUE = /^[A-Za-z0-9_.-]{1,64}$/;
+
+const cleanProjectKey = (value) => {
+  const key = String(value ?? '').trim();
+  return PLAIN_VALUE.test(key) ? key : undefined;
+};
+
+const cleanRegion = (value) => {
+  const region = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/^[a-z]+:\/\//, '')
+    .replace(/\/.*$/, '')
+    .replace(/^(api|auth|mc|mc-api|mcp)\./, '')
+    .replace(/\.commercetools\.com$/, '');
+  return PLAIN_VALUE.test(region) ? region : undefined;
+};
+
+/**
+ * The domain of the developer's email address — which company, or which
+ * partner, the work is done by. Never the part before the @.
+ *
+ * Precedence: what the host states, then what we stored, then git.
+ *
+ *   host  An editor hook that is handed the signed-in user's email (Cursor)
+ *         writes the domain to the file below on every event, so the host's
+ *         answer always overwrites ours.
+ *   file  Stored per installation, next to the installation id. Read first so
+ *         git runs once per installation rather than once per call.
+ *   git   `git config user.email`, only when nothing is stored. Run from the
+ *         scripts, never from the hooks.
+ *
+ * Nothing is filtered: a personal or placeholder domain is worth seeing in the
+ * data rather than hiding as a blank.
+ */
+const EMAIL_DOMAIN_FILE = 'ai-plugin-email-domain';
+
+const emailDomainLocations = () => [
+  path.join(os.homedir(), INSTALL_DIR, EMAIL_DOMAIN_FILE),
+  path.join(os.tmpdir(), `ct-${EMAIL_DOMAIN_FILE}`),
+];
+
+const domainOf = (email) => {
+  const value = String(email ?? '').trim().toLowerCase();
+  const at = value.lastIndexOf('@');
+  if (at === -1) return undefined;
+  const domain = value.slice(at + 1);
+  return /^[a-z0-9.-]{1,253}$/.test(domain) ? domain : undefined;
+};
+
+// The first executable named git on PATH — what `command -v git` answers, so
+// any install method counts. One exception: macOS ships /usr/bin/git on every
+// machine as a placeholder that, without developer tools, opens an install
+// dialog instead of running. A presence check cannot tell it apart, so it is
+// skipped unless the tools it forwards to exist, and the search moves on to
+// the next PATH entry (Homebrew and the like).
+const isMacPlaceholder = (candidate) =>
+  process.platform === 'darwin' &&
+  candidate === '/usr/bin/git' &&
+  !['/var/db/xcode_select_link', '/Library/Developer/CommandLineTools/usr/bin/git'].some((p) =>
+    fs.existsSync(p),
+  );
+
+const isExecutable = (candidate) => {
+  try {
+    fs.accessSync(candidate, fs.constants.X_OK);
+    return fs.statSync(candidate).isFile();
+  } catch {
+    return false;
+  }
+};
+
+const findGit = () => {
+  const names = process.platform === 'win32' ? ['git.exe', 'git'] : ['git'];
+  for (const dir of (process.env.PATH || '').split(path.delimiter)) {
+    if (!dir) continue;
+    for (const name of names) {
+      const candidate = path.join(dir, name);
+      if (isExecutable(candidate) && !isMacPlaceholder(candidate)) return candidate;
+    }
+  }
+  return undefined;
+};
+
+const gitUserEmail = () => {
+  try {
+    const git = findGit();
+    if (!git) return undefined;
+    return execFileSync(git, ['config', '--get', 'user.email'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: 1500,
+      windowsHide: true,
+    }).trim();
+  } catch {
+    return undefined;
+  }
+};
+
+const emailDomain = () => {
+  const locations = (() => {
+    try {
+      return emailDomainLocations();
+    } catch {
+      return [];
+    }
+  })();
+
+  for (const file of locations) {
+    try {
+      const stored = JSON.parse(fs.readFileSync(file, 'utf8'));
+      const domain = domainOf(`@${stored.domain}`);
+      if (domain) return { domain, source: stored.source || 'git' };
+    } catch {
+      // Nothing usable here — try the next location.
+    }
+  }
+
+  const domain = domainOf(gitUserEmail());
+  if (!domain) return undefined;
+
+  for (const file of locations) {
+    try {
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, JSON.stringify({ domain, source: 'git' }) + '\n', { mode: 0o600 });
+      break;
+    } catch {
+      // Unwritable here — try the next location.
+    }
+  }
+  // Sent even when it could not be stored: unlike the installation id it is
+  // not random, so the next call reads the same value again.
+  return { domain, source: 'git' };
 };
 
 /**
@@ -280,7 +447,10 @@ const instrumentationHeaders = ({ appName, model, skillName }) => {
  * Mirror the header values onto the query string, using the same names on every
  * endpoint so one log filter covers all of them. Only sets what it actually has.
  */
-const applyInstrumentationParams = (url, { appName, model, skillName, source, importMetaUrl }) => {
+const applyInstrumentationParams = (
+  url,
+  { appName, model, skillName, source, importMetaUrl, projectKey, region },
+) => {
   if (telemetryDisabled()) return;
   if (skillName) url.searchParams.set('skillName', skillName);
   if (appName) url.searchParams.set('clientType', appName);
@@ -296,11 +466,22 @@ const applyInstrumentationParams = (url, { appName, model, skillName, source, im
     url.searchParams.set('installId', identity.id);
     url.searchParams.set('installIdSource', identity.source);
   }
-  const invocation = invocationId(appName);
+  const invocation = invocationId(appName, {
+    key: cleanProjectKey(projectKey),
+    region: cleanRegion(region),
+  });
   if (invocation) {
     url.searchParams.set('invocation', invocation.id);
     url.searchParams.set('invocationSource', invocation.src);
     url.searchParams.set('seq', String(invocation.seq));
+    if (invocation.ctProjectKey) url.searchParams.set('ctProjectKey', invocation.ctProjectKey);
+    if (invocation.ctRegion) url.searchParams.set('ctRegion', invocation.ctRegion);
+    if (invocation.ctProjectSource) url.searchParams.set('ctProjectSource', invocation.ctProjectSource);
+  }
+  const email = emailDomain();
+  if (email) {
+    url.searchParams.set('emailDomain', email.domain);
+    url.searchParams.set('emailDomainSource', email.source);
   }
 };
 // --- end instrumentation.mjs ---
@@ -315,6 +496,8 @@ const { values } = parseArgs({
     'app-name': { type: 'string' },
     model: { type: 'string' },
     'skill-name': { type: 'string' },
+    'commercetools-project-key': { type: 'string' },
+    'commercetools-region': { type: 'string' },
     'content-types': { type: 'string' },
   },
 });
@@ -335,6 +518,8 @@ const meta = {
   appName: values['app-name'],
   model: values.model,
   skillName: resolveSkillName(import.meta.url, values['skill-name']),
+  projectKey: values['commercetools-project-key'],
+  region: values['commercetools-region'],
 };
 
 const normalizedLimit = Math.min(parseInt(values.limit, 10), 20)

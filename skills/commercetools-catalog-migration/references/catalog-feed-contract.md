@@ -18,7 +18,7 @@ validates.
 - [Shape](#shape)
 - [Variant axes](#variant-axes)
 - [Two rules that are load-bearing](#two-rules-that-are-load-bearing) — [axis codes vs labels](#axis-codes-and-axis-labels-are-separate-fields), [money as a decimal string](#money-is-a-decimal-string-never-a-json-number)
-- [Record types](#record-types) — [`channel` / `customerGroup`](#channel-and-customergroup--prerequisites-not-imports), [`productSelection` / `store`](#productselection-and-store--assortments-and-where-they-apply), [`category`](#category), [`attributeDefinition`](#attributedefinition), [`product`](#product), [`variant`](#variant), [`asset`](#asset)
+- [Record types](#record-types) — [`channel` / `customerGroup`](#channel-and-customergroup--prerequisites-not-imports), [`taxCategory`](#taxcategory--how-products-are-taxed-per-country), [`productSelection` / `store`](#productselection-and-store--assortments-and-where-they-apply), [`category`](#category), [`attributeDefinition`](#attributedefinition), [`product`](#product), [`variant`](#variant), [`asset`](#asset), [`inventoryEntry`](#inventoryentry--stock-per-sku-and-supply-channel)
 - [Resolve in the adapter what commercetools cannot express](#resolve-in-the-adapter-what-commercetools-cannot-express)
 - [Choosing a code](#choosing-a-code) — [`externalId` only maps on a category](#externalid-only-maps-on-a-category)
 - [Validation](#validation)
@@ -182,8 +182,9 @@ Three consequences follow:
 
 - **The `code` is the key, used verbatim — never prefixed.** A price
   references the project's own channel key, and channels are often created by
-  store setup long before a catalog migration runs. These two are the only
-  deliberate exception to `<prefix>-<sourceCode>`. ProductTypes used to be a
+  store setup long before a catalog migration runs. These two, and
+  [`taxCategory`](#taxcategory--how-products-are-taxed-per-country) for the
+  same reason, are the only deliberate exceptions to `<prefix>-<sourceCode>`. ProductTypes used to be a
   second, accidental one — keyed verbatim from the feed's `productType` code —
   and are now prefixed like everything else.
 - **A teardown scoped to `keys.prefix` will not remove them.** If the load
@@ -215,6 +216,68 @@ the project: a missing one is a **warning** — `load` will create it — while 
 that exists with insufficient roles is an **error**, because that is the case
 `load` refuses to fix for you. `preflight --apply` creates neither; it changes
 project settings only, and creating resources belongs to `load`.
+
+### `taxCategory` — how products are taxed, per country
+
+A prerequisite shaped like `channel`: the Import API has **no tax-category
+resource**, so `load` creates a missing one through the platform API, before
+any import, with its `code` as the key **verbatim**. Verbatim because a tax
+category is usually shared with shipping methods and set up by whoever owns
+tax — the migration references the project's category, it does not own one.
+
+**The reference is what matters, and it is on the product.** Under the default
+`Platform` tax mode a cart takes its rate from the product's tax category and
+the shipping address's country. A product with none **loads, verifies, and
+cannot be taxed at checkout** — no stage of the platform reports it. `validate`
+counts those products and warns; it cannot make it an error, because under
+`External` or `ExternalAmount` tax mode an outside service supplies the rate
+and no category is needed. Which mode applies is a step-0 question. A source
+that taxes **per variant** cannot be mapped one-to-one — see
+[writing-an-adapter.md](writing-an-adapter.md#tax).
+
+A product whose `taxCategory` does not resolve is worse than a price whose
+channel does not: the **whole product draft** sits `unresolved` — variants and
+prices with it — and expires after 48 hours. So `validate` refuses a reference
+to an undeclared category outright.
+
+| `taxCategory` field | Notes |
+| :--- | :--- |
+| `code` | required — the category's key in the project, verbatim |
+| `name` | optional; required by the API and **unique per project**, so the code stands in and `preflight` checks nobody else holds it |
+| `description` | optional |
+| `rates[]` | optional; each `{country, state?, amount, includedInPrice, name?}` |
+
+| `rates[]` field | Notes |
+| :--- | :--- |
+| `country` | required, ISO 3166-1 alpha-2. A rate is selected by **exact** match on the shipping address |
+| `state` | optional, case-sensitive. A rate with a state matches only carts whose address carries the same state |
+| `amount` | required, a **fraction**: `0.2` for 20%. The schema refuses anything above 1, because a source's `20` copied across is a 2000% rate |
+| `includedInPrice` | required, **no default** — `true` means prices are gross for that country, `false` net. Backwards, every price is off by the rate |
+| `name` | optional; required by the API and **printed on orders** as the tax portion's name, so a derived one (`GB 20%`) is recorded for review |
+
+**Rates are used once, at creation.** A category that already exists is left
+exactly as found — rates included — because its rates also tax shipping and
+belong to whoever owns tax, and `replaceTaxRate` in passing would change what
+open carts are charged the next time they recalculate. `preflight` names any difference between the feed's
+rates and the project's; `verify` names it again as a warning. The products are
+taxed at the **project's** rates either way.
+
+One rate per `(country, state)` in a category — the API refuses a second, and
+refuses the whole category with it. `validate` also warns when a category's
+products are priced in, or a store trades in, a country the category has no
+rate for, and when a category declares no rates at all: right for `External`
+tax mode, and under `Platform` every cart containing those products fails to
+calculate tax.
+
+Not expressible yet, and reported as loss if the source has them: compound
+**sub-rates** (a combined rate split into state and county portions) and
+**`taxRoundingTarget`**, which UK VAT is defined against. US sales tax is not a
+case for either — it needs an external tax service, not project configuration.
+
+A teardown scoped to `keys.prefix` will not remove a tax category. No extra
+scope for the load: `manage_products` grants tax categories for backward
+compatibility, as do the dedicated `view_tax_categories` and
+`manage_tax_categories`.
 
 ### `productSelection` and `store` — assortments, and where they apply
 
@@ -258,10 +321,11 @@ Three consequences worth planning around:
   intended one rather than erroring.
 
 `supplyChannels` is the inventory twin — the same Channel resource with the
-`InventorySupply` role. It is carried for fidelity and is the one field this
-pipeline cannot follow through on: **no inventory is imported**, so the channels
-are created and wired and every one of them holds zero stock. `validate` warns
-(`store-inventory-not-migrated`) rather than letting a correct-looking store
+`InventorySupply` role. It is **wiring only**: the stock itself is
+[`inventoryEntry`](#inventoryentry--stock-per-sku-and-supply-channel) records
+naming that channel. A store listing a supply channel nothing stocks gets
+created, wired and empty, so `validate` warns
+(`store-supply-channel-unstocked`) rather than letting a correct-looking store
 imply migrated stock.
 
 #### Product selections decide which products exist
@@ -348,7 +412,7 @@ it is the one an author reaches by accident while trying to stage a rollout.
 A store references selections that the **Import API creates asynchronously**,
 and a store cannot be created pointing at one that does not exist yet. So
 `store` is a platform stage that runs **last**, after every import — not
-alongside `channel` and `customer-group`, which must run first.
+alongside `channel`, `customer-group` and `tax-category`, which must run first.
 
 `load` **refuses without `--wait`** when a store references selections. Without
 waiting there is no moment at which the store stage is safe, and refusing up
@@ -415,6 +479,7 @@ type, not only `number`.
 | `axes` | ordered attribute names distinguishing this product's variants; absent or empty means a single-variant product |
 | `attributes` | product-level values, invariant across variants |
 | `categories` | category codes |
+| `taxCategory` | code of a declared [`taxCategory`](#taxcategory--how-products-are-taxed-per-country). Product-level in both catalog models. **Absent means the product cannot be taxed under `Platform` tax mode** |
 | `slug`, `description` | optional |
 | `externalId` | optional, **feed-only — dropped at map time** (see below) |
 
@@ -491,6 +556,56 @@ assets on one owner claiming one — plus at least one source, a name in some lo
 no duplicate source keys inside an asset. `verify` compares assets by key and
 source URI, because an asset pointing at the wrong file renders a broken image
 and nothing else reports it.
+
+### `inventoryEntry` — stock per SKU and supply channel
+
+Stock is a record of its own, not a field on `variant`. Prices are authored on
+the variant, so following them is the obvious move — but stock is refreshed on
+a cadence the catalog is not, and in most exports it arrives in a different
+file. A separate record means **a feed can be regenerated for stock alone**,
+without rebuilding and re-validating every variant line to change one number.
+
+| Field | Notes |
+| :--- | :--- |
+| `sku` | required — must match a declared `variant` |
+| `quantityOnStock` | required, integer ≥ 0. Overall stock *including* reserved |
+| `supplyChannel` | optional; code of a declared channel with `InventorySupply`. Absent means project-wide |
+| `restockableInDays` | optional |
+| `expectedDelivery` | optional, ISO-8601 instant |
+
+**Identity is the pair `(sku, supplyChannel)`**, which is what the API treats
+as unique, and the key is derived from it rather than supplied. The derivation
+is what makes a second run over refreshed stock *update* the same entries
+instead of creating a parallel set — the same reasoning as a price key. One
+SKU may legitimately have an entry per warehouse and a project-wide entry
+beside them; two entries for one pair are a contradiction, and `validate`
+refuses them rather than letting the second silently win.
+
+**Do not emit `availableQuantity`.** The platform computes it as stock minus
+reservations. It is not importable, and `verify` deliberately does not compare
+it: a cart holding two of something makes it differ from `quantityOnStock`
+legitimately.
+
+Two failures the Import API will not catch, which is why both are errors here:
+
+- **An entry for an unknown SKU imports successfully.** Nothing rejects it, at
+  any stage, ever — it simply becomes stock against a SKU nothing sells.
+  `validate` checks the SKU against the feed, and the audit gate re-checks it
+  against the written plan, because a variant can be lost between the two.
+- **An entry naming a channel that does not exist goes `unresolved`**, waits 48
+  hours and expires — the same trap as a price scoped to a missing channel, and
+  the reason `load` creates channels before it imports anything.
+
+**Zero is a figure, not a gap.** A deliberate out-of-stock has to survive the
+pipeline: dropping it turns "we know there are none" into "we do not know",
+which most storefronts render as available.
+
+Keys are prefixed like any other imported resource, but they are unique among
+**InventoryEntries only** — so project-wide stock for SKU `TEE-M` keys as
+`<prefix>-TEE-M` alongside the variant of the same name, and that is legal.
+
+No extra scope: `manage_products` already covers InventoryEntries and the
+inventory Import Request, and `view_products` covers reading them back.
 
 ## Resolve in the adapter what commercetools cannot express
 

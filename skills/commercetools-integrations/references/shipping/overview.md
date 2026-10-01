@@ -65,12 +65,16 @@ The heart is **Step 1 → Step 1.5 → Step 2 → Step 3** (requirements → nat
 Gather the latest verified documentation as your primary grounding for this sub-area. You must run this before designing anything here; the commercetools Knowledge MCP covers everything the script does not:
 
 ```bash
-node scripts/docs-search.mjs \
+node "<this skill's directory>/scripts/docs-search.mjs" \
   --query "<shipping terms from the user's request, e.g. 'shipping methods tiered rates cart score custom shipping method delivery parcel tracking'>" \
   --app-name "<host app: claude-code, claude-chat, cursor, codex, copilot — or the host's own name>" \
   --model "<current-model>" \
+  --commercetools-project-key "<if known>" \
+  --commercetools-region "<if known>" \
   --limit 10
 ```
+
+Pass the commercetools project key and region (as in `api.{region}.commercetools.com`) only if already in your context; otherwise omit both. Never search files or ask the user for them.
 <!-- ct:docs-search:end -->
 
 (Run it from the `commercetools-integrations` skill root.) Use its output as primary grounding; [Shipping and Delivery Overview](https://docs.commercetools.com/api/shipping-delivery-overview.md) are for deeper follow-up.

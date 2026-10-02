@@ -136,14 +136,17 @@ contained.
 **Report every silent cap.** If the adapter samples, truncates, or skips, say so
 in its output. Partial coverage that reads as complete is worse than an error.
 
-**An attribute the source declares but never populates: emit the definition,
-not the attribute.** Declaring it keeps the target's model faithful to the
-source's, which matters if the catalog is ever re-exported into it; omitting it
-avoids a column no product fills. The pipeline reports either way —
-`attribute-never-populated` if you declare it — so both are defensible and the
-cost of choosing wrongly is low. Pick the first by default, and **say which you
-did**, because a later reader comparing the two models will otherwise wonder
-whether the field was missed.
+**An attribute the source declares but never populates: the target will not
+carry it, so say so.** The pipeline builds each ProductType from the attributes
+its products actually set, and leaves out a declared attribute no product sets.
+That is deliberate: it would sit empty on every ProductType, and the
+[product-modeling guidance](https://docs.commercetools.com/learning-model-your-product-catalog/product-modeling/product-types.md)
+is to avoid attributes with no clear use. Emitting the definition therefore
+does not keep the target's model faithful to the source's. It only makes
+`validate` report `attribute-never-populated`, which is the right signal for a
+field the adapter dropped by mistake. Either way, **record that the field was
+left off**, because a later reader comparing the two models will otherwise
+wonder whether it was missed.
 
 **Normalise locale tags.** Many sources write `en_GB`; commercetools requires
 `en-GB`. Re-key every localized map, and make sure the default locale is
@@ -312,7 +315,10 @@ Fix the adapter, never the feed. The feed is regenerated on every run.
 A useful first milestone is a **thin vertical slice**: one product with two
 variants, two prices and a category, all the way through `audit`. It exercises
 every stage and every invariant in seconds, and it surfaces identity and
-type-system problems while they are still cheap.
+type-system problems while they are still cheap. A slice leaves some declared
+tax categories and channels unreferenced; set `feed.subset: true` for it (see
+[running-the-pipeline.md](running-the-pipeline.md)) so `validate` says so once
+instead of warning per prerequisite.
 
 ## What good output looks like
 

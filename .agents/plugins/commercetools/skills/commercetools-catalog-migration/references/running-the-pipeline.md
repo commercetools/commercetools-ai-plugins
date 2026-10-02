@@ -155,11 +155,11 @@ second one: the Import API validates asynchronously, so every request can come
 back accepted while individual operations are rejected afterwards. `verify` is
 what closes that gap. Run it.
 
-Still absent by design: a cutover sequence and a delta strategy, which are
-engagement decisions rather than pipeline features. `verify` also does not yet
-scan for orphans across the key prefix — it checks what the plan names, not
-what the project holds that the plan has forgotten. Say that out loud rather
-than letting green stages imply readiness.
+The pipeline has no cutover sequence and no delta strategy; those are
+engagement decisions rather than pipeline features. `verify` does not scan for
+orphans across the key prefix — it checks what the plan names, not what the
+project holds that the plan has forgotten. Say that out loud rather than
+letting green stages imply readiness.
 
 ## validate
 
@@ -185,14 +185,27 @@ but is something only this stage can see early:
   under embedded.
 - **Tax.** A product referencing an undeclared `taxCategory` is an error: the
   whole product draft would wait on it and expire. Two rates for one
-  `(country, state)` in a category are an error too. The rest are warnings,
+  `(country, state)` in a category are an error too, as are sub-rates that do not
+  sum to the rate's `amount` (`tax-subrates-sum-mismatch`). The rest are warnings,
   because the feed cannot know the cart tax mode:
   `products-without-tax-category` (once, with a count — under `Platform` those
   products cannot be taxed), `tax-category-without-rates`,
   `tax-rate-country-missing` (a country the category's products are priced in,
   or a store trades in, with no rate), and `tax-category-never-referenced`.
   A feed with no tax categories at all gets the first one on every run; under
-  `External` tax mode, accept it and record why.
+  `External` or `ExternalAmount` tax mode, set `target.taxMode` to say so and it
+  stops, and record why in `DECISIONS.md`. The same setting silences
+  `tax-category-without-rates` and `tax-rate-country-missing`, because an outside
+  service supplies the rate. It does not touch the checks that are wrong in every
+  mode: a duplicated rate scope, a product naming an undeclared category, and a
+  category no product references.
+
+  On a slice of the catalog, `tax-category-never-referenced` and
+  `channel-never-referenced` are expected: the products that use those
+  prerequisites sit outside it. Set `feed.subset: true` in the config for that
+  run and `validate` reports them as one line, `subset-unreferenced-declarations`,
+  naming each. It holds them back rather than dropping them, so remove the flag
+  for the full load, where an unreferenced prerequisite is a real finding.
 - **A dangling or self-defeating assortment.** A product assigned to an
   undeclared selection (the assignment is silently dropped — nothing fails, the
   assortment is just wrong); a store listing an undeclared channel, or one
@@ -337,7 +350,7 @@ generated from `severity: 'error'` in `audit/gate.ts`:
 | Prices (4) | `duplicate-price-scope`, `overlapping-price-validity`, `currency-not-configured`, `fraction-digits-mismatch` |
 | Price mode (5) | `product-price-mode-mismatch`, `embedded-prices-in-standalone-mode`, `standalone-prices-in-embedded-mode`, `duplicate-standalone-price-scope`, `standalone-price-orphan` |
 | Inventory (3) | `inventory-sku-not-in-plan` (the Import API accepts stock for a SKU that does not exist), `inventory-quantity-invalid`, `duplicate-inventory-scope` (unique per `(sku, supplyChannel)`) |
-| Tax (3) | `dangling-tax-category` (a product referencing a category the prerequisites do not declare), `tax-rate-invalid` (an amount outside [0, 1] — the message does the arithmetic on a percentage — a missing name, a country that is not ISO alpha-2), `duplicate-tax-rate-scope` |
+| Tax (3) | `dangling-tax-category` (a product referencing a category the prerequisites do not declare), `tax-rate-invalid` (an amount outside [0, 1] — the message does the arithmetic on a percentage — a missing name, a country that is not ISO alpha-2, sub-rates that do not sum to the amount), `duplicate-tax-rate-scope` |
 | Assets (4) | `asset-without-source`, `asset-without-name`, `duplicate-asset-key` (per variant or category, **not** per project), `duplicate-asset-source-key` (within one asset) |
 | Limits (2) | `variant-limit-exceeded` (100 per Product under `Classic`, 10,000 under `Modular`), `price-limit-exceeded` (100 embedded per Variant, embedded mode only) |
 
@@ -350,6 +363,9 @@ be wrong: `approaching-variant-limit`, `attribute-never-populated`,
 Six more are advisory: `attribute-never-populated`, `variant-without-price`,
 `product-without-category`, `category-without-products`, `order-hint-absent`,
 and `approaching-variant-limit` (past 80 variants, before the cap bites).
+`attribute-never-populated` is more than a hint: `derive` leaves such an
+attribute off the ProductType, so it will not exist in the project after the
+load, however the definition was declared.
 
 Findings are grouped by check and capped per code, because one broken assumption
 in an adapter produces hundreds of instances of a single code and a flat list
@@ -606,12 +622,9 @@ counts, and that RAM is not the problem — rather than emitting V8's bare
 `load` and `verify` each read `plan.json` as one string, so a plan can be
 written and then be too large to read back.
 
-**The way through today is to split the engagement**: several configs with
+**The way through is to split the engagement**: several configs with
 different `keys.prefix` values, each covering part of the catalog. Each plan is
-then its own document and the loads stay additive. Writing the artefacts
-incrementally — NDJSON per collection — is what would remove the ceiling, and
-it changes an artefact the freshness digest and the dry-run review both depend
-on, so it is worth doing when an engagement needs it rather than in advance.
+then its own document and the loads stay additive.
 
 ### Batching
 
@@ -898,7 +911,7 @@ category's rates.
 A store's key is matched **verbatim**, not prefixed — asking for
 `mig-northwind-uk` would find nothing and report the store missing.
 
-Not built yet: orphan detection across the key prefix. `verify` checks what the
+`verify` does not detect orphans across the key prefix: it checks what the
 plan names, not what the project holds that the plan has forgotten.
 
 ## Configuration

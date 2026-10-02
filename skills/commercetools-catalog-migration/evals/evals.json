@@ -139,6 +139,85 @@
         "States that only `rejected` operations need resubmitting, or that the Import API retries pending ones itself",
         "Names the conditions for a re-load: operations `rejected`, or the in-flight count no longer falling with the missing reference found"
       ]
+    },
+    {
+      "id": 11,
+      "prompt": "We run one webshop, no regional storefronts. Our stock export is per warehouse — LEEDS and BRISTOL, both ship online orders. The agency says per-warehouse stock is invisible to the shop unless a Store lists those warehouses as supply channels, so they want us to add a store record with both in the feed. They also mentioned a third site, NEWPORT, opening next month that we'll stock later. Is the agency right that we need a store for the stock to show? Tell me what the channel, store and inventory part of the feed should hold.",
+      "expected_output": "Corrects the agency: a store's supplyChannels is a filter, not what makes stock visible — a store listing supply channels sees only those (plus channel-less stock), while no store, or a store listing none, sees all stock. Recommends no store for a single webshop, two InventorySupply channels and one inventoryEntry per (sku, channel), and points out that a store would later hide NEWPORT's stock silently until someone adds it to the store's list.",
+      "files": [],
+      "expectations": [
+        "Says the agency is wrong: per-warehouse stock is visible without any store, because only a store that lists supply channels filters stock",
+        "States that a store with supplyChannels sees stock only from those channels (plus stock with no channel)",
+        "Recommends no store record for a single webshop, with LEEDS and BRISTOL as `InventorySupply` channels and one `inventoryEntry` per SKU and channel",
+        "Points out that if a store listing LEEDS and BRISTOL were added, NEWPORT's stock would be hidden through it until NEWPORT is added to its supplyChannels — nothing errors",
+        "Does not recommend a channel-less total entry beside the per-warehouse entries"
+      ]
+    },
+    {
+      "id": 12,
+      "prompt": "Our source classification system declares a text attribute `legacyRegionCode` on the Apparel class, but not one of our 8 products has a value for it. We plan to re-export the commercetools catalog into our PIM later, so we want the ProductType in commercetools to mirror the source model exactly, `legacyRegionCode` included. I'm writing the adapter for your catalog-migration pipeline: if I emit an `attributeDefinition` record for it, will the attribute exist on the ProductType after the load? Tell me what the adapter should do and what the pipeline will report.",
+      "expected_output": "Says no: the pipeline builds each ProductType from the attributes its products set, so a declared attribute no product sets is left off the ProductType even when the definition is emitted. Emitting it only makes `validate` warn `attribute-never-populated`. Does not promise the attribute will exist after the load, so the 'mirror the source exactly' goal is not met by the definition alone, and tells the user to record that the field was left off.",
+      "files": [],
+      "expectations": [
+        "States that the attribute will NOT exist on the ProductType after the load if no product sets it, even when an `attributeDefinition` record is emitted",
+        "Says the pipeline's `validate` reports `attribute-never-populated` for it, as a warning",
+        "Does not claim that emitting the definition keeps the target model faithful to the source or that the attribute 'will be created and stay empty'",
+        "Tells the adapter author to record (for example in DECISIONS.md) that the field was left off the target model",
+        "Does not invent a workaround the skill does not describe, such as editing the generated ProductType by hand before load"
+      ]
+    },
+    {
+      "id": 13,
+      "prompt": "I'm on the catalog-migration pipeline and doing the small first run: my adapter writes a slice of 12 products out of about 4,000. `validate` on the slice prints four warnings: `tax-category-never-referenced` for 'reduced' and 'zero', and `channel-never-referenced` for 'WH-NORTH' and 'WH-EAST'. The full catalog does use all four, the products just aren't in my slice. I don't want to delete the declarations from the feed, because the adapter emits them from the source's master data. What should I do about these warnings on the slice, and what do I need to remember before the full load?",
+      "expected_output": "Sets `feed.subset: true` in the pipeline config for the slice run, which makes `validate` report the four as one `subset-unreferenced-declarations` line naming each instead of four warnings. Keeps the declarations in the feed. Says to remove the flag for the full load, because the flag holds the warnings back rather than dropping them and an unreferenced prerequisite is a real finding on the full catalog.",
+      "files": [],
+      "expectations": [
+        "Recommends setting `feed.subset: true` in the pipeline config for the slice run",
+        "Says `validate` then reports the unreferenced tax categories and channels as one line, `subset-unreferenced-declarations`, instead of one warning each",
+        "Keeps the tax category and channel declarations in the feed rather than deleting or filtering them in the adapter to silence the warnings",
+        "Says to remove `feed.subset` before the full load, because an unreferenced prerequisite is a real finding on the full catalog",
+        "Does not tell the user to simply ignore or hand-edit the validate output"
+      ]
+    },
+    {
+      "id": 14,
+      "prompt": "Our carts are taxed by an external tax service that sets the exact tax amounts on each cart, so we have no tax categories and I'm not going to invent any. I'm running the catalog-migration pipeline and `validate` prints `products-without-tax-category` ('No tax category is declared, so none of the 240 product(s) will have one') on every single run. The adapter is fine and the business has confirmed the tax setup. How do I stop the warning, and what should I record about it?",
+      "expected_output": "Sets `target.taxMode` in the pipeline config to `ExternalAmount` (the mode where the service supplies exact amounts), which makes `validate` stop warning about products with no tax category. Records the tax-mode decision in DECISIONS.md. Does not add placeholder tax categories to the feed, and does not claim this silences every tax check: a duplicated rate scope or a product naming an undeclared category still applies.",
+      "files": [],
+      "expectations": [
+        "Tells the user to set `target.taxMode` in the pipeline config, and picks `ExternalAmount` (or says `External` or `ExternalAmount` as the two that apply) rather than `Platform`",
+        "Says that with the mode set, `validate` stops emitting `products-without-tax-category`",
+        "Says to record the tax-mode decision and who confirmed it in DECISIONS.md",
+        "Does not suggest declaring a placeholder or dummy tax category, or setting a fake `taxCategory` on products, to quiet the warning",
+        "Does not claim the setting turns off every tax diagnostic; says checks that are wrong in every mode (for example a product naming an undeclared tax category, or a duplicated rate scope) still apply"
+      ]
+    },
+    {
+      "id": 15,
+      "prompt": "Our carts are taxed by an external tax service that supplies the rates, but master data does list our three tax classes, so the adapter emits `taxCategory` records 'standard', 'reduced' and 'zero' with names and no rates, and every product references one of them. `validate` prints `tax-category-without-rates` for all three and `tax-rate-country-missing` for the ones with no rate for the countries our stores trade in. The business confirmed the service owns the rates. Do these warnings mean something is wrong, and how do I get rid of them without inventing rates?",
+      "expected_output": "Says the warnings are about the rate a cart would find under Platform tax mode, which is the wrong question for this project, and that setting `target.taxMode` to `External` or `ExternalAmount` in the config silences `tax-category-without-rates` and `tax-rate-country-missing`. Does not tell the user to invent rates or drop the categories. Notes the checks that are wrong in every mode still apply, and records the decision in DECISIONS.md.",
+      "files": [],
+      "expectations": [
+        "Says the warnings do not indicate a defect for this project, because an outside service supplies the rates",
+        "Tells the user to set `target.taxMode` in the pipeline config to `External` or `ExternalAmount`",
+        "Says `tax-category-without-rates` and `tax-rate-country-missing` stop once the mode is set",
+        "Does not tell the user to invent or copy placeholder rates, or to remove the tax categories from the feed, to quiet the warnings",
+        "Says to record the tax-mode decision in DECISIONS.md",
+        "Says checks that are wrong in every mode still apply, such as a product referencing an undeclared category or a duplicated rate scope"
+      ]
+    },
+    {
+      "id": 17,
+      "prompt": "I'm writing the adapter for the catalog-migration pipeline. Our tax table for the province of ON has a 5% federal part and an 8% provincial part, and the business wants orders to show the two portions separately, not one 13% line. Prices in our shop are net. The tax class is 'standard'. What should the taxCategory record in the feed look like for ON, and what will the pipeline check about it?",
+      "expected_output": "Emits a taxCategory 'standard' whose rate for CA/ON has amount 0.13 (a fraction), includedInPrice false, and subRates of 0.05 (federal) and 0.08 (provincial), each with a name. Says amount must equal the sum of the sub-rates and that validate refuses a mismatch (tax-subrates-sum-mismatch) because the API would refuse the whole category. Does not say the feed cannot express sub-rates.",
+      "files": [],
+      "expectations": [
+        "Puts the sub-rates on the rate for the province as `subRates`, each with a `name` and an `amount` as a fraction (0.05 and 0.08)",
+        "Sets the rate's own `amount` to 0.13, the sum of the portions, as a fraction rather than 13 or 13%",
+        "Sets `includedInPrice` to false explicitly, because prices are net, and says it has no default",
+        "Says the pipeline checks that the sub-rates sum to `amount`, and that a mismatch is an error (`tax-subrates-sum-mismatch`) because the API refuses the whole category",
+        "Does not say the feed or pipeline cannot express sub-rates, and does not suggest emitting two separate rates for the same country and state"
+      ]
     }
   ]
 }

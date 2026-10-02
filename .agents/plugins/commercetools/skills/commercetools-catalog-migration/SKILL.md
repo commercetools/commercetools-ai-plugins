@@ -268,7 +268,8 @@ public documentation in September 2026; re-check any limit before relying on it.
   Under the default `Platform` tax mode a cart takes its rate from the
   product's tax category; with none, checkout cannot compute tax and nothing
   earlier says so. `validate` warns rather than refuses, because `External`
-  tax mode needs no category — which mode applies is a step-0 question.
+  tax mode needs no category — which mode applies is a step-0 question, and
+  the answer goes in the config as `target.taxMode`.
   → [catalog-feed-contract.md](references/catalog-feed-contract.md)
 - **`publish: false` unpublishes.** It is an instruction, not "leave
   publication alone", and the pipeline plans it on every product. Correct on a
@@ -393,8 +394,9 @@ Before running the pipeline:
 - [ ] The tax mode was asked of whoever owns tax. Under `Platform`, every
       product has a `taxCategory`, every category has a rate for each country
       it sells into, and each rate's `includedInPrice` was confirmed, not
-      inferred. Under `External`, `products-without-tax-category` is accepted
-      in `DECISIONS.md`.
+      inferred. Under `External` or `ExternalAmount`, `target.taxMode` is set,
+      so `products-without-tax-category` stops, and the choice is in
+      `DECISIONS.md`.
 - [ ] `preflight` reports no `product-type-keys-unprefixed`. If it does, the
       project was loaded before ProductType keys were prefixed, and a Product's
       ProductType cannot be changed after creation.

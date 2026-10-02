@@ -124,7 +124,7 @@ wrong-but-consistent choice passes every offline stage:
 | How does the storefront read prices? | `target.priceMode`: `embedded` / `standalone` | a product whose `priceMode` disagrees with where its prices are imports cleanly, reports `imported`, and shows no price at all |
 | Which search API does the storefront use? | `productTypes.productLevelStrategy`: `sameForAll` / `native` | `native` Product-level attributes are invisible to Product Projection Search |
 | Should attributes be searchable unless stated otherwise? | `productTypes.searchableByDefault`: `true` / `false` | ProductTypes that disagree on a shared attribute name make it unavailable for search, filters and facets everywhere — and the import still succeeds |
-| How are carts taxed — by the platform from tax categories, or by an external service? And does the project already hold its tax categories? | nothing in the config — the adapter's `taxCategory` records and each product's `taxCategory` | under the default `Platform` tax mode a product with no tax category loads, verifies, and **cannot be taxed at checkout**. An existing category is never modified, so the project's keys become the codes |
+| How are carts taxed — by the platform from tax categories, or by an external service? And does the project already hold its tax categories? | `target.taxMode`: `External` / `ExternalAmount`, or left out for `Platform` — plus the adapter's `taxCategory` records and each product's `taxCategory` | under the default `Platform` tax mode a product with no tax category loads, verifies, and **cannot be taxed at checkout**. An existing category is never modified, so the project's keys become the codes |
 | Will this catalog be **re-exported and re-loaded**, or is this one-shot? | nothing — `DECISIONS.md` only | every derived code becomes a key on the first load and cannot move afterwards. One-shot permits deriving from whatever is readable; repeatable requires deriving only from fields the source guarantees are stable, which is usually a smaller set |
 | Which variant should be the **shop window**, if the source does not say? | nothing — the adapter's `isMaster` | absent `isMaster` falls back to the lowest SKU by sort order. Deterministic, and arbitrary as merchandising: it decides what a category listing shows. Most sources have no master-variant concept, so this is the normal case, not an edge case |
 
@@ -133,7 +133,10 @@ source declares its own attribute types is a fact 0b established, not a
 preference. Set `require` when the adapter can emit `attributeDefinition`
 records, `infer` only when the source genuinely cannot describe its own type
 system — and then expect every inferred type to need review, because each
-one becomes an attribute constraint that cannot be changed afterwards.
+one becomes an attribute type and constraint. No update action changes an
+attribute's type, and the
+[constraint update action](https://docs.commercetools.com/api/projects/productTypes.md#change-attributedefinition-attributeconstraint)
+takes only `None`, so a wrong guess cannot be corrected in place.
 
 The first two are storefront decisions with no evidence in the source, so they
 stay questions for whoever owns the implementation. The tax row is a question
@@ -141,7 +144,8 @@ for whoever owns **tax**, which is often someone else: they decide the mode,
 confirm the rates and each rate's net/gross setting, and know whether the
 project's tax categories already exist — a new one needs a name no existing
 category holds. Record "External, no tax categories" as deliberately as a set
-of rates; `validate` will otherwise keep warning, correctly. The last two are the ones
+of rates, by setting `target.taxMode`; `validate` will otherwise keep warning,
+correctly. The last two are the ones
 most often skipped — they feel like project management rather than modelling,
 and get discovered while writing the adapter, once the derivation is chosen.
 
@@ -158,10 +162,16 @@ load it. Ask, and record the answer either way:
 - **Is the export's stock current?** A figure taken from a nightly extract two
   weeks before cutover is worse than no figure, because a wrong number reads
   as authoritative while an absent one reads as unknown.
-- **Per warehouse, or one number?** Stock scoped to a supply channel only
-  counts for shoppers in a store that lists it; project-wide stock counts
-  everywhere. Getting this backwards makes stock either invisible or
-  oversold, and neither shows up as an error.
+- **Per warehouse, or one number?** A store that lists supply channels sees
+  stock only on those channels, plus project-wide stock; a store that lists
+  none, or no store at all, sees everything. Getting this backwards makes
+  stock either invisible or oversold, and neither shows up as an error.
+- **If per warehouse: which store(s) sell from each warehouse?** The answer
+  becomes `store` records whose `supplyChannels` list those warehouses. A
+  warehouse no store lists, in a feed where some store lists others, is stock
+  the storefront cannot see — `validate` warns
+  (`inventory-supply-channel-not-in-store`). "No stores yet" is a valid
+  answer; record it.
 
 Skip it when the export carries no stock at all. Do **not** skip it because
 stock looks like an implementation detail — it is the one field that decides

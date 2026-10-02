@@ -243,7 +243,8 @@ Worth raising rather than silently carrying across:
 - Categories that are really facets.
 - Attributes that encode business rules.
 - Attributes declared but never populated — usually a field the adapter dropped,
-  and reported as such.
+  and reported as such. The pipeline leaves them off the ProductType, so a source
+  model that must be mirrored exactly needs that said up front.
 - A 300-attribute ProductType serving eight facets.
 
 ## Output

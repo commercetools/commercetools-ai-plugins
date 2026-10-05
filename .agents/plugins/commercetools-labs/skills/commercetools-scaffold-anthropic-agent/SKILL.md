@@ -1,6 +1,9 @@
 ---
 name: commercetools-scaffold-anthropic-agent
 description: Entrypoint for scaffolding a shopping or merchant agent on the anthropics/commerce-agents packages, backed by commercetools. Clones the commercetools/commercetools-anthropic-agents reference implementation and interviews the user before generating code. Use when the user wants to build an agent (shopping, merchant, or both) backed by commercetools, and no project scaffold exists yet.
+metadata:
+  contentType: SKILL
+  experimental: true
 ---
 
 # Scaffold an Anthropic commerce agent on commercetools

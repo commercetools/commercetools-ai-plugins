@@ -139,6 +139,167 @@
         "States that only `rejected` operations need resubmitting, or that the Import API retries pending ones itself",
         "Names the conditions for a re-load: operations `rejected`, or the in-flight count no longer falling with the missing reference found"
       ]
+    },
+    {
+      "id": 11,
+      "prompt": "We run one webshop, no regional storefronts. Our stock export is per warehouse — LEEDS and BRISTOL, both ship online orders. The agency says per-warehouse stock is invisible to the shop unless a Store lists those warehouses as supply channels, so they want us to add a store record with both in the feed. They also mentioned a third site, NEWPORT, opening next month that we'll stock later. Is the agency right that we need a store for the stock to show? Tell me what the channel, store and inventory part of the feed should hold.",
+      "expected_output": "Corrects the agency: a store's supplyChannels is a filter, not what makes stock visible — a store listing supply channels sees only those (plus channel-less stock), while no store, or a store listing none, sees all stock. Recommends no store for a single webshop, two InventorySupply channels and one inventoryEntry per (sku, channel), and points out that a store would later hide NEWPORT's stock silently until someone adds it to the store's list.",
+      "files": [],
+      "expectations": [
+        "Says the agency is wrong: per-warehouse stock is visible without any store, because only a store that lists supply channels filters stock",
+        "States that a store with supplyChannels sees stock only from those channels (plus stock with no channel)",
+        "Recommends no store record for a single webshop, with LEEDS and BRISTOL as `InventorySupply` channels and one `inventoryEntry` per SKU and channel",
+        "Points out that if a store listing LEEDS and BRISTOL were added, NEWPORT's stock would be hidden through it until NEWPORT is added to its supplyChannels — nothing errors",
+        "Does not recommend a channel-less total entry beside the per-warehouse entries"
+      ]
+    },
+    {
+      "id": 12,
+      "prompt": "Our source classification system declares a text attribute `legacyRegionCode` on the Apparel class, but not one of our 8 products has a value for it. We plan to re-export the commercetools catalog into our PIM later, so we want the ProductType in commercetools to mirror the source model exactly, `legacyRegionCode` included. I'm writing the adapter for your catalog-migration pipeline: if I emit an `attributeDefinition` record for it, will the attribute exist on the ProductType after the load? Tell me what the adapter should do and what the pipeline will report.",
+      "expected_output": "Says no: the pipeline builds each ProductType from the attributes its products set, so a declared attribute no product sets is left off the ProductType even when the definition is emitted. Emitting it only makes `validate` warn `attribute-never-populated`. Does not promise the attribute will exist after the load, so the 'mirror the source exactly' goal is not met by the definition alone, and tells the user to record that the field was left off.",
+      "files": [],
+      "expectations": [
+        "States that the attribute will NOT exist on the ProductType after the load if no product sets it, even when an `attributeDefinition` record is emitted",
+        "Says the pipeline's `validate` reports `attribute-never-populated` for it, as a warning",
+        "Does not claim that emitting the definition keeps the target model faithful to the source or that the attribute 'will be created and stay empty'",
+        "Tells the adapter author to record (for example in DECISIONS.md) that the field was left off the target model",
+        "Does not invent a workaround the skill does not describe, such as editing the generated ProductType by hand before load"
+      ]
+    },
+    {
+      "id": 13,
+      "prompt": "I'm on the catalog-migration pipeline and doing the small first run: my adapter writes a slice of 12 products out of about 4,000. `validate` on the slice prints four warnings: `tax-category-never-referenced` for 'reduced' and 'zero', and `channel-never-referenced` for 'WH-NORTH' and 'WH-EAST'. The full catalog does use all four, the products just aren't in my slice. I don't want to delete the declarations from the feed, because the adapter emits them from the source's master data. What should I do about these warnings on the slice, and what do I need to remember before the full load?",
+      "expected_output": "Sets `feed.subset: true` in the pipeline config for the slice run, which makes `validate` report the four as one `subset-unreferenced-declarations` line naming each instead of four warnings. Keeps the declarations in the feed. Says to remove the flag for the full load, because the flag holds the warnings back rather than dropping them and an unreferenced prerequisite is a real finding on the full catalog.",
+      "files": [],
+      "expectations": [
+        "Recommends setting `feed.subset: true` in the pipeline config for the slice run",
+        "Says `validate` then reports the unreferenced tax categories and channels as one line, `subset-unreferenced-declarations`, instead of one warning each",
+        "Keeps the tax category and channel declarations in the feed rather than deleting or filtering them in the adapter to silence the warnings",
+        "Says to remove `feed.subset` before the full load, because an unreferenced prerequisite is a real finding on the full catalog",
+        "Does not tell the user to simply ignore or hand-edit the validate output"
+      ]
+    },
+    {
+      "id": 14,
+      "prompt": "Our carts are taxed by an external tax service that sets the exact tax amounts on each cart, so we have no tax categories and I'm not going to invent any. I'm running the catalog-migration pipeline and `validate` prints `products-without-tax-category` ('No tax category is declared, so none of the 240 product(s) will have one') on every single run. The adapter is fine and the business has confirmed the tax setup. How do I stop the warning, and what should I record about it?",
+      "expected_output": "Sets `target.taxMode` in the pipeline config to `ExternalAmount` (the mode where the service supplies exact amounts), which makes `validate` stop warning about products with no tax category. Records the tax-mode decision in DECISIONS.md. Does not add placeholder tax categories to the feed, and does not claim this silences every tax check: a duplicated rate scope or a product naming an undeclared category still applies.",
+      "files": [],
+      "expectations": [
+        "Tells the user to set `target.taxMode` in the pipeline config, and picks `ExternalAmount` (or says `External` or `ExternalAmount` as the two that apply) rather than `Platform`",
+        "Says that with the mode set, `validate` stops emitting `products-without-tax-category`",
+        "Says to record the tax-mode decision and who confirmed it in DECISIONS.md",
+        "Does not suggest declaring a placeholder or dummy tax category, or setting a fake `taxCategory` on products, to quiet the warning",
+        "Does not claim the setting turns off every tax diagnostic; says checks that are wrong in every mode (for example a product naming an undeclared tax category, or a duplicated rate scope) still apply"
+      ]
+    },
+    {
+      "id": 15,
+      "prompt": "Our carts are taxed by an external tax service that supplies the rates, but master data does list our three tax classes, so the adapter emits `taxCategory` records 'standard', 'reduced' and 'zero' with names and no rates, and every product references one of them. `validate` prints `tax-category-without-rates` for all three and `tax-rate-country-missing` for the ones with no rate for the countries our stores trade in. The business confirmed the service owns the rates. Do these warnings mean something is wrong, and how do I get rid of them without inventing rates?",
+      "expected_output": "Says the warnings are about the rate a cart would find under Platform tax mode, which is the wrong question for this project, and that setting `target.taxMode` to `External` or `ExternalAmount` in the config silences `tax-category-without-rates` and `tax-rate-country-missing`. Does not tell the user to invent rates or drop the categories. Notes the checks that are wrong in every mode still apply, and records the decision in DECISIONS.md.",
+      "files": [],
+      "expectations": [
+        "Says the warnings do not indicate a defect for this project, because an outside service supplies the rates",
+        "Tells the user to set `target.taxMode` in the pipeline config to `External` or `ExternalAmount`",
+        "Says `tax-category-without-rates` and `tax-rate-country-missing` stop once the mode is set",
+        "Does not tell the user to invent or copy placeholder rates, or to remove the tax categories from the feed, to quiet the warnings",
+        "Says to record the tax-mode decision in DECISIONS.md",
+        "Says checks that are wrong in every mode still apply, such as a product referencing an undeclared category or a duplicated rate scope"
+      ]
+    },
+    {
+      "id": 17,
+      "prompt": "I'm writing the adapter for the catalog-migration pipeline. Our tax table for the province of ON has a 5% federal part and an 8% provincial part, and the business wants orders to show the two portions separately, not one 13% line. Prices in our shop are net. The tax class is 'standard'. What should the taxCategory record in the feed look like for ON, and what will the pipeline check about it?",
+      "expected_output": "Emits a taxCategory 'standard' whose rate for CA/ON has amount 0.13 (a fraction), includedInPrice false, and subRates of 0.05 (federal) and 0.08 (provincial), each with a name. Says amount must equal the sum of the sub-rates and that validate refuses a mismatch (tax-subrates-sum-mismatch) because the API would refuse the whole category. Does not say the feed cannot express sub-rates.",
+      "files": [],
+      "expectations": [
+        "Puts the sub-rates on the rate for the province as `subRates`, each with a `name` and an `amount` as a fraction (0.05 and 0.08)",
+        "Sets the rate's own `amount` to 0.13, the sum of the portions, as a fraction rather than 13 or 13%",
+        "Sets `includedInPrice` to false explicitly, because prices are net, and says it has no default",
+        "Says the pipeline checks that the sub-rates sum to `amount`, and that a mismatch is an error (`tax-subrates-sum-mismatch`) because the API refuses the whole category",
+        "Does not say the feed or pipeline cannot express sub-rates, and does not suggest emitting two separate rates for the same country and state"
+      ]
+    },
+    {
+      "id": 18,
+      "prompt": "I'm migrating our Magento catalog into commercetools with the catalog-migration pipeline. I've sized and profiled the export already: 6 products, 19 SKUs, the largest product has 6 variants, two websites (UK in GBP, Ireland in EUR), prices are entered including tax and use three Magento tax classes (Taxable Goods, Children's Clothing, None), one warehouse with a stock quantity per SKU, and images are stored as relative paths like /c/l/tee.jpg. The people who can answer the storefront and tax questions, our agency developer and our accountant, are not here until tomorrow, and I'd like the adapter started today if possible. Take step 0 as far as you sensibly can today and tell me what you produce.",
+      "expected_output": "Writes the step-0 questions into a file for the user to edit (migration/INTERVIEW.md), one block per topic holding a table with a row per question (question, fact, recommendation, empty answer cell) and a recommendation that is not an answer, covering at least the catalog model, price mode, searchable-by-default, tax mode, one-shot versus re-export, shop-window variant, stock, and the media host (relative paths found). Does not answer any of them itself, does not write migration.config.json, and does not start the adapter: it stops, and says it continues once every question in the file is answered, because the answers are irreversible or fail silently.",
+      "files": [],
+      "expectations": [
+        "Puts the questions in a file the user edits (named `migration/INTERVIEW.md` or equivalent) rather than only asking them in chat or answering them itself",
+        "The file has a block per topic holding a table with one row per question, each row with its own empty answer cell, covering at least price mode, tax mode, one-shot versus re-export, and the media host for the relative image paths; no row bundles two questions under one answer cell",
+        "Each row pairs one fact from the source with the question it prompts, in separate cells; facts and questions are not mixed in one cell",
+        "Does not ask which search API the storefront uses and does not offer `native` as an option; `productLevelStrategy` is left at `sameForAll` and listed with the conditionals not asked, with the reason that `plan` cannot map `native` yet",
+        "The tax topic has a row asking whether the three source tax classes are kept as tax categories without rates or dropped, marked as to be answered only if the tax mode is external (the mode is not known when the file is written), so the owner is not asked in a later round",
+        "Stock is split into separate rows, at least whether to load it at all and whether the export's quantity is current / who owns inventory afterwards, so the freshness row can be answered \"unknown, owner: <name>\" without leaving the load decision open",
+        "Within each block the bold fields (`**Owner:**`, `**Why it matters:**`, `**Writes:**` and the like) are separated by blank lines, and a blank line precedes each table, so the block renders as separate lines and a real table",
+        "Any recommendation in the file is labelled as a recommendation and the answer cells stay empty; no question is answered or defaulted on the user's behalf",
+        "Does not write `migration.config.json` and does not start writing the adapter, and says why: the answers are irreversible or fail silently, and it continues when every question has an answer",
+        "Says it will re-read the file when the user is back and continue only when all questions are answered, naming any that are not"
+      ]
+    },
+    {
+      "id": 19,
+      "prompt": "I'm partway through a catalog-migration engagement. Step 0 is finished: the twelve questions in migration/INTERVIEW.md are answered (sections Q1 to Q6; Q5 is \"Stores and selling countries\", with rows 5.1 and 5.2), recorded in DECISIONS.md, and the config and adapter exist. `validate`, `derive`, `plan` and `audit` pass. I just ran `preflight` and it reports `store-countries-not-accepted`: the feed has a store for Ireland with country IE, and the project's countries are DE, US and GB. The business owner is out for the rest of the week and has said before that she'd rather not change project settings. I'd like to get this loaded today. What do you do next?",
+      "expected_output": "Does not run `preflight --apply`, does not add IE to the project, and does not decide to drop or change the store itself. Adds the new question to the engagement's interview file, migration/INTERVIEW.md, as the next row of the section it belongs to (row 5.3 in Q5, \"Stores and selling countries\"), not as a new block at the end of the file, leaving the answered rows 5.1 and 5.2 untouched. The row says it was raised during preflight by `store-countries-not-accepted`, that it affects the feed's store records so plan is the stage to start again from, and that nothing is loaded yet, and the user is told Q5 gained a row. Stops work that depends on the answer and says it resumes from plan when the answer is in, and that the question before `load --execute` will still be asked live.",
+      "files": [],
+      "expectations": [
+        "Adds the new question to the interview file (`migration/INTERVIEW.md`) as the next row of the store section (5.3 in Q5), not as a new block appended at the end, instead of asking in chat or deciding the store question itself; rows 5.1 and 5.2 and every answered cell are left as they are",
+        "The new row says what prompted it (preflight, `store-countries-not-accepted` for IE) and offers the real options, such as adding the country to the project or dropping or adjusting the store, with the cost of each",
+        "Tells the user that section Q5 gained a row (5.3), because they may already have filled that section in",
+        "States which stage the answer affects and that it will start again from there (the store records, so `plan` and later stages) once the answer is in",
+        "Does not run `preflight --apply`, does not change the project's countries, and does not drop or alter the Ireland store on its own, even though the user wants to load today",
+        "Says the question before `load --execute` is still asked live and that an answer in the file is not consent to write"
+      ]
+    },
+    {
+      "id": 20,
+      "prompt": "We're loading our catalog into a commercetools project that was created last week. Our storefront agency built their search on Product Projection Search, and they'd like the shared attribute `material` to be a real product-level attribute so it's filterable there. What should we set productLevelStrategy to, and is there anything about the search API we should sort out before the load?",
+      "expected_output": "Says the project is new, so Product Projection Search is deprecated and cannot be activated on a Project created after 31 August 2026, and the agency has to use Product Search (with the migration guide). Says that for the load itself productLevelStrategy stays sameForAll, because the pipeline's plan refuses native (native-product-level-not-mapped) for now, not because of the other search API. Does not recommend native, and does not treat Product Projection Search as a normal choice for this project.",
+      "files": [],
+      "expectations": [
+        "States that Product Projection Search is deprecated and cannot be activated on a Project created after 31 August 2026, so the agency's plan to build on it needs to change to Product Search",
+        "Points to Product Search as the replacement and to the Product Search migration guide",
+        "Recommends `sameForAll` for `productLevelStrategy` and gives the real reason: `plan` refuses `native` (`native-product-level-not-mapped`) today",
+        "Does not recommend `native`, and does not present Product Projection Search and Product Search as two equal options for this project"
+      ]
+    },
+    {
+      "id": 21,
+      "prompt": "I'm migrating a small Magento catalog to commercetools with the catalog-migration pipeline, and the export has no notion of a master or default variant. It has two products: Zip Hoodie, with SKUs HOOD-2XL, HOOD-L, HOOD-M, HOOD-S, HOOD-XL, and Classic Tee, with SKUs TEE-L, TEE-M, TEE-S. Write the shop-window row for the step-0 interview file: the row the business owner will answer. I don't need the rest of the interview.",
+      "expected_output": "Writes one row per product for the interview file in the skill's table shape (question, fact, recommendation, empty answer cell). Each fact cell computes what the pipeline's fallback would pick, the lowest SKU by plain string order per product: Zip Hoodie → HOOD-2XL (digits sort before letters) and Classic Tee → TEE-L, and says it is arbitrary as merchandising. The recommendation names a variant per product (for example the M size) rather than accepting the default, and every answer cell is left empty.",
+      "files": [],
+      "expectations": [
+        "Zip Hoodie and Classic Tee each have their own row, and each fact cell states the variant the fallback would pick for that product: HOOD-2XL for Zip Hoodie and TEE-L for Classic Tee",
+        "Explains that the fallback is the lowest SKU by string order, so digits sort before letters and the hoodie would be fronted by its 2XL, and that this decides what category listings show",
+        "The recommendation names a variant per product instead of accepting the default, and presents itself as a recommendation",
+        "Every answer cell is left empty, and no row asks about two products at once"
+      ]
+    },
+    {
+      "id": 22,
+      "prompt": "I'm running a catalog-migration engagement and we are on round two of the step-0 interview. migration/INTERVIEW.md has sections Q1 to Q5. I answered everything except row 4.2 (the tax class question), which the tax owner has to answer and who is away until Friday. One of my answers, 2.1 (\"stock is per warehouse\"), opens a follow-up: which stores sell from which warehouse. Update the interview file for this round and tell me what happens next.",
+      "expected_output": "Adds the follow-up as the next row of the section it belongs to (row 2.2 in Q2, with \"Follows 2.1\" in its fact cell), not as a new block at the end of the file. Leaves row 4.2 where it is, unanswered, and does not copy it into a new block or ask it again. Does not touch answered cells. Tells the user that Q2 gained row 2.2, names 2.2 and 4.2 as the open rows, and stops: no config and no adapter until both are answered.",
+      "files": [],
+      "expectations": [
+        "Adds the follow-up as a new row in the section it belongs to (2.2 in Q2), marked as following 2.1, rather than appending a new block at the end of the file",
+        "Does not repeat row 4.2 in the new round: it stays in its own section, still unanswered, and is not copied into a new block or re-asked",
+        "Leaves every answered cell unedited and does not fill in 2.2's answer or recommend it as accepted",
+        "Tells the user that Q2 gained a row and names both open rows, 2.2 and 4.2",
+        "Stops without writing migration.config.json or starting the adapter, saying it continues when every answer cell is filled in"
+      ]
+    },
+    {
+      "id": 23,
+      "prompt": "I'm migrating a small catalog to commercetools with the catalog-migration pipeline and I'm at the end of the step-0 interview. From the export I know: the shop sells in en-GB and en-IE, in GBP and EUR (both with 2 decimal places), and I haven't chosen a key prefix for this engagement yet. Write the part of migration/INTERVIEW.md that asks for these project facts, as the sections and rows the business owner will answer. I don't need the rest of the interview.",
+      "expected_output": "Writes the project facts as two sections, not one catch-all: a key-prefix section whose Why it matters is that the prefix goes into every key and bounds a teardown, and a separate locales-and-currencies section whose Why it matters is about which locales and currencies the project and its prices can carry (and that the default locale is where plain strings land, and that guessed fraction digits load silently wrong). Every row sits in the section whose Why it matters explains it: the prefix row is not in the market section and the locale and currency rows are not in the prefix section. Every answer cell is left empty and each row asks one question. The table columns run # | Question | Found in the source | Recommendation | Answer.",
+      "files": [],
+      "expectations": [
+        "Splits the project facts into at least two sections: the key prefix on its own, and the locales and currencies together; there is no single \"Project facts\" section holding both",
+        "Each section's Why it matters explains every row in it: the prefix section says the prefix goes into every key and bounds a teardown, and the market section gives a reason for the locales and for the currencies",
+        "Asks for a default locale, the required locales, the required currencies and a fraction-digits entry per currency (GBP and EUR) without folding two questions into one row",
+        "Every answer cell is empty and the recommendations are presented as recommendations, not answers",
+        "Every table has the columns in the order #, Question, Found in the source, Recommendation, Answer: the question comes before the fact from the source"
+      ]
     }
   ]
 }

@@ -83,11 +83,17 @@ attribute present on some variants but not others is refused.
   [Product Search](https://docs.commercetools.com/api/projects/product-search.md)
   but **not** by
   [Product Projection Search](https://docs.commercetools.com/api/projects/product-projection-search.md).
-- **`Variant` + `SameForAll`** — works with both search APIs.
+- **`Variant` + `SameForAll`** — readable from both search APIs.
 
-`productTypes.productLevelStrategy` defaults to `sameForAll` for that reason.
-Choose `native` only when the storefront is known to use Product Search
-exclusively.
+Product Projection Search is deprecated and cannot be activated on Projects
+created after 31 August 2026; Product Search replaces it, and the
+[migration guide](https://docs.commercetools.com/guides/migration-guides/product-search-migration-guide.md)
+covers the move. So on a new Project Product Search is the only search API
+there is, and the case against `native` is not the other API's gap: `derive`
+accepts `native`, but `plan` refuses it (`native-product-level-not-mapped`)
+because it writes Product-level attributes in a different shape.
+`productTypes.productLevelStrategy` defaults to `sameForAll` for that reason,
+and `sameForAll` is the value to use.
 
 **Do not repeat `keys.prefix` in `defaultKey`.** Every resource key is
 prefixed, ProductTypes included, so `keys.prefix: "acme"` with
@@ -97,8 +103,9 @@ reference the ProductType.
 
 **The names read backwards, so read them twice.** `sameForAll` is the safe
 default and `native` is the one that makes attributes invisible to Product
-Projection Search — so the cautious-sounding option is the risky one, and the
-option that sounds like a workaround is the one to pick. The values name *what
+Projection Search, which an existing Project may still use — so the
+cautious-sounding option is the risky one, and the option that sounds like a
+workaround is the one to pick. The values name *what
 the pipeline does* (write a variant attribute constrained `SameForAll`, or use
 the platform's native Product level), not how safe they are.
 
@@ -243,7 +250,8 @@ Worth raising rather than silently carrying across:
 - Categories that are really facets.
 - Attributes that encode business rules.
 - Attributes declared but never populated — usually a field the adapter dropped,
-  and reported as such.
+  and reported as such. The pipeline leaves them off the ProductType, so a source
+  model that must be mirrored exactly needs that said up front.
 - A 300-attribute ProductType serving eight facets.
 
 ## Output

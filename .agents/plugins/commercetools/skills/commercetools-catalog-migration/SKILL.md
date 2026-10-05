@@ -68,9 +68,11 @@ the API.
 
 ## Workflow
 
-0. **Interview, then write the config.** Do not hand over a template to fill
-   in. Ask the questions, then **write `migration.config.json` from the
-   answers** — the config is the record of a conversation, not a form.
+0. **Interview in a file, then write the config.** Do not hand over a template
+   to fill in, and do not ask the questions in chat. Write them to
+   `migration/INTERVIEW.md` for the user to edit, stop, and **write
+   `migration.config.json` from the answers** once every question has one —
+   the config is the record of a conversation, not a form.
 
    Every question, what it writes, and why none of them can be defaulted:
    [references/step-0-interview.md](references/step-0-interview.md). Work
@@ -78,13 +80,23 @@ the API.
 
    1. **Size the export** (minutes): file list, line counts, largest variant
       count. Structural only — no mapping, no types, no decisions.
-   2. **Ask 0a**, the catalog-model question, with that number in hand. Both
-      its answers can end the engagement, and both are cheaper to learn now
-      than after an adapter exists. A catalog over 100 variants per product
-      cannot be loaded under `Classic` at all.
-   3. **Discover the source (0b)** —
-      [references/source-discovery.md](references/source-discovery.md) — then
-      ask the rest (0c, 0d), because the data answers some of them.
+   2. **Discover the source (0b)** —
+      [references/source-discovery.md](references/source-discovery.md) — because
+      the data answers some of the questions.
+   3. **Write `migration/INTERVIEW.md` and stop.** One block per topic, a table with a row per question: 0a,
+      the catalog-model question, first, because both its answers can end the
+      engagement (over 100 variants per product cannot be loaded under
+      `Classic` at all) and are cheaper to learn before an adapter exists; then
+      0c, each conditional that applies, and 0d. Each row carries the question, the
+      fact that prompted it, a recommendation, and an empty answer cell that only a
+      person fills in. Tell the user to edit the file and say when it is done.
+   4. **Continue only when every answer cell is filled in.** Otherwise name the
+      unanswered rows and stop. The file format and the rules for "I don't
+      know" and follow-up questions are in the interview reference.
+
+   The file stays open after step 0. A question that arises at any later stage
+   is added to it as a row of the section it belongs to, not asked in chat; the work that depends on it waits, and
+   when the answer arrives you start again from the stage it affects.
 
    **Then open the decision log.** The config records *what* was chosen, not
    who chose it, what the alternative would have cost, or that a question was
@@ -268,7 +280,8 @@ public documentation in September 2026; re-check any limit before relying on it.
   Under the default `Platform` tax mode a cart takes its rate from the
   product's tax category; with none, checkout cannot compute tax and nothing
   earlier says so. `validate` warns rather than refuses, because `External`
-  tax mode needs no category — which mode applies is a step-0 question.
+  tax mode needs no category — which mode applies is a step-0 question, and
+  the answer goes in the config as `target.taxMode`.
   → [catalog-feed-contract.md](references/catalog-feed-contract.md)
 - **`publish: false` unpublishes.** It is an instruction, not "leave
   publication alone", and the pipeline plans it on every product. Correct on a
@@ -393,8 +406,9 @@ Before running the pipeline:
 - [ ] The tax mode was asked of whoever owns tax. Under `Platform`, every
       product has a `taxCategory`, every category has a rate for each country
       it sells into, and each rate's `includedInPrice` was confirmed, not
-      inferred. Under `External`, `products-without-tax-category` is accepted
-      in `DECISIONS.md`.
+      inferred. Under `External` or `ExternalAmount`, `target.taxMode` is set,
+      so `products-without-tax-category` stops, and the choice is in
+      `DECISIONS.md`.
 - [ ] `preflight` reports no `product-type-keys-unprefixed`. If it does, the
       project was loaded before ProductType keys were prefixed, and a Product's
       ProductType cannot be changed after creation.
@@ -410,8 +424,11 @@ Before running the pipeline:
       assortment. It is permanent, and the two modes are opposites.
 - [ ] No store's selections are all inactive — that offers no products, where
       an empty list would have offered every product.
+- [ ] `INTERVIEW.md` has an answer in every row, including any
+      added after step 0, and is committed with `DECISIONS.md`.
 - [ ] `DECISIONS.md` exists, is committed, and has an entry for every step 0
-      decision — including the ones still open.
+      decision — including the ones still open and the questions the interview
+      file lists as not asked.
 
 Before loading:
 

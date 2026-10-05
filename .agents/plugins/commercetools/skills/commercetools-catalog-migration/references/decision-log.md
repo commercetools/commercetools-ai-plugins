@@ -56,6 +56,7 @@ sibling of the pipeline, never inside it.**
   source-export/                what the customer handed over
   migration/                    the engagement
     migration.config.json         written from the step-0 interview
+    INTERVIEW.md                  the step-0 questions and their answers, committed
     DECISIONS.md                  this log — append-only, committed
     MAPPING-PROPOSAL.md           the step-0b artefact
     adapter/                      the only code written per engagement
@@ -154,6 +155,8 @@ later reader needs), and **status**. Mark `irreversible` and `lossy` explicitly
 The config records *what* was chosen. It cannot record who chose it, what the
 alternative would have cost, or that a question was asked at all. Log one entry
 per decision in 0a and 0c, plus the resolved catalog-model/variant-count pair.
+The questions and answers themselves live in `INTERVIEW.md`; the log records
+what each answer decided, and the questions the file lists as not asked.
 
 If a question could not be answered, log that too, as `status: open`. An open
 question with an owner is a plan; an unasked one is a surprise later.

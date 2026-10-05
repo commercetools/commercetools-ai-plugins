@@ -231,7 +231,11 @@ the shipping address's country. A product with none **loads, verifies, and
 cannot be taxed at checkout** — no stage of the platform reports it. `validate`
 counts those products and warns; it cannot make it an error, because under
 `External` or `ExternalAmount` tax mode an outside service supplies the rate
-and no category is needed. Which mode applies is a step-0 question. A source
+and no category is needed ([tax modes](https://docs.commercetools.com/api/carts-orders-overview.md#tax-modes)).
+Which mode applies is a step-0 question, recorded as `target.taxMode`: set to
+`External` or `ExternalAmount`, it silences that warning and the two rate-gap
+warnings (`tax-category-without-rates`, `tax-rate-country-missing`); left out,
+it means `Platform`. A source
 that taxes **per variant** cannot be mapped one-to-one — see
 [writing-an-adapter.md](writing-an-adapter.md#tax).
 
@@ -245,7 +249,7 @@ to an undeclared category outright.
 | `code` | required — the category's key in the project, verbatim |
 | `name` | optional; required by the API and **unique per project**, so the code stands in and `preflight` checks nobody else holds it |
 | `description` | optional |
-| `rates[]` | optional; each `{country, state?, amount, includedInPrice, name?}` |
+| `rates[]` | optional; each `{country, state?, amount, includedInPrice, name?, subRates?}` |
 
 | `rates[]` field | Notes |
 | :--- | :--- |
@@ -254,6 +258,7 @@ to an undeclared category outright.
 | `amount` | required, a **fraction**: `0.2` for 20%. The schema refuses anything above 1, because a source's `20` copied across is a 2000% rate |
 | `includedInPrice` | required, **no default** — `true` means prices are gross for that country, `false` net. Backwards, every price is off by the rate |
 | `name` | optional; required by the API and **printed on orders** as the tax portion's name, so a derived one (`GB 20%`) is recorded for review |
+| `subRates[]` | optional; each `{name, amount}`, the portions a combined rate is made of. `amount` stays required and must **equal their sum**: `validate` refuses a mismatch (`tax-subrates-sum-mismatch`) and the audit gate checks it again, because the API refuses the whole category. Float noise is tolerated: `0.07 + 0.03` against `0.1` passes |
 
 **Rates are used once, at creation.** A category that already exists is left
 exactly as found — rates included — because its rates also tax shipping and
@@ -269,10 +274,16 @@ rate for, and when a category declares no rates at all: right for `External`
 tax mode, and under `Platform` every cart containing those products fails to
 calculate tax.
 
-Not expressible yet, and reported as loss if the source has them: compound
-**sub-rates** (a combined rate split into state and county portions) and
-**`taxRoundingTarget`**, which UK VAT is defined against. US sales tax is not a
-case for either — it needs an external tax service, not project configuration.
+Use `subRates` when the total tax is a combination of several taxes — the API's
+own examples are local, state or provincial, and federal portions — so that carts
+and orders can show each portion. They suit a combined rate that is stable. A
+jurisdiction like US sales tax, which combines state, county and city rates that
+change often, is not a case for project configuration at all: the product-modeling
+guidance is an external tax service
+([net and gross prices and tax](https://docs.commercetools.com/learning-model-b2b-commerce/configure-b2b-pricing/net-and-gross-prices-and-tax.md)).
+
+The feed cannot express **`taxRoundingTarget`**; report it as loss if the source
+needs it.
 
 A teardown scoped to `keys.prefix` will not remove a tax category. No extra
 scope for the load: `manage_products` grants tax categories for backward
@@ -326,7 +337,11 @@ Three consequences worth planning around:
 naming that channel. A store listing a supply channel nothing stocks gets
 created, wired and empty, so `validate` warns
 (`store-supply-channel-unstocked`) rather than letting a correct-looking store
-imply migrated stock.
+imply migrated stock. The reverse warns too: a store that lists supply
+channels projects stock **only** from those (plus project-wide stock), so a
+stocked channel no store lists is invisible through every such store
+(`inventory-supply-channel-not-in-store`). A store listing none filters
+nothing.
 
 #### Product selections decide which products exist
 
@@ -595,6 +610,11 @@ Two failures the Import API will not catch, which is why both are errors here:
 - **An entry naming a channel that does not exist goes `unresolved`**, waits 48
   hours and expires — the same trap as a price scoped to a missing channel, and
   the reason `load` creates channels before it imports anything.
+
+One it can only warn about: stock in a channel that no store lists, when some
+store lists others, imports cleanly and is hidden from reads through those
+stores (`inventory-supply-channel-not-in-store`). A warning, because stores
+created after cutover or stock read by channel are legitimate — record which.
 
 **Zero is a figure, not a gap.** A deliberate out-of-stock has to survive the
 pipeline: dropping it turns "we know there are none" into "we do not know",

@@ -49,7 +49,7 @@ commercetools decision it decides:
 | Whether labels accompany codes | `enum` versus `lenum` — `derive` chooses on exactly this |
 | Value kinds per field: all numeric, boolean-ish, ISO dates, mixed | The attribute type, and whether inference is even possible. Mixed kinds are a hard error, not a guess |
 | Locale-bearing fields and their tag format | Whether the adapter must re-key `en_GB` to `en-GB`, and which locales actually appear versus which are configured somewhere |
-| Price rows: currency, country, customer group, channel, validity, quantity | Price scope, and whether `priceMode` can even be honoured. Quantity breaks cannot be expressed: the feed has no `tiers` field |
+| Price rows: currency, country, customer group, channel, validity, quantity | Price scope, and whether `priceMode` can even be honoured. Quantity breaks map to the price's `tiers` if the whole quantity gets the lower price; breaks priced per band cannot be expressed |
 | Whether a price is inherited from a parent level | commercetools does not inherit between variants, so inheritance must resolve in the adapter |
 | Decimal representation of money, and whether any amount has more places than its currency allows | Whether minor-unit conversion will refuse records |
 | Category representation: path strings, parent references, adjacency list | How the adapter rebuilds the tree, and whether names repeat enough to force slug disambiguation |
@@ -58,6 +58,7 @@ commercetools decision it decides:
 | How many renditions per shot, and whether they are keyed by format | `images` (one URL each) versus `assets` (one source per rendition). More than one rendition means assets, or the extras are discarded |
 | Sentinel and placeholder values (`N/A`, `-`, `0000-00-00`, empty strings that mean something) | What the adapter must report rather than silently clean |
 | Whether attributes live in more than one place in the export | Many platforms split attributes between a type definition and a separate classification structure. Mapping only the first half is a common and expensive mistake |
+| Whether one relation or edge type carries more than one kind of link | A single relation type often binds other structures besides product categories. In a hybris export, some `CategoryCategoryRelation` rows name the target before the source and point at a different catalog version: they bind classification classes and are not product categories. Rebuilding the category tree from every row of the type puts classes into the navigation. Tell the kinds apart by direction, by catalog or version, and by what the endpoints are, exclude the rest from the tree on purpose, and log how many rows were excluded and why |
 
 Two of these deserve emphasis because getting them wrong is silent rather than
 loud: **net versus gross prices** is usually a setting elsewhere in the source
@@ -66,6 +67,16 @@ price by the tax rate with nothing in the data to contradict you. And **whether
 the product identifier is stable between exports** — if it is not, keys derived
 from it duplicate instead of updating, and that has to be solved before
 anything else is designed.
+
+**Comments and notes inside the export are the source team's claims, not
+facts.** A header comment is what someone believed when they wrote it, often
+about commercetools, which they did not own. One real export said that embedded
+prices have no tiered pricing at all, and both price types support `tiers`.
+Repeated to the user as a step-0 question, a claim like that frames the question
+around a limit that does not exist. So check every claim a comment makes about
+the target against these references and the documentation before it reaches a
+question, and treat a claim about the source itself as a lead to confirm, not a
+finding.
 
 ## When the handover is the whole export
 

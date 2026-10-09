@@ -187,8 +187,10 @@ Three consequences follow:
   same reason, are the only deliberate exceptions to `<prefix>-<sourceCode>`. ProductTypes used to be a
   second, accidental one — keyed verbatim from the feed's `productType` code —
   and are now prefixed like everything else.
-- **A teardown scoped to `keys.prefix` will not remove them.** If the load
-  created one, it has to be removed by hand.
+- **A teardown scoped to `keys.prefix` will not remove them**, with one opt-in:
+  `--include-created-tax-categories` removes a tax category that `load` created
+  ([teardown](running-the-pipeline.md#teardown)). A channel or customer group the
+  load created has to be removed by hand.
 - **Creating them needs scopes the import does not.** `manage_products` covers
   channels; customer groups need `view_customer_groups` and
   `manage_customer_groups`, which `manage_products` does not grant.
@@ -249,7 +251,7 @@ to an undeclared category outright.
 | `code` | required — the category's key in the project, verbatim |
 | `name` | optional; required by the API and **unique per project**, so the code stands in and `preflight` checks nobody else holds it |
 | `description` | optional |
-| `rates[]` | optional; each `{country, state?, amount, includedInPrice, name?, subRates?}` |
+| `rates[]` | optional; each `{country, state?, amount, includedInPrice, taxRoundingTarget?, name?, subRates?}` |
 
 | `rates[]` field | Notes |
 | :--- | :--- |
@@ -257,6 +259,7 @@ to an undeclared category outright.
 | `state` | optional, case-sensitive. A rate with a state matches only carts whose address carries the same state |
 | `amount` | required, a **fraction**: `0.2` for 20%. The schema refuses anything above 1, because a source's `20` copied across is a 2000% rate |
 | `includedInPrice` | required, **no default** — `true` means prices are gross for that country, `false` net. Backwards, every price is off by the rate |
+| `taxRoundingTarget` | optional, `Net` or `Tax`; absent means the API's default, `Net`. When `includedInPrice` is `true`, tax is carved out of a gross price and only one of the two derived amounts can be rounded; this picks the net price (`Net`) or the tax amount (`Tax`), and the other is the exact remainder. Use `Tax` where the tax authority expresses the calculation as a fraction of the gross price — the docs give [UK VAT as an example](https://docs.commercetools.com/api/carts-orders-overview.md#tax-rounding-target). With `includedInPrice: false` it has no effect, and `validate` warns (`tax-rounding-target-ignored`). `preflight` and `verify` compare it like the other rate fields |
 | `name` | optional; required by the API and **printed on orders** as the tax portion's name, so a derived one (`GB 20%`) is recorded for review |
 | `subRates[]` | optional; each `{name, amount}`, the portions a combined rate is made of. `amount` stays required and must **equal their sum**: `validate` refuses a mismatch (`tax-subrates-sum-mismatch`) and the audit gate checks it again, because the API refuses the whole category. Float noise is tolerated: `0.07 + 0.03` against `0.1` passes |
 
@@ -282,10 +285,9 @@ change often, is not a case for project configuration at all: the product-modeli
 guidance is an external tax service
 ([net and gross prices and tax](https://docs.commercetools.com/learning-model-b2b-commerce/configure-b2b-pricing/net-and-gross-prices-and-tax.md)).
 
-The feed cannot express **`taxRoundingTarget`**; report it as loss if the source
-needs it.
-
-A teardown scoped to `keys.prefix` will not remove a tax category. No extra
+A teardown scoped to `keys.prefix` will not remove a tax category unless it is
+told to remove the ones its `load` created
+([teardown](running-the-pipeline.md#teardown)). No extra
 scope for the load: `manage_products` grants tax categories for backward
 compatibility, as do the dedicated `view_tax_categories` and
 `manage_tax_categories`.
@@ -485,6 +487,22 @@ facets *everywhere* — see [product-model.md](product-model.md).
 loses machine-readability — recorded as information loss. It applies to any
 type, not only `number`.
 
+**A `money` attribute's value is `{currency, amount}`**, the two fields a price
+has, with the amount a decimal string; a set of money is an array of them. A
+list price kept for display is the usual case. `plan` converts the value to the
+Import API's cent-precision money the way it converts a price, so an amount
+with more decimal places than the currency allows is refused rather than
+rounded, and the currency needs a `market.currencyFractionDigits` entry.
+Declare the attribute as `money`: `derive` does not infer a type from
+money-shaped values, because a type cannot be changed once loaded, and stops
+with `money-attribute-undeclared`. The target shape is the Import API's
+[`MoneyAttribute`](https://docs.commercetools.com/api/import-export/import-resources.md#moneyattribute).
+
+A `reference` attribute is refused by `derive`
+(`reference-attribute-unsupported`), because the feed has no field for the type
+it points at. Carry the target's key as `text` and record that in the decision
+log.
+
 ### `product`
 
 | Field | Notes |
@@ -502,7 +520,7 @@ type, not only `number`.
 
 | Field | Notes |
 | :--- | :--- |
-| `sku` | required, unique across the whole feed |
+| `sku` | required, unique across the whole feed. It is the variant's only identity: the variant's key is always `<keys.prefix>-<sku>`, made key-safe, so there is no `key` field and a feed that sends one is refused |
 | `product` | owning product code; forward references allowed |
 | `axisValues` | code per axis; every axis the product declares must be present |
 | `axisLabels` | display text per axis; never used for identity |
@@ -511,10 +529,28 @@ type, not only `number`.
 | `images` | `url` required — **relative or absolute, as the source stores it**. `width`/`height` are optional but **default to `0x0`**, recorded as information loss: a storefront that reserves layout space from the declared size cannot, so supply them whenever the source has them |
 | `assets` | media assets — prefer these over `images` when the source has several renditions per shot |
 | `isMaster` | optional hint; at most one per product. Absent ⇒ **lowest SKU by sort order** — deterministic, but arbitrary as merchandising. See below |
-| `key` | optional |
 | `externalId` | optional, **feed-only — dropped at map time** (see below) |
 
-### Relative image URLs
+### Price tiers — quantity breaks
+
+A price can carry `tiers`, the quantity breaks of that one price:
+
+```jsonc
+{"currency":"GBP","amount":"19.99","country":"GB",
+ "tiers":[{"minimumQuantity":10,"amount":"17.99"},{"minimumQuantity":50,"amount":"15.50"}]}
+```
+
+Embedded and Standalone Prices both support tiers, and the pipeline maps the
+field to either. A tier has no `currency`: it is always in the currency of the
+price it belongs to, and `amount` is a decimal string converted like any other
+price. Once `minimumQuantity` is reached, the tier price applies to **the whole
+quantity** of that line item, not only to the units above the threshold — see
+[Tiered pricing](https://docs.commercetools.com/api/pricing-and-discounts-overview.md#tiered-pricing).
+
+The schema and the audit gate refuse what the Import API refuses: a
+`minimumQuantity` below 2, because the base price covers a single unit, and two
+tiers at the same quantity. Order does not matter. A tier is ignored while a
+Product Discount applies to its price.
 
 `image.url` accepts a relative path. Emit what the source holds rather than
 resolving it: the host is usually not in the export, and the contract used to
@@ -640,9 +676,10 @@ flat SKU list with explicit axis values. Because the contract carries variants
 flat, the pipeline's own types never encode a hierarchy shape — which is what
 lets a 2-level and a 4-level source share the same pipeline.
 
-**Anything that needs a different commercetools concept.** A quantity break is a
-Cart Discount; a net/gross decision is a tax mode; a category that is really a
-facet is an attribute. This pipeline's job is to *detect and report* that the
+**Anything that needs a different commercetools concept.** A quantity break
+priced per band rather than for the whole quantity is a Cart Discount (a price
+tier prices the whole quantity); a net/gross decision is a tax mode; a category
+that is really a facet is an attribute. This pipeline's job is to *detect and report* that the
 source needs one, not to invent it.
 
 ## Choosing a code

@@ -100,6 +100,13 @@ off.
 Validity intervals are half-open, so one window ending exactly where the next
 begins does not overlap.
 
+The window's dates are datetimes, and a source that says a promotion runs from
+`01/10/2026` almost never means midnight UTC. Ask for the store's timezone and
+have the adapter write the UTC instant for it: for a UK store in BST that is
+`2026-09-30T23:00:00Z`. The reasoning, and the inclusive-end question that goes
+with it, are in [product-model.md](product-model.md) under "Date, time and
+datetime".
+
 The audit gate checks all of this offline. Resolving inherited prices produces
 duplicate-scope shapes very easily, which is why it is worth catching before the
 API names one offending record and stops.
@@ -172,11 +179,29 @@ channel-less base price beats a price per channel.
 
 Report these as information loss rather than approximating them:
 
-- **Quantity breaks / tiered pricing.** Embedded and Standalone Prices both
-  support native `tiers`, but **the feed contract has no field for them**, so
-  the pipeline cannot load one in either price mode. Until it can, a quantity
-  break is information loss, or becomes a Cart Discount, which is a modelling
-  decision, not a translation.
+- **Quantity breaks that are not volume pricing.** A price `tier` is volume
+  pricing: once the minimum quantity is reached, **every** unit costs the tier
+  price. A source that prices each band separately (the first units at one
+  price, the next at another) cannot be a `tiers` field; it needs Cart
+  Discounts or an external price, which is a modelling decision, not a
+  translation, so report it. Source quantity breaks that *are* volume pricing
+  go in the feed's `tiers` — see
+  [Price tiers](catalog-feed-contract.md#price-tiers--quantity-breaks) — and a
+  tier is ignored while a Product Discount applies to its price. See also
+  [Types of prices](https://docs.commercetools.com/learning-price-and-discount-your-products/price-calculation/types-of-prices.md#tiered-versus-volume-pricing).
+- **A tier the source stores as a rule.** Some sources hold the break as a
+  percentage or an amount off ("12.5% off from 10 units", "8.00 off from 6"),
+  not as the price. A tier is a price, so the adapter computes it from the base
+  price in the same scope. Two things in the rule are not the adapter's to
+  settle. What a rule type such as `fixed` or `price` means (an amount off, or
+  the new unit price) differs by source and is not in the data. How the result
+  rounds matters as soon as it has more places than the currency: 12.5% off
+  89.00 is 77.875, which the pipeline refuses rather than rounds, so the
+  adapter has to round, and whether that is half up, half even or down changes
+  what shoppers pay. Ask the business for both, name the rounding rule in the
+  adapter report, and record each derived tier in the decision log with the
+  rule, the base price and the figure, because the source never held that
+  figure.
 - **An unmappable customer-group price.** Loading a trade or staff price
   unscoped shows it to every shopper *and* collides with the base price as a
   duplicate scope. Skip and report. Skipping is recoverable; wrong data in

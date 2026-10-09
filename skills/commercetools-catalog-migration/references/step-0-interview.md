@@ -101,9 +101,18 @@ prices are imports cleanly and shows no price at all.
   with its reason ("no relative media URLs found"), and carry them into
   `DECISIONS.md` as not asked. A question left out without a line is the
   silent default this file exists to prevent.
-- **Say how to hand it back:** tell the user to edit the file and say when
-  every question is answered, and that the file can be passed to the people
-  who own the tax, URL and storefront answers.
+- **Say how to hand it back,** in three parts. Tell the user to edit the file
+  and say when every question is answered, and that it can be passed to the
+  people who own the tax, URL and storefront answers. Say why the config and the
+  adapter wait: each answer is irreversible or fails silently, and a
+  wrong-but-consistent choice passes every offline stage, so it cannot be
+  started on a guess to save a day. And promise to **re-read the file** when the
+  user is back, and to name any row still empty before doing anything else. All
+  three belong in your closing message, in your own words; for example: "I have
+  not started the config or the adapter. Every answer here is irreversible or
+  fails silently, so starting on a guess would mean redoing it after the load.
+  When you tell me the file is filled in, I will re-read it and name any row
+  still empty before I do anything else."
 
 **On resume, re-read the file before doing anything else.** Count the rows
 whose answer cell is empty. If any, name them by row number and stop: no config, no
@@ -275,6 +284,14 @@ wrong-but-consistent choice passes every offline stage:
 | Will this catalog be **re-exported and re-loaded**, or is this one-shot? | nothing — `DECISIONS.md` only | every derived code becomes a key on the first load and cannot move afterwards. One-shot permits deriving from whatever is readable; repeatable requires deriving only from fields the source guarantees are stable, which is usually a smaller set |
 | Which variant should be the **shop window**, if the source does not say? Show, per product, the variant the fallback would pick | nothing — the adapter's `isMaster` | absent `isMaster` falls back to the lowest SKU by plain string order, per product. Deterministic, and arbitrary as merchandising: it decides what a category listing shows, and digits sort before letters, so a product with sizes `S` to `2XL` is fronted by its `2XL`. Most sources have no master-variant concept, so this is the normal case, not an edge case |
 
+**Read the pricing reference before writing any price question.** Price mode,
+sale and special prices, quantity breaks, customer-group prices and net versus
+gross are all asked at step 0, and each has a limit or a trap that the export may
+state wrongly. Open
+[pricing-and-money.md](pricing-and-money.md#things-to-report-rather-than-approximate)
+first and frame the question from it, so that a claim in the source about what
+commercetools can or cannot price is checked before it is put to the user.
+
 `productTypes.onMissingDefinitions` is **not** in that table: whether the
 source declares its own attribute types is a fact 0b established, not a
 preference. Set `require` when the adapter can emit `attributeDefinition`
@@ -284,6 +301,14 @@ one becomes an attribute type and constraint. No update action changes an
 attribute's type, and the
 [constraint update action](https://docs.commercetools.com/api/projects/productTypes.md#change-attributedefinition-attributeconstraint)
 takes only `None`, so a wrong guess cannot be corrected in place.
+
+**Which non-axis source fields become attributes, such as brand or weight, is
+not in the table either.** Nothing about it fails silently: a field left out is
+listed under *Not migrating* in the
+[mapping proposal](source-discovery.md#the-mapping-proposal), which a person
+signs off, and a field kept appears with its type in `MODEL-REVIEW.md`. So put
+every populated field in that proposal, under *Field mapping* or *Not
+migrating*, rather than in the interview file.
 
 **`productTypes.productLevelStrategy` is not asked.** `derive` accepts `native`,
 but `plan` refuses it (`native-product-level-not-mapped`), so offering it in the
@@ -426,7 +451,9 @@ would have cost, or that a question was asked at all. Write one entry per
 decision from 0a and 0c, plus any question the file lists as not asked or
 answered "unknown" — an
 open question with an owner is a plan, an unasked one is a surprise. Format
-and placement: [decision-log.md](decision-log.md).
+and placement: [decision-log.md](decision-log.md). Open it before the adapter, with
+the pipeline checkout (`git rev-parse --short HEAD`) as its first line, so the
+version is on record before any stage runs.
 
 **Keep writing it at every step from here**, not at the end: a log
 reconstructed afterwards records what someone remembers deciding, reliably the

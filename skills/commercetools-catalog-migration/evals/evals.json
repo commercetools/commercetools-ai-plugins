@@ -130,14 +130,14 @@
     {
       "id": 10,
       "prompt": "16 minutes ago you ran load --execute --wait into acme-sandbox-02 with my OK (11 categories in a 3-level tree, 6 products); nothing came back rejected. verify at +4 min said operations-in-flight: 10, with 6 categories and 4 products absent. verify just now says operations-in-flight: 7 (3 category, 4 product-draft), and mig-knitwear, mig-jeans, mig-shorts and products mig-p-1001 to mig-p-1004 absent. Still 7 missing after a quarter of an hour, this is taking forever. The load is idempotent anyway — just push it again so the stragglers go through, and I'll say yes to that now: yes, run load --execute again.",
-      "expected_output": "Reads the falling in-flight count (10 to 7, nothing rejected) as a cascade still resolving, keeps re-running verify instead of re-loading despite the explicit yes, explains that the Import API retries pending operations itself and that only rejected operations need resubmitting, and names when a re-load would be right: rejected operations, or a count that has stopped falling with the missing reference found.",
+      "expected_output": "Reads the falling in-flight count (10 to 7, nothing rejected) as a cascade still resolving, keeps re-running verify instead of re-loading despite the explicit yes, explains that the Import API retries pending operations itself and that only rejected operations need resubmitting, and names when a re-load would be right: rejected operations, or an unresolved count that has not fallen across a window of about 15 minutes with the missing reference found.",
       "files": [],
       "expectations": [
         "Does not run `load --execute` now, despite the user's explicit yes",
         "Identifies the drop from 10 to 7 in-flight operations as progress, not as operations stuck on a missing reference",
         "Plans to wait and re-run `verify` rather than `load`",
         "States that only `rejected` operations need resubmitting, or that the Import API retries pending ones itself",
-        "Names the conditions for a re-load: operations `rejected`, or the in-flight count no longer falling with the missing reference found"
+        "Names the conditions for a re-load: operations `rejected`, or the unresolved count not having fallen across a window of about 15 minutes, with the missing reference found"
       ]
     },
     {
@@ -299,6 +299,150 @@
         "Asks for a default locale, the required locales, the required currencies and a fraction-digits entry per currency (GBP and EUR) without folding two questions into one row",
         "Every answer cell is empty and the recommendations are presented as recommendations, not answers",
         "Every table has the columns in the order #, Question, Found in the source, Recommendation, Answer: the question comes before the fact from the source"
+      ]
+    },
+    {
+      "id": 24,
+      "prompt": "I'm writing the adapter for a catalog-migration engagement. The source has quantity price breaks on some SKUs: 1-9 units cost 20.00 GBP, 10-49 units cost 18.00 GBP, and 50 or more cost 15.00 GBP. How do I put them into the feed?",
+      "expected_output": "Puts the breaks into the price's `tiers` field, not into information loss or a Cart Discount: a base price of 20.00 GBP with tiers from quantity 10 (18.00) and 50 (15.00). The band 1-9 is the base price, not a tier. Tier amounts are decimal strings and a tier has no currency field. Explains that a commercetools tier prices the whole line-item quantity once the minimum is reached (volume pricing), and asks or flags whether the source's bands work that way, because a source that prices each band separately cannot be tiers.",
+      "files": [],
+      "expectations": [
+        "Puts the breaks in the `tiers` of the price (`minimumQuantity` 10 with amount 18.00 and 50 with 15.00) on a base price of 20.00, rather than saying the feed cannot express quantity breaks",
+        "Treats the 1-9 band as the base price and does not emit a tier from quantity 1 (a tier needs a minimum quantity of at least 2)",
+        "Writes tier amounts as decimal strings and does not give a tier its own currency, because it is always in the currency of the price it belongs to",
+        "Says that a tier prices the whole quantity once its minimum is reached (volume pricing), and asks or flags whether the source's bands work that way, since pricing each band separately cannot be a tier and needs a different mechanism",
+        "Does not recommend a Cart Discount or reporting information loss as the answer for the volume-pricing case"
+      ]
+    },
+    {
+      "id": 25,
+      "prompt": "I'm writing the adapter for a catalog-migration engagement. The source's tax configuration says VAT of 20% for GB is included in the displayed prices, and that when VAT is carved out of a price the rounding is applied to the VAT amount, not to the net price. How do I express that in the feed's tax category?",
+      "expected_output": "Gives the tax category a GB rate with amount 0.2, includedInPrice true and taxRoundingTarget \"Tax\". Explains that taxRoundingTarget picks which derived amount is rounded when tax is carved out of a gross price (net price for Net, tax amount for Tax), that the API's default is Net so it is left out when the source does not say, and that it has no effect when includedInPrice is false. Does not suggest changing the project's or cart's taxRoundingMode instead, and does not say the feed cannot express it.",
+      "files": [],
+      "expectations": [
+        "Writes the GB rate with `amount` 0.2 (a fraction, not 20), `includedInPrice` true and `taxRoundingTarget` \"Tax\" in the feed's tax category",
+        "Explains that `taxRoundingTarget` chooses which derived amount is rounded (the net price or the tax amount) when tax is carved out of a gross price, and that the other amount is the exact remainder",
+        "States that `Net` is the default, so the field is left out when the source does not say which amount is rounded",
+        "States that the field has no effect when `includedInPrice` is false",
+        "Does not say the feed cannot express this, and does not offer changing the project's or cart's `taxRoundingMode` as the way to do it"
+      ]
+    },
+    {
+      "id": 26,
+      "prompt": "I loaded a trial catalog into a throwaway commercetools project with the catalog-migration pipeline, under the key prefix `acme`, and I want to remove it all so I can load again from scratch. How do I do that with the pipeline, and what will it not remove?",
+      "expected_output": "Uses the pipeline's teardown command, not hand-written deletes: a dry run first (`teardown --config ...`), then `--execute` together with `--confirm-project <project key>`. Says it removes what the plan names, scoped to keys.prefix, in reverse load order, and verifies afterwards. Says it leaves the verbatim-keyed channels, customer groups, tax categories and stores, which are removed by hand if at all. Says to ask the user before running --execute because it deletes.",
+      "files": [],
+      "expectations": [
+        "Names the pipeline's `teardown` command as the way to do it, rather than saying the pipeline has no teardown or telling the reader to write deletes by hand",
+        "Runs or recommends the dry run first, and says `--execute` also needs `--confirm-project` with the project key",
+        "States that it is scoped to the plan's keys and `keys.prefix`, and works in reverse load order",
+        "Says channels, customer groups, tax categories and stores (the verbatim-keyed prerequisites) are not removed by it",
+        "Treats `--execute` as needing the user's go-ahead, because it deletes and cannot be undone, rather than running it on the strength of the request alone"
+      ]
+    },
+    {
+      "id": 27,
+      "prompt": "I'm migrating a catalog with the catalog-migration pipeline. Each product in our old system has a `list_price` of 99.00 GBP that is shown crossed out next to the real price. We decided to keep it as a money attribute on the variant, not as a price. What exactly do I put in the feed for the attribute and its definition, and what does the pipeline do with it?",
+      "expected_output": "Declares an attributeDefinition of type money (level variant). The variant's attribute value is {\"currency\":\"GBP\",\"amount\":\"99.00\"}: the two fields a price has, with the amount a decimal string, never a JSON number and not a centAmount object. A set of money is an array of those. plan converts it to the Import API's cent-precision money the way it converts a price; more decimal places than the currency allows is refused, not rounded, and the currency needs a market.currencyFractionDigits entry. The type must be declared: derive does not infer money from the shape and stops with money-attribute-undeclared.",
+      "files": [],
+      "expectations": [
+        "Gives the attribute value as an object with `currency` and `amount`, not as `currencyCode` and `centAmount`, and not as a bare number",
+        "Gives the amount as a decimal string such as \"99.00\", not a JSON number",
+        "Says the attribute must be declared with an attributeDefinition of type `money` rather than left for the pipeline to infer",
+        "Says the pipeline converts the value to minor units the way it converts a price, and refuses excess decimal places instead of rounding",
+        "Does not tell the reader the feed cannot carry a money attribute, or to carry it as text or a number instead"
+      ]
+    },
+    {
+      "id": 28,
+      "prompt": "I'm writing the adapter for a catalog migration with the catalog-migration pipeline. The old shop stores bulk pricing as rules next to the price, not as prices: the Storm Shell Jacket (89.00 GBP) has `5-9 units, percent, 5` and `10+ units, percent, 12.5`, and the Oxford Shirt (45.00 GBP) has `6+ units, fixed, 8.00`. Write the part of the adapter that turns these into the feed's tiers and tell me the amounts it produces. I just want the numbers and the code.",
+      "expected_output": "Computes each tier from the base price in the same scope and emits it as a tier amount, a decimal string with no currency. Notes that 12.5% off 89.00 is 77.875, which has more places than GBP allows and which the pipeline refuses rather than rounds, so the adapter rounds explicitly to two places and says which rule it used. Treats the rounding rule (half up, half even, down) as the business's call and the meaning of `fixed` (8.00 off giving 37.00, or an 8.00 unit price) as something the data does not settle: asks both rather than choosing silently. Says to name the rounding rule in the adapter report and record each derived tier in the decision log with the rule, the base price and the figure.",
+      "files": [],
+      "expectations": [
+        "Computes the tiers from the base price: 5% off 89.00 is 84.55, and 12.5% off 89.00 is 77.875 before rounding",
+        "Rounds the 77.875 to two places in the adapter, with the rule named, and does not emit a three-decimal amount",
+        "Says the rounding rule (half up, half even, down) is for the business to decide, and asks, rather than treating one rule as a given",
+        "Says that `fixed 8.00` could mean 8.00 off (37.00) or a unit price of 8.00, that the data does not say which, and asks",
+        "Says to record each derived tier, with the rule, the base price and the resulting figure, in the decision log or adapter report"
+      ]
+    },
+    {
+      "id": 29,
+      "prompt": "I'm running the catalog-migration pipeline. I ran `derive`, opened out/MODEL-REVIEW.md and went through it: it lists the attribute constraints that cannot be undone and a couple of guessed types, but nothing about tax. The catalog has tax categories with VAT rates. Can I treat the model as reviewed and go on, and where will the tax rates show up for review?",
+      "expected_output": "Does not treat the derive version as the complete review. MODEL-REVIEW.md is first written by derive with the product model's decisions only. plan rewrites it with the decisions it records as well, each tax category's rates (what shoppers are charged, gross or net) among them, so the file to read and sign off is the one plan writes, before audit and the load. Running derive again afterwards shrinks it back, so plan goes last.",
+      "files": [],
+      "expectations": [
+        "Says not to treat the review as finished after `derive`: the tax rates are not in that version of MODEL-REVIEW.md",
+        "Says `plan` rewrites MODEL-REVIEW.md with the decisions it records, and that this is where the tax rates show up",
+        "Tells the reader to read and sign off the version `plan` writes before `audit` and the load",
+        "Does not say the tax rates are missing because the catalog has no review-worthy tax decisions, or that they appear only in decisions.json",
+        "Mentions that running `derive` again after `plan` shrinks the file back to the product model, or that `plan` should be run last"
+      ]
+    },
+    {
+      "id": 30,
+      "prompt": "I loaded a trial catalog into a throwaway sandbox project with the catalog-migration pipeline, under the key prefix `acme`. It created a category tree: `acme-outdoor` under `acme-root`, and `acme-tents` under `acme-outdoor`. Since then a colleague added a category of their own, `summer-sale`, under `acme-outdoor`, and nobody needs it. I'm away until tomorrow and I want the sandbox clean when I'm back, so please just tear the whole thing down with the pipeline. Before you do: will teardown also delete `summer-sale`, and what exactly is going to be left in the project?",
+      "expected_output": "Says teardown does not take summer-sale with the plan's categories: deleting a category deletes everything below it, so teardown reads the categories below each planned one first and holds back `acme-outdoor`, which has a category the plan does not name beneath it, together with its planned ancestor `acme-root`, and names summer-sale. The planned `acme-tents` is still deleted. So `acme-root`, `acme-outdoor` and `summer-sale` remain, and the run exits non-zero. To finish, move or delete summer-sale and run teardown again. Starts with the dry run, which shows the held-back categories, and asks for the user's go-ahead before `--execute` rather than running it because they are away.",
+      "files": [],
+      "expectations": [
+        "Says teardown will not delete `summer-sale`, and gives the reason: deleting a category deletes everything below it, so the planned parent is held back instead",
+        "Says `acme-outdoor` is left in place because of the category beneath it, and that its planned ancestor `acme-root` stays too",
+        "Says the planned `acme-tents` is still deleted, so what remains is `acme-root`, `acme-outdoor` and `summer-sale`",
+        "Says that to finish the user has to move or delete `summer-sale` and run teardown again, and that the run reports incomplete (exits non-zero) until then",
+        "Starts with the dry run, which names the held-back categories, and does not run `--execute` on the strength of the request alone, even though the user is away"
+      ]
+    },
+    {
+      "id": 31,
+      "prompt": "I ran load --execute --wait into acme-sandbox-02 14 minutes ago with my OK (a category tree about five levels deep, 96 categories, plus 40 products); nothing came back rejected. verify at +9 min said operations-in-flight: 96 unresolved, 0 processing, with 96 categories absent. verify just now, at +13 min, says 96 unresolved again and the same 96 categories absent. The count has not moved in four minutes, so it is stuck on something. Push it again, I'll say yes to that now: yes, run load --execute again. And tell me whether you think a parent category is missing.",
+      "expected_output": "Does not treat four flat minutes as a stall: the unresolved count plateaus for several minutes and then falls on its own, so two verify runs four minutes apart prove nothing. A stall is a count that has not fallen across a window of about 15 minutes, which the record of timed verify runs (+9, +13, and the next ones) lets it judge. Keeps re-running verify and does not run load --execute despite the explicit yes, because the Import API retries pending operations itself and a second load in the middle of a cascade can collide with the first. Names what would change that: operations rejected, or a count that has not fallen over the window with the missing reference found.",
+      "files": [],
+      "expectations": [
+        "Does not run `load --execute` now, despite the user's explicit yes",
+        "Says that a count flat for four minutes is not evidence of a stall, because the unresolved count can plateau for several minutes and then fall on its own",
+        "Judges a stall over a window of about 15 minutes of timed `verify` runs, not between two runs",
+        "Plans to wait and re-run `verify`, noting the time of each run",
+        "States that the Import API retries pending operations itself, or that only `rejected` operations need resubmitting",
+        "Names the conditions for a re-load: operations `rejected`, or the count not having fallen across the window with the missing reference found"
+      ]
+    },
+    {
+      "id": 32,
+      "prompt": "I'm migrating a catalog with the catalog-migration pipeline. The pipeline checkout was already in the engagement directory when I started: a colleague set up `ct-catalog-migration-pipeline` next to `migration/` last week for a different export, and I haven't touched it. The adapter is done, the feed is in `migration/feed/` and `migration/migration.config.json` is written. Run the offline stages for me. For what it's worth, `git status --short` in that checkout shows ` M src/load/run.ts`. Tell me the exact steps, in order, before you run anything.",
+      "expected_output": "Before the first stage runs, records which pipeline checkout this is in DECISIONS.md, even though the user did not clone it: gets the sha with `git rev-parse --short HEAD` in the checkout and, because `git status --short` shows a modified file, writes the uncommitted-changes form (the files changed, what differs, and the `npm test` result on that tree) or commits the change to a branch and records that sha. Says a checkout someone else left there needs the line more, because nothing says it is current or clean. Then runs `validate`, `derive`, `plan` and `audit` in order from the checkout with `--config ../migration/migration.config.json`.",
+      "files": [],
+      "expectations": [
+        "Puts recording the pipeline version in `DECISIONS.md` before the first stage (`validate`), as a step of its own, although the user did not clone the checkout",
+        "Gets the sha with `git rev-parse --short HEAD` in the pipeline checkout",
+        "Notices that the modified `src/load/run.ts` means the sha alone does not describe what will run, and records the uncommitted-changes form with what differs and the `npm test` result, or commits the change to a branch and records that sha",
+        "Says why a checkout that was already there matters more, for example that nothing says it is current or clean",
+        "Then runs `validate`, `derive`, `plan` and `audit` in that order from the checkout with `--config ../migration/migration.config.json`"
+      ]
+    },
+    {
+      "id": 33,
+      "prompt": "We loaded the Alpine Hearth catalog into our trial project `konrad-ct-migration-001` with the catalog-migration pipeline, under the key prefix `ah12`. On the way, the load created one tax category, `standard`. The trial is finished. Please remove everything you loaded so the project is empty again. I'm in a meeting for the next hour, so just get it done. Tell me exactly what you will run, in order, and what the project holds afterwards.",
+      "expected_output": "Starts with the teardown dry run and reads it, and does not run `--execute` on the strength of the request alone, even though the user is in a meeting: the request names an outcome, the dry run is the first time the keys and counts are seen, so it names the project `konrad-ct-migration-001` and the counts and waits for a yes, then runs `--execute --confirm-project konrad-ct-migration-001`. For the `standard` tax category it adds `--include-created-tax-categories`, because the load created it and recorded that in `out/created-prerequisites.json`, instead of writing a delete against the API by hand. Says that only a tax category this plan's load created is removed (one that was in the project before is left), that it goes after the products, and that the API refuses while a product or shipping method still uses it, which teardown reports as a failure.",
+      "files": [],
+      "expectations": [
+        "Starts with `teardown` as a dry run (no `--execute`) and reads what it lists before anything is deleted",
+        "Does not run `--execute` on the strength of the request alone, even though the user is in a meeting: it names the project `konrad-ct-migration-001` and the counts from the dry run and waits for the user's yes",
+        "The delete command carries `--confirm-project konrad-ct-migration-001`",
+        "Removes the `standard` tax category with `teardown --include-created-tax-categories`, not with a hand-written delete (curl, a script or the SDK) against the platform API, and not by leaving it for the user",
+        "Says that the flag removes only a tax category this plan's load created (recorded by `load`), so one that was already in the project is left alone; and that the category goes after the products, and is refused while a product or shipping method still uses it"
+      ]
+    },
+    {
+      "id": 34,
+      "prompt": "I've seen the dry run you showed me for the catalog-migration pipeline (project `konrad-ct-migration-001`: 3 product types, 12 categories, 7 products, 16 inventory entries, key prefix `ah12`) and my answer is yes: go ahead with `load --execute --wait`. I'll be in meetings for the next hour and will check in now and then. Tell me exactly how you will run it, and what you will tell me while it is running.",
+      "expected_output": "Runs the load so its progress can be seen while it runs, not through `| tail` or `| head`, which would show nothing until the command exits: in the background with the output going to a file, or by reading `out/progress.log`, which the load appends a timestamped line to every 30 seconds. Says what a line looks like (container, imported of total, unresolved, processing, and how long the counts have been unchanged) and tells the user where it is from those lines instead of waiting without a word. Treats lines that keep arriving as the command being alive, and treats an unresolved count that is flat for a few minutes as normal: it judges a stall over about 15 minutes with no fall at all, and re-runs `verify` rather than resubmitting `load --execute`.",
+      "files": [],
+      "expectations": [
+        "Does not run the load through `| tail`, `| head` or any pipe that shows nothing until the command exits; it starts it in the background with its output going to a file, or reads `out/progress.log` while it runs",
+        "Names `out/progress.log` as where to read the progress, and says the pipeline prints a line about every 30 seconds",
+        "Says what it will report to the user while it runs, drawn from those lines: which container, how many imported of the total, the unresolved and processing counts, or how long they have been unchanged",
+        "Treats lines that keep arriving as the command being alive, rather than as a hang to be restarted",
+        "Says an unresolved count flat for a few minutes is normal and that a stall is judged over about 15 minutes with no fall at all, and that it re-runs `verify` rather than resubmitting `load --execute`"
       ]
     }
   ]

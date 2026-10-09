@@ -72,8 +72,10 @@ it is trying to answer.
 - Are prices net or gross? This is often a setting elsewhere in the source, not
   a property of the price row, and getting it backwards changes every price by
   the tax rate with nothing in the data to contradict you.
-- Quantity breaks: the feed contract has no field for price `tiers`, in either
-  price mode. Expect to report them.
+- Quantity breaks: does a higher quantity lower the price of **every** unit
+  (volume pricing, which is what a price `tier` is) or only of the units in the
+  band? The first goes in the price's `tiers`; the second cannot, so report it.
+  A break "from 1" is the base price, not a tier.
 
 **Tax**
 
@@ -84,6 +86,10 @@ it is trying to answer.
 - Is tax computed by the platform today, or by an external service? A class
   that is only a code handed to a tax engine carries across as that code, and
   its rates do not exist in the export at all.
+- When tax is included in the price, does the source say which amount is
+  rounded, the net price or the tax amount? That is the rate's
+  `taxRoundingTarget` (`Tax` for the tax amount); the API's default is `Net`,
+  so leave it out when the source does not say.
 
 **Media**
 
@@ -133,6 +139,20 @@ placeholder, or obvious junk, either skip it and report it or pass it through �
 quietly cleaning it is how a migration starts lying about what the source
 contained.
 
+**One feature, two classes, different values: surface the disagreement, do not
+pick a winner.** A classification system lets a product sit in several classes,
+and each class can carry the same feature with its own value: a weight of 450 g
+under one and 480 g under another. A single-valued attribute holds one of them,
+so the adapter has to choose, and every rule it could use (the first class, the
+larger value, the union for a set-valued attribute) is a guess about what the
+source team meant. The export does not say which is right, and the pipeline
+cannot tell, because it receives one value and never sees that there were two.
+So state the rule, apply it, **report every product where the classes
+disagreed** (the count and a sample, as with any silent cap), log the rule as a
+decision, and put the question to whoever owns the product data. Taking the
+superset of a set-valued feature is still a choice: it adds values one of the
+classes never claimed.
+
 **Report every silent cap.** If the adapter samples, truncates, or skips, say so
 in its output. Partial coverage that reads as complete is worse than an error.
 
@@ -162,6 +182,17 @@ text survives every validation in this pipeline — it is well-formed, correctly
 typed, and wrong. Check the degree signs, the accented names and the currency
 symbols in the first artefact you generate.
 
+**A hand-written reader for a macro-and-column format, such as a hybris ImpEx
+export, has two quiet traps.** The skill carries no ImpEx grammar on purpose;
+these are two things any such reader gets wrong. *Strip the comment and the
+trailing separator before taking a macro's value:* a macro line with an inline
+`# comment` and a final `;` otherwise keeps both in the value, and every place
+the macro is expanded inherits them. *Expand a macro by its whole name:* with
+`$class` and `$classSystemVersion` both defined, replacing `$class` as a
+substring corrupts every `$classSystemVersion`, so match the full identifier or
+expand the longest name first. Neither fails loudly, so test the reader on one
+line of each kind before trusting any column that goes through a macro.
+
 **Derive a code when the source only has a display value.** Especially for
 variant axes. Record how it was derived; that is a decision, not a detail.
 
@@ -190,7 +221,7 @@ by folding a quantity onto each variant as you build it. The two are joined
 only by SKU, and keeping the passes separate is what lets a stock refresh be
 regenerated without rebuilding the catalog.
 
-Three things go wrong here, and none of them errors:
+Four things go wrong here, and none of them errors:
 
 - **A stock row for a SKU the catalog does not have.** Extracts routinely
   carry discontinued lines. `validate` rejects these, which is the point —
@@ -200,6 +231,13 @@ Three things go wrong here, and none of them errors:
   the second as available. If the source distinguishes them, preserve the
   distinction; if it does not, say which reading you chose in the adapter
   report.
+- **A zero the source does not mean as a count.** A row with quantity 0 on an
+  item the source does not track, or flags as in stock (a digital item,
+  tracking `none`), is a third state next to "none in stock" and "no figure".
+  Omit the entry: emitted, the 0 reads as out of stock wherever stock is checked
+  or shown. List the SKUs and the flag that decided it in the adapter report,
+  because the omission is the information. A zero on an item the source *does*
+  track is still emitted.
 - **A warehouse column read as project-wide stock.** Summing per-warehouse
   rows into one figure is a decision, not an aggregation: it makes stock
   count in every store rather than the ones that list the channel. Either map
@@ -212,7 +250,7 @@ Emit one `taxCategory` record per tax class the catalog uses, and set
 the product and the rates in a separate table keyed by class; join them in the
 adapter, the same way stock is joined by SKU.
 
-Five things go wrong here, and none of them errors:
+Six things go wrong here, and none of them errors:
 
 - **A percentage emitted as a rate.** Sources store `20`, the contract takes
   `0.2`. The schema refuses anything above 1, so `20` is caught — but a rate
@@ -239,6 +277,12 @@ Five things go wrong here, and none of them errors:
   exists is never modified, and its *name* is unique per project. If the
   project's tax setup predates the migration, use its keys as the codes —
   `preflight` refuses a new category whose name another one already holds.
+- **A class with no rate row.** A source can list a class such as `None` that
+  its rate table never mentions. Carrying it with no rate, or with no category
+  on the product, leaves a cart holding the product unable to be taxed under
+  `Platform` mode, and nothing but `validate` says so. A 0% category does not.
+  Whether the goods are out of scope or taxed at zero is for whoever owns tax;
+  see [`taxCategory`](catalog-feed-contract.md#taxcategory--how-products-are-taxed-per-country).
 
 If the source has no tax classes at all, emit no `taxCategory` records and say
 so in the adapter report. `validate` then warns once that no product can be
@@ -260,6 +304,24 @@ The pipeline owns this. `validate` refuses a feed carrying relative URLs unless
 being guessed; `plan` then resolves each relative URL against that base and
 records the count and the base as a reviewable decision. Absolute URLs pass
 through untouched, and a feed may legitimately mix the two.
+
+**A root-relative path ignores any path on the base.** `plan` resolves with the
+standard URL rules (RFC 3986), so a path that starts with `/` replaces the
+base's own path:
+
+```
+media.baseUrl             url in the feed   resolves to
+https://example.com/media/  /img/x.jpg      https://example.com/img/x.jpg
+https://example.com/media/  img/x.jpg       https://example.com/media/img/x.jpg
+```
+
+The `media/` is gone in the first row. A hybris-style `/medias/...` path is
+root-relative, so this is where it bites. When the source's "root" is really a
+media directory the CDN serves from, there are two ways to make it resolve: set
+`media.baseUrl` to the host only and keep the full path in the feed, or strip
+the leading `/` in the adapter and keep the directory in the base. Pick one and
+record it as a decision. It is a rule for the whole export, and the first image
+that returns 404 will not say which side was wrong.
 
 Do not work around this by inventing a hostname to get a feed to validate.
 That is what a contract requiring an absolute `url` would force, and it is
@@ -285,11 +347,39 @@ If you do have to reduce several renditions to one image, larger is the safer
 default: a storefront can scale down and cannot scale up. Record the choice —
 "the middle one" is a decision a retina storefront will disagree with.
 
+**Assets alone leave `images` empty, and whatever reads `images` then has no
+picture.** commercetools describes
+[images](https://docs.commercetools.com/learning-model-your-product-catalog/images-and-assets/images-and-assets.md)
+as a variant's product visuals for product pages and listings, and assets as
+general media with several sources and richer metadata. A variant migrated as
+assets only therefore carries `images: []`, and a storefront or listing page
+that takes its thumbnail from a variant's `images`, or an integration built on
+that field, finds nothing however complete the assets are. So ask which field
+the storefront and its integrations read before choosing. If it is `images`,
+emit the one rendition it shows (usually the middle size) as an `image` as well
+as the full set as an `asset`: the pipeline accepts both on one variant, and a
+repeated URL costs nothing. If it reads assets, assets alone are right. Either
+way record the choice, and look at one migrated product in the storefront and in
+the Merchant Center before go-live, because what each of them shows is not
+something the export can tell you.
+
 **Dimensions are required, and 0×0 is accepted.** If the source has real
 width and height, emit them. If it does not, the pipeline defaults to 0×0 and
 records it as information loss — a storefront reserving layout space from the
 declared size then cannot. That is worth knowing before go-live rather than
 after a page reflows.
+
+**Dimensions parsed from a format name are an approximation, so say so.** Some
+sources give only a format called `Product 515x515`. That states what the source
+asked the rendition to be, not what the file measures: a rendition scaled to fit
+a box usually keeps the original's proportions, so one side comes out smaller.
+Parsing the name is still better than 0×0 when it names both sides, because a
+declared size is what a storefront reserves layout from. But the pipeline cannot
+tell a parsed size from a measured one and reports neither, so the adapter has
+to: record that these dimensions came from format names and were not measured,
+and measure the real size instead if the files or their metadata can be read.
+If the name carries no numbers, leave the 0×0 default and let the pipeline
+record the loss.
 
 Two smaller things worth stating in the proposal: image **order** is
 significant in commercetools and usually meaningful in the source, so preserve

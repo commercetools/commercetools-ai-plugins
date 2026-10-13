@@ -62,6 +62,11 @@ sibling of the pipeline, never inside it.**
     adapter/                      the only code written per engagement
       package.json                  {"type":"module"} — see below
     feed/                         generated NDJSON; regenerated, disposable
+      ADAPTER-REPORT.json           the adapter's own report: counts, caps, skipped
+                                    rows, flags. Replaced on every run. It is
+                                    `.json` on purpose: the pipeline reads only
+                                    `*.ndjson` from `feed/`, so the report stays
+                                    out of the feed digest
     out/                          pipeline artefacts; regenerated, gitignored
 ```
 
@@ -77,7 +82,9 @@ to fix and the very first thing an adapter author hits:
 
 Commit `migration.config.json`, `DECISIONS.md`, `MAPPING-PROPOSAL.md` and
 `adapter/`. Do not commit `feed/` or `out/` — both are regenerated, and `out/`
-is gitignored by the pipeline already.
+is gitignored by the pipeline already. The adapter report sits in `feed/` and is
+overwritten on the next run, so anything in it that is a decision (a cap, a
+count of skipped rows) belongs in `DECISIONS.md`, where it survives.
 
 **The pipeline checkout has to be ignored, and before it is cloned.** The
 engagement is usually a git repository, and a clone inside one becomes an
@@ -113,12 +120,16 @@ tool's own `out/`, where the next reader will not look for them.
 ## Format
 
 Numbered, so entries can reference each other and be superseded rather than
-edited:
+edited. The file opens with the pipeline checkout (`git rev-parse --short HEAD`,
+in the form [the stages](running-the-pipeline.md#the-stages) gives for a dirty
+tree), because the log is opened at the end of step 0, before any stage runs:
+that is what puts the version on record in time.
 
 ```markdown
 # Migration decision log — acme-eu
 
 Append-only. Newest last. Never regenerate; supersede instead.
+Pipeline: ct-catalog-migration-pipeline @ 4f2a9c1
 
 ## D001 — Catalog model: Classic
 2026-09-22 · step 0a · decided by Priya (commerce lead)

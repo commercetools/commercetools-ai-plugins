@@ -214,6 +214,19 @@ start of the day**, so a window ending on it excludes that day. Whether the
 source meant inclusive is a question for the customer, not a coercion rule —
 decide it, log it, do not silently add a day.
 
+**A bare date also has no timezone, and `Z` quietly makes it UTC.** Which
+timezone the source's dates are in is a second question for the customer,
+usually the store's. Midnight on `30/09/2026` in a UK store (BST, +01:00) is
+`2026-09-30T00:00:00+01:00`, the instant `2026-09-29T23:00:00Z`; written as
+`2026-09-30T00:00:00Z` it starts an hour late, and a sale window ending on it
+ends an hour late too. The offset follows the date, not the store: a UK window
+that starts on `01/10/2026` (`+01:00`) and ends on `31/10/2026` ends in GMT
+(`+00:00`), because the clocks go back on 25 October, so the two ends convert
+differently. The API's
+[DateTime](https://docs.commercetools.com/api/types.md#datetime) is a UTC
+string, so have the adapter write the UTC instant. Log the timezone you
+assumed, and who confirmed it.
+
 **A value's own label is separate from the attribute's.** The fallback rules
 above are about the *attribute* label. Each `enum` / `lenum` **value** carries
 its own, and an omitted one falls back to the key in the default locale:

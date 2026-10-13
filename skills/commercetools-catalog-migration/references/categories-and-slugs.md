@@ -45,6 +45,13 @@ loss. Generate the slug report from the plan, not from the loaded project: the
 old URL structure only exists before cutover, and the SEO owner needs to see the
 changes forced by project-wide uniqueness while there is still time to argue.
 
+Appending the code is a default the pipeline applies, not a decision anyone has
+made. So when `derive` reports collisions, ask two things, not one: which
+suffix policy the business wants, and **who owns the URLs**. Logging every
+changed URL against nobody reads as a decision and is not one. The question and
+why it is asked are in
+[step-0-interview.md](step-0-interview.md#0c-conditional-if-slugs-collide-ask-who-owns-the-urls).
+
 Derivation from a name strips diacritics by decomposing them rather than
 dropping the letters, so `Oberbekleidung für Männer` becomes
 `oberbekleidung-fur-manner` rather than a run of dashes. A name that slugifies to

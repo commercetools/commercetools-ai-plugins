@@ -12,7 +12,7 @@ a defect is reported at the earliest stage that can see it, so a broken feed or
 an unloadable plan says so on a laptop with no `.env`.
 
 - [Getting the pipeline](#getting-the-pipeline)
-- [The stages](#the-stages)
+- [The stages](#the-stages) — [progress while one runs](#progress-while-a-stage-runs)
 - [What is built](#what-is-built)
 - [validate](#validate)
 - [derive](#derive)
@@ -21,6 +21,7 @@ an unloadable plan says so on a laptop with no `.env`.
 - [preflight](#preflight) — [unprefixed ProductType keys](#a-project-loaded-before-producttype-keys-were-prefixed), [the project-wide attribute constraint](#the-one-project-wide-constraint-only-preflight-can-see)
 - [load](#load) — [platform stages](#platform-stages-at-opposite-ends-of-the-run), [prerequisites](#prerequisites-run-first-and-not-through-the-import-api), [catalog size ceiling](#how-large-a-catalog-this-handles), [batching](#batching), [failure states](#which-states-are-failures), [SDKs](#the-official-sdks), [credentials and scopes](#credentials)
 - [verify](#verify)
+- [teardown](#teardown) — the way back out, not one of the seven
 - [Configuration](#configuration)
 - [What shapes the load](#what-shapes-the-load)
 - [Fixtures](#fixtures)
@@ -112,6 +113,18 @@ goes back to one.
 
 ## The stages
 
+**Before the first stage runs, record the pipeline version in `DECISIONS.md` —
+however the checkout arrived.** If you cloned it a moment ago, the line under
+[Getting the pipeline](#getting-the-pipeline) is the one to write. If the
+checkout was already there (a second engagement, a shared directory, a
+colleague's clone, a branch placed for a change that is not merged), the line
+matters more, not less, because nothing says the checkout is current or clean.
+In it, run `git rev-parse --short HEAD` and `git status --short`, and write the
+line, in its uncommitted-changes form if the tree differs, before `validate`.
+`DECISIONS.md` is opened at the end of step 0 with this line first; if it does
+not exist yet, open it now rather than after the stages. Skipping it leaves a decision log that describes a tool nobody can identify,
+and the instruction is easy to miss when it only sits beside the clone.
+
 ```bash
 npm run pipeline -- validate --config ../migration/migration.config.json
 npm run pipeline -- derive   --config ../migration/migration.config.json
@@ -131,6 +144,35 @@ engagement layout this assumes is in
 
 Every stage exits non-zero when it finds an error, so the sequence composes in a
 shell or CI.
+
+### Progress while a stage runs
+
+A stage that takes minutes used to print nothing until it ended, which looks like
+a hang. Now each command prints **one line per tick**, every 30 seconds by default
+(`--progress-interval <seconds>`, `0` for none), on stderr, and ends with
+`done in <time>`. It reports on the clock, not on every change, so lines that keep
+arriving mean it is alive; a command shorter than one tick prints only the last
+line, and `--quiet` prints none.
+
+```text
+5m10s  load: waiting on ah12-category (container 1/3) · 7/12 imported · 5 unresolved · 0 processing · unchanged for 1m30s
+```
+
+Read `unchanged for` against the stall window under [verify](#verify): a count that
+has not moved for a few minutes is normal, and only about 15 minutes with no fall
+at all means something the plan referenced never arrived. The other stages say what
+they are reading or deleting and how far along (`deleting products: 340/1,200 · 3 retries`).
+Expect several minutes of lines even for a small catalog: the unresolved cascade has
+taken over ten minutes to clear.
+
+**Run long stages so you can see the lines.** A caller that pipes the command
+through `| tail -40` sees nothing until it exits, which is the silence the lines
+exist to end. `derive`, `plan`, `load`, `verify` and `teardown --execute` also
+append every line, timestamped, to `out/progress.log`: start the command in the
+background, read the end of that file, and tell the user where it is ("11 of 12
+categories in, unchanged for two minutes") rather than waiting without a word.
+`validate`, `audit`, `preflight` and a teardown dry run write no other artefact,
+so they write no log.
 
 ## What is built
 
@@ -241,8 +283,9 @@ Diagnostics name a file and a line. Fix the adapter, not the feed.
 Builds ProductTypes from declarations, or infers them from observed values. See
 [product-model.md](product-model.md).
 
-Reading `out/MODEL-REVIEW.md` is the point of this stage. It groups what needs a
-human into irreversible choices, information loss needing sign-off, and guesses.
+`out/MODEL-REVIEW.md` is first written here. It groups what needs a human into
+irreversible choices, information loss needing sign-off, and guesses, but only
+those of the product model: sign off on the version `plan` writes, below.
 
 Fatal here: an attribute that is an axis for some products in a ProductType and
 a plain attribute for others; one at product level on some records and variant
@@ -257,6 +300,13 @@ them apart is what makes the audit trustworthy.
 Four things are *resolved* here, each covered in its own reference: minor-unit
 money conversion, slug allocation and disambiguation, order-hint encoding, and
 deterministic master-variant selection.
+
+`plan` rewrites `out/MODEL-REVIEW.md` with the decisions it records as well:
+each tax category's rates (what shoppers are charged, and whether prices read as
+gross or net), a key that fell back, stock and price handling. Those are the
+entries a reader of the `derive` version never sees, so this is the file to read
+and sign off before `audit`. Running `derive` again afterwards shrinks it back to
+the product model, so run `plan` last.
 
 Two structural points worth knowing when reading a plan:
 
@@ -343,7 +393,7 @@ generated from `severity: 'error'` in `audit/gate.ts`:
 
 | Area | Codes |
 | :--- | :--- |
-| Identity and content (10) | `duplicate-resource-key`, `duplicate-sku` (project-wide), `duplicate-slug` (per locale), `duplicate-price-key`, `variant-without-sku`, `invalid-key`, `invalid-slug`, `invalid-order-hint` (outside (0,1) or ending in `0`), `missing-name`, `dangling-product-type` |
+| Identity and content (10) | `duplicate-resource-key` (unique per resource type: a category and a product may share a key, variant keys are unique among variants project-wide), `duplicate-sku` (project-wide), `duplicate-slug` (per locale), `duplicate-price-key`, `variant-without-sku`, `invalid-key`, `invalid-slug`, `invalid-order-hint` (outside (0,1) or ending in `0`), `missing-name`, `dangling-product-type` |
 | References (2) | `dangling-category-parent`, `dangling-category-reference` |
 | Attributes (5) | `attribute-not-declared`, `attribute-type-mismatch` (including set element types), `enum-value-not-declared`, `duplicate-attribute`, `required-attribute-missing` |
 | Constraints (2) | `same-for-all-violation` (values disagreeing, or present on only some variants), `combination-unique-violation` |
@@ -360,11 +410,10 @@ be wrong: `approaching-variant-limit`, `attribute-never-populated`,
 `overlapping-standalone-price-validity`, `product-without-category`,
 `variant-without-price`.
 
-Six more are advisory: `attribute-never-populated`, `variant-without-price`,
-`product-without-category`, `category-without-products`, `order-hint-absent`,
-and `approaching-variant-limit` (past 80 variants, before the cap bites).
-`attribute-never-populated` is more than a hint: `derive` leaves such an
-attribute off the ProductType, so it will not exist in the project after the
+`approaching-variant-limit` applies to `Classic` only: it fires for a product
+past 80 variants, before the 100 cap bites, and never under `Modular`, whose cap
+is 10,000. `attribute-never-populated` is more than a hint: `derive` leaves such
+an attribute off the ProductType, so it will not exist in the project after the
 load, however the definition was declared.
 
 Findings are grouped by check and capped per code, because one broken assumption
@@ -590,9 +639,10 @@ unknown* — an unreachable project should not cost you the request bodies.
 
 Two asymmetries worth knowing: these are the only resources keyed **verbatim**
 rather than `<prefix>-<key>`, and therefore the only ones a prefix-scoped
-teardown leaves behind. If `load` created a channel or a tax category, removing
-it is manual — and a tax category cannot be deleted while a product or shipping
-method still references it.
+teardown leaves behind. If `load` created a channel, removing it is manual. A tax
+category it created can be removed by [teardown](#teardown) with
+`--include-created-tax-categories`, unless a product or shipping method still
+references it.
 
 ### How large a catalog this handles
 
@@ -651,8 +701,15 @@ at **48 hours**, containers at **72**. So a container can outlive the
 operations it holds, and a summary read late in that window reports fewer
 operations than the run submitted.
 
-**What `--wait` covers.** It waits for operations to leave `processing` —
-i.e. for the API to finish validating what was sent. It does not wait for
+**What `--wait` covers.** It waits for this run's operations to appear in the
+Import Summary, then for them to leave `processing` — i.e. for the API to finish
+validating what was sent. The first part matters because the API creates the
+operations a moment after it accepts a request, so a summary read straight away
+can show nothing processing simply because nothing is registered yet. The
+summary counts every operation the container still holds, earlier runs
+included, so `--wait` reads the container's total before it posts and waits for
+the total to rise by the number of resources in the requests the API accepted.
+It does not wait for
 `unresolved` operations to find their KeyReference targets, because that can
 legitimately take up to 48 hours and depends on data this run may not be
 sending. Expect `unresolved` counts after a `--wait` load of a deep category
@@ -665,8 +722,10 @@ operation completes on its own when its KeyReference target arrives, any time
 inside 48 hours, so waiting per stage serialises a pipelined design — and
 frequent summary polling actively slows the import.
 
-`--wait` polls with doubling backoff until nothing is processing, and says
-plainly when it times out.
+`--wait` polls with doubling backoff until this run's operations are registered
+and nothing is processing, and says plainly when it times out, naming whether
+operations were still processing or had not registered at all. While it waits it
+reports where it is on every tick ([progress](#progress-while-a-stage-runs)).
 
 ### Which states are failures
 
@@ -863,19 +922,25 @@ after the load returns — not hours, and not permanently. The deeper the tree,
 the longer the cascade.
 
 `verify` now reads the operation states when it finds anything absent, and
-leads with `operations-in-flight` — the count still pending, and the
-instruction to wait and re-run before believing the absences. If the count does
-not fall between runs, something the plan referenced was never imported and the
-absences are real.
+leads with `operations-in-flight` — the count still pending, the time it was
+read, and the instruction to wait and re-run before believing the absences.
 
-**While the count is falling, re-run `verify`, not `load --execute`.** Pending
+The unresolved count plateaus. In a live load it sat at 96 for five minutes,
+fell on its own, and sat flat for another five before reaching the full set, so
+two `verify` runs a few minutes apart prove nothing either way. Judge a stall
+over a window of about 15 minutes, not between two runs: if the unresolved count
+has not fallen at all across that span, something the plan referenced was never
+imported and the absences are real. Note the time of each run, so the window
+can be read from the record.
+
+**While the count is falling or inside the window, re-run `verify`, not `load --execute`.** Pending
 operations are the Import API's to retry: its
 [best practices](https://docs.commercetools.com/api/import-export/best-practices.md#handle-retries)
 say to retry only `rejected` operations, and warn that duplicate import
 requests sent concurrently can collide in a concurrent modification error. A
 second load in the middle of a cascade is exactly that. Resubmit for `rejected`
-operations, or once the count has stopped falling and the missing reference is
-found and fixed — and either way it is a new write, so ask first.
+operations, or once the count has not fallen across the window and the missing
+reference is found and fixed — and either way it is a new write, so ask first.
 
 It reads stores and product selections back too, but only when the plan
 declares them — most engagements have neither, and an unconditional read costs
@@ -913,6 +978,76 @@ A store's key is matched **verbatim**, not prefixed — asking for
 
 `verify` does not detect orphans across the key prefix: it checks what the
 plan names, not what the project holds that the plan has forgotten.
+
+## teardown
+
+The way back out, not one of the seven stages: for a rehearsal on a trial
+project, or a load that has to be undone.
+
+```bash
+npm run pipeline -- teardown --config ../migration/migration.config.json                # dry run
+npm run pipeline -- teardown --config ../migration/migration.config.json \
+  --execute --confirm-project <project-key>             # add --include-created-tax-categories to remove the one load created
+```
+
+- **It removes what the plan names and nothing else.** The scope is every key in
+  `plan.json`, not `key-map.json`, which holds only categories, products and
+  variants. Before any delete it checks that each key starts with
+  `<keys.prefix>-` and stops if one does not, because a key outside the prefix
+  means the plan is not the one that was loaded. The API deletes a category's
+  whole subtree with it, so before deleting anything teardown reads the
+  categories directly below each planned one. A planned category with a category
+  the plan does not name beneath it stays, together with its planned ancestors,
+  and is named in the output, the dry run included; the planned categories below
+  it are still deleted. Move or delete the others and run it again.
+- **Deleting needs the project named.** `--execute` also needs
+  `--confirm-project` equal to the credentials' project key. A delete cannot be
+  undone, and a shell that still exports another project's `CTP_*` variables is
+  how a wrong-project run happens. Ask the user before `--execute`, as for
+  `load --execute`: reading the dry run is not consent to delete, and neither is
+  a request to "remove everything you loaded". The request names an outcome; the
+  dry run is the first time anyone sees which keys and how many, so show it, name
+  the project and the counts, and wait for the yes.
+- **Reverse of the load order:** standalone prices, stock, product selections,
+  Modular variants, products, categories, ProductTypes, then the plan's import
+  containers. Categories go deepest first, one at a time within a tree: the API
+  [locks the part of a category tree a write touches](https://docs.commercetools.com/api/projects/categories.md#category-tree-locking)
+  and fails a conflicting request with a 400; deletes of two sibling categories
+  at once are refused the same way. A delete refused that way is retried briefly
+  and read again, and a category that is gone by then counts as deleted, not
+  failed. Selections
+  go before the products they list because
+  the API refuses to delete a product a selection still references. Deleting the
+  selection clears that reference a moment later, so a product refused right
+  after it is retried for up to a minute. A selection that cannot be deleted
+  leaves its products refused, and teardown reports both. A product's
+  version changes when its standalone prices are deleted, so a version read
+  earlier is stale by then; teardown reads each product's version just before
+  deleting it.
+- **It leaves the verbatim-keyed prerequisites** — channels, customer groups,
+  tax categories and stores — and lists them: they belong to the project. The
+  one you can ask it to remove is a tax category this plan's `load` created.
+  `load --execute` records those in `out/created-prerequisites.json`, which only
+  grows, because `load-result.json` is rewritten by every execute and a second
+  load reports the category as existing. `--include-created-tax-categories`
+  deletes those keys that the plan also names, after the products, and the dry run
+  says what it would delete. A tax category that was in the project before the
+  load is never in that file, so it stays. A tax category cannot be deleted while
+  a product or shipping method uses it; teardown reports that as a failure and the
+  run is not complete. Anything else it leaves is removed by hand, by whoever
+  owns it, so ask first; do not write a delete against the API with the
+  engagement's credentials to empty the project.
+- **One exception is an edit.** A product selection that a store listed in the
+  plan still holds cannot be deleted, so it is taken off that store first. A
+  selection held by a store the plan does not list is left in place and named,
+  and the run exits non-zero.
+- **It reads the project again afterwards** and reports what is left per kind,
+  writes `teardown-result.json`, and exits non-zero if a delete failed,
+  something was blocked or anything remains. A dry run writes nothing.
+
+It works from the plan on disk, so keep the plan that was loaded: a plan
+regenerated afterwards with different keys cannot name what the earlier one
+created.
 
 ## Configuration
 
@@ -982,9 +1117,11 @@ and [best practices](https://docs.commercetools.com/api/import-export/best-pract
 - Load in dependency order — channels, customer groups and tax categories,
   then product types, then categories, then products, then Standalone Prices if
   the price mode calls for them — and tear down in reverse, scoped to
-  `keys.prefix`. Channels, customer groups and tax categories are outside that
-  scope and outside the Import API entirely: created through the platform API,
-  and removable only by hand.
+  `keys.prefix` — the [teardown](#teardown) command does exactly that. Channels,
+  customer groups and tax categories are outside that scope and outside the
+  Import API entirely: created through the platform API. Teardown leaves them,
+  except a tax category `load` created, which `--include-created-tax-categories`
+  removes; the rest are removed by hand.
 - Standalone Prices need `manage_standalone_prices` and customer groups need
   `manage_customer_groups`; `manage_products` covers every other request here.
 - Containers, Operations and Summaries are generally available; the per-resource

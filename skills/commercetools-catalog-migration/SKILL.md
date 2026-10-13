@@ -9,7 +9,7 @@ when_to_use:
 metadata:
   contentType: SKILL
   area:
-    - Integrations
+    - Migrations
   docsSearch:
     products:
       - Composable Commerce
@@ -63,8 +63,22 @@ the API.
    Pass the commercetools project key and region (as in `api.{region}.commercetools.com`) only if already in your context; otherwise omit both. Never search files or ask the user for them.
    <!-- ct:docs-search:end -->
 
+   If the search prints "No results found", that is a failed lookup, not a sign
+   the documentation is silent. Retry once with one or two of the terms alone
+   (`Import API`, `Standalone Prices`), and if that is empty too, look the same
+   topics up through the Knowledge MCP before going on. The references in this
+   skill were checked at one point in time, and this search is how you learn
+   what has changed since, so do not continue on the references alone.
+
    The limits and constraints in [Critical](#critical) were verified in
    September 2026. Re-check any of them here before relying on one.
+
+2. **Lay out the engagement beside the pipeline checkout, never inside it.**
+   `migration/` holds the config, the interview, the decision log and the
+   adapter; `source-export/` holds what the customer handed over. Create
+   `migration/` before step 0 writes `INTERVIEW.md` into it. The layout, and what
+   to commit, is in
+   [references/decision-log.md](references/decision-log.md#where-it-lives--and-the-layout-it-belongs-to).
 
 ## Workflow
 
@@ -89,7 +103,9 @@ the API.
       `Classic` at all) and are cheaper to learn before an adapter exists; then
       0c, each conditional that applies, and 0d. Each row carries the question, the
       fact that prompted it, a recommendation, and an empty answer cell that only a
-      person fills in. Tell the user to edit the file and say when it is done.
+      person fills in. Tell the user to edit the file and say when it is done,
+      and that you will re-read it then and name any empty row. The config and
+      adapter wait because each answer is irreversible or fails silently.
    4. **Continue only when every answer cell is filled in.** Otherwise name the
       unanswered rows and stop. The file format and the rules for "I don't
       know" and follow-up questions are in the interview reference.
@@ -102,7 +118,9 @@ the API.
    who chose it, what the alternative would have cost, or that a question was
    asked at all. Write one entry per decision from 0a and 0c, plus any
    question that could not be answered — an open question with an owner is a
-   plan, an unasked one is a surprise. Format and placement:
+   plan, an unasked one is a surprise. Open it before the adapter, with the
+   pipeline checkout (`git rev-parse --short HEAD`) as its first line, so the
+   version is on record before any stage runs. Format and placement:
    [references/decision-log.md](references/decision-log.md).
 
    **Keep writing it at every step from here**, not at the end: a log
@@ -119,7 +137,10 @@ the API.
    [references/catalog-feed-contract.md](references/catalog-feed-contract.md).
 
    **Take the thin vertical slice before writing the rest**: one product, two
-   or three variants, through `validate`, `derive`, `plan` and `audit`.
+   or three variants, through `validate`, `derive`, `plan` and `audit`. Before
+   the first of them runs, record which pipeline checkout it is
+   (`git rev-parse --short HEAD`, one line in `DECISIONS.md`), whether you
+   cloned it or found it there: [the stages](references/running-the-pipeline.md#the-stages).
    Writing every SKU in one pass usually gets away with it, which is why this
    step keeps getting skipped — and is not a reason to skip it. The axis
    model, the money conversion and the attribute constraints are wrong in the
@@ -156,7 +177,9 @@ the API.
    Record the count and the artefact, not every finding.
 
 3. **Read `out/MODEL-REVIEW.md` before loading.** It is the sign-off artefact:
-   irreversible choices, information loss, and anything guessed.
+   irreversible choices, information loss, and anything guessed. Read the one
+   `plan` writes: `derive` writes the product model only, and the tax rates and
+   the other decisions recorded while mapping the feed are added by `plan`.
 
    Log the *review outcome*, not its contents — one entry naming what was
    accepted and against which plan. `MODEL-REVIEW.md` is regenerated on every
@@ -195,6 +218,11 @@ the API.
    run matches what the user saw; if anything differs, show it and ask again.
    `preflight --apply` needs its own yes.
 
+   `load --wait`, `verify` and `teardown --execute` take minutes. They print a line
+   every 30 seconds and append it to `out/progress.log`: run them so you can read
+   it, not through `| tail`, and tell the user where they are
+   ([progress](references/running-the-pipeline.md#progress-while-a-stage-runs)).
+
    Log one entry per `--execute`: project key, timestamp, what was sent, the
    outcome. `out/load-result.json` holds the detail but is regenerated and
    gitignored.
@@ -219,6 +247,16 @@ the API.
    Log the result as the closing entry for the run, **including a clean one**.
    "Reconciled, no differences" is the sentence someone needs months later when
    asking whether the load was ever checked at all.
+
+   To undo a run on a trial project, `teardown` removes what the plan created,
+   scoped to `keys.prefix`: a dry run by default, and `--execute` needs
+   `--confirm-project <key>` — see
+   [running-the-pipeline.md](references/running-the-pipeline.md#teardown).
+   **Ask before every `--execute`, as for the load.** A request to "remove
+   everything you loaded" names an outcome, not which keys or how many: show the
+   dry run, name the project and the counts, and wait for the yes. A tax category
+   `load` created goes with `--include-created-tax-categories`, never a
+   hand-written delete.
 
 7. **Fix defects in the adapter, never in the feed by hand.** The feed is
    regenerated on every run.
@@ -314,8 +352,8 @@ public documentation in September 2026; re-check any limit before relying on it.
   **nothing**. → [catalog-feed-contract.md](references/catalog-feed-contract.md)
 - **Channels, customer groups and tax categories cannot be imported — `load`
   creates them** through the platform API before any import, with keys used
-  **verbatim**: the one exception to the prefix rule, and the one thing a
-  prefix-scoped teardown leaves behind. An existing one is **never modified** —
+  **verbatim**: the one exception to the prefix rule, and what a prefix-scoped
+  teardown leaves behind (a tax category `load` created can be removed with a flag). An existing one is **never modified** —
   a tax category keeps the project's rates, whatever the feed says. A price
   channel needs `ProductDistribution` or the API refuses the price. `productSelection` *is* importable and prefixed; `store` is not,
   and runs last. → [catalog-feed-contract.md](references/catalog-feed-contract.md)
@@ -397,7 +435,8 @@ Before running the pipeline:
 - [ ] `keys.prefix` names this engagement, so teardown can scope itself. Every
       resource carries it, ProductTypes included. Channels, customer groups and
       tax categories are the only exception: `load` creates the missing ones
-      with their keys **verbatim**, and teardown will not remove them.
+      with their keys **verbatim**, and teardown leaves them unless told to remove
+      the tax categories `load` created.
 - [ ] Whether opening stock is in scope was **asked**, not assumed either way.
       A catalog loaded without it is normal; a catalog loaded with stock nobody
       agreed to is a figure the business did not sign off. If it is in scope,
@@ -432,6 +471,9 @@ Before running the pipeline:
 
 Before loading:
 
+- [ ] `DECISIONS.md` names the pipeline checkout that ran the stages
+      (`git rev-parse --short HEAD`, in its uncommitted-changes form if the tree
+      differs), including when the checkout was already there.
 - [ ] `validate`, `derive`, `plan` and `audit` all pass — in that order, in one
       sitting. If `plan` fails it writes nothing and the previous `plan.json`
       survives; `audit` refuses a plan whose feed digest no longer matches

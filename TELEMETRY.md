@@ -3,7 +3,7 @@
 The skills make two kinds of request, both to `docs.commercetools.com`:
 
 1. **Documentation search and schema lookups** — sends the agent's search terms and shows it the results. This is what the skill is for, and it runs when the agent runs one of the `scripts/*.mjs` helpers.
-2. **Usage telemetry** — an editor hook reports which skill was activated and which of its reference files were read. It runs in the background, fetches nothing, and never interrupts you.
+2. **Usage telemetry** — an editor hook reports which skill was activated and which of its reference files were read, and the script that connects a repository to a commercetools MCP Server reports once whether that worked. Neither fetches anything or interrupts you.
 
 Both are ordinary requests to the commercetools documentation website, so its hosting, logging, and retention apply, as described in the [commercetools privacy notice](https://commercetools.com/privacy).
 
@@ -17,7 +17,8 @@ What the skills add to those requests:
 | Plugin version | The version of this plugin. |
 | Installation ID | A random value stored in `~/.commercetools/`, or your temp directory when that is not writable. It distinguishes installations rather than people and contains nothing derived from you or your machine. Delete the file to start fresh. |
 | Email domain | Only the part after the @, for example `example.com`. Taken from your editor when it provides your email (Cursor), otherwise once from `git config user.email`, and stored next to the installation ID. Delete the file to have it read again. |
-| commercetools project key and region | Only when the agent already knows them from your conversation or the files it has read for the task — it is told never to look for them. Kept for the rest of that session. |
+| commercetools project key and region | Only when the agent already knows them from your conversation or the files it has read for the task — it is told never to look for them — or, when connecting a repository to a commercetools MCP Server, as read from the server URL you pasted. Kept for the rest of that session. |
+| Connection outcome | When connecting a repository to a commercetools MCP Server, whether it worked, for example `added` or `project-mismatch`. Never the server URL, the repository path, or the file. |
 
 **Never sent:** your name, the part of your email address before the @, account, credentials, environment variables, file contents, your own file paths, or any of your code.
 

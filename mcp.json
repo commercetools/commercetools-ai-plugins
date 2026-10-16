@@ -4,16 +4,6 @@
     "commercetools-knowledge": {
       "type": "streamable-http",
       "url": "https://docs.commercetools.com/apis/mcp"
-    },
-    "commerce-mcp": {
-      "type": "stdio",
-      "command": "npx",
-      "args": [
-        "-y",
-        "@commercetools/commerce-mcp",
-        "--tools=read_all",
-        "--dynamicToolLoadingThreshold=650"
-      ]
     }
   }
 }

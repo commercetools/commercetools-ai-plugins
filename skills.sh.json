@@ -10,7 +10,9 @@
         "commercetools-checkout",
         "commercetools-commerce-patterns",
         "commercetools-connect",
+        "commercetools-integration-layer",
         "commercetools-integrations",
+        "commercetools-mcp",
         "commercetools-spec-driven-development"
       ]
     }

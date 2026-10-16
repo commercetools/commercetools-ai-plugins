@@ -7,7 +7,7 @@ The official commercetools Plugins gives **Claude Code**, **Cursor**, **VS Code 
 🔌 **commercetools Knowledge MCP** — live up to date documentation search, GraphQL & OpenAPI schema lookup, query validation, and developer best practices. Public endpoint, no API key needed. [--> Read the docs!](https://docs.commercetools.com/sdk/mcp/knowledge-mcp)
 
 
-🔌 **commercetools Commerce MCP** — The commercetools Commerce MCP enables agent to interact directly with commercetools APIs through function calling. [--> Read the docs!](https://docs.commercetools.com/sdk/mcp/commerce-mcp)
+🔌 **commercetools Commerce MCP** — lets your agent read and change data in your commercetools Project. The `commercetools-mcp` skill walks you through connecting it: you create a managed MCP Server in the Merchant Center and sign in with your own account, no API credentials needed. [--> Read the docs!](https://docs.commercetools.com/dev-tooling/mcp/commerce-mcp)
 
 📚 **commercetools Skills** — smoke tested playbooks the agent reaches for to build commercetools solutions. [--> Read the docs!](https://docs.commercetools.com/docs/build-with-ai)
 
@@ -25,11 +25,7 @@ The official commercetools Plugins gives **Claude Code**, **Cursor**, **VS Code 
 The bundled `commercetools-knowledge` MCP endpoint is publicly accessible and does not require an API key. Depending on the host tool, you may still need to trust the plugin source, enable the plugin, or reload the tool after installation.
 
 
-To enable the commerce-mcp, you must export the API client credentials to your CLI/OS environment and reload the plugin.
-
-```
-export CLIENT_ID=<client-id> CLIENT_SECRET=<client-secret> PROJECT_KEY=<project-key> AUTH_URL=<auth-url> API_URL=<api-url>
-```
+To connect the Commerce MCP, ask your agent, for example: *"Connect this repository to my commercetools project."*
 
 # Partial installations
 

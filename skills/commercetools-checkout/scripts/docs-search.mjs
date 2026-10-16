@@ -4,35 +4,64 @@
  * Search docs for the agent
  *
  * Gathers relevant commercetools documentation as grounding context for the agent, with instrumentation headers.
- * Results are written to stdout for consumption by AI agents.
- *
- * Usage:
- *   node scripts/docs-search.mjs --query "how to create payment" --app-name <name> --model <model> [options]
- *
- * Required:
- *   --query <string>          Search query
- *
- * Optional (telemetry — never gates the search):
- *   --app-name <string>       Host app: claude-code, claude-desktop, cursor, codex, copilot.
- *                             Must match the hook vocabulary or the two layers
- *                             cannot be grouped together.
- *   --model <string>          Model name (e.g., claude-sonnet-4.5, gpt-4)
- *   --skill-name <string>     Overrides the skill name derived from this file's path
- *   --commercetools-project-key <string>
- *                             The project the work targets, only if already known.
- *                             Kept for the rest of the session once passed.
- *   --commercetools-region <string>
- *                             Its region as in api.{region}.commercetools.com, e.g.
- *                             europe-west1.gcp. Same rules as the project key.
- *
- * Optional:
- *   --limit <number>          Number of results (default: 3)
- *   --content-types <string>  Comma-separated content types
- *
- * Opt out of telemetry with COMMERCETOOLS_AI_PLUGIN_TELEMETRY=0.
+ * Results are written to stdout for consumption by AI agents. Usage: see USAGE
+ * below, or run with --help.
  */
 
-import { parseArgs } from 'util';
+// --- inlined from .internal/skill-scripts/cli.mjs — do not edit here ---
+// Command-line handling shared by the skill scripts: --help, usage errors, and
+// the message an agent gets when the docs service cannot be used. INLINED into
+// each script by sync-skill-scripts.mjs, never shipped as its own file.
+//
+// Why the messages matter: an agent that gets no output cannot tell "blocked"
+// from "nothing found", and goes on to read the script's source to find out.
+// So every failure says what happened and what to do next, on stderr. The
+// script still never throws at the agent: a failure is a clear message and
+// exit code 1, not a stack trace.
+
+import { parseArgs } from 'node:util';
+
+const DOCS_HOST = 'docs.commercetools.com';
+
+// parseArgs with --help/-h and readable usage errors. `options` must stay the
+// first key of the argument object: lint-skill-script-usage.mjs reads the
+// allowed flags from that literal.
+const parseArgsOrUsage = ({ options, usage }) => {
+  let parsed;
+  try {
+    parsed = parseArgs({ options: { ...options, help: { type: 'boolean', short: 'h' } } });
+  } catch (err) {
+    process.stderr.write(`Error: ${err.message}\n\n${usage}\n`);
+    process.exit(1);
+  }
+  if (parsed.values.help) {
+    process.stdout.write(`${usage}\n`);
+    process.exit(0);
+  }
+  return parsed;
+};
+
+// The request did not produce a usable answer. `mcpTool` is the Knowledge MCP
+// tool that does the same job: if the agent has it, that is the faster route
+// than asking the user to grant network access.
+const reportServiceFailure = ({ mcpTool, err, status }) => {
+  const viaMcp =
+    `If the commercetools Knowledge MCP tool "${mcpTool}" is available, use it instead.`;
+  if (status !== undefined) {
+    process.stderr.write(
+      `Error: ${DOCS_HOST} returned HTTP ${status}. ${viaMcp} Otherwise retry later.\n`,
+    );
+  } else {
+    const reason = err?.cause?.code || err?.name || 'unknown error';
+    process.stderr.write(
+      `Error: could not reach ${DOCS_HOST} (${reason}). ${viaMcp} ` +
+        `Otherwise the environment may be blocking network access: ask for access to ` +
+        `${DOCS_HOST} and run the command again.\n`,
+    );
+  }
+  process.exit(1);
+};
+// --- end cli.mjs ---
 // --- inlined from .internal/skill-scripts/instrumentation.mjs — do not edit here ---
 /**
  * Shared instrumentation helpers for the commercetools skill scripts.
@@ -56,7 +85,7 @@ import { fileURLToPath } from 'node:url';
 
 // Substituted at install time from .internal/config.json. The one field in the
 // payload that is verified rather than self-reported by the model.
-const PLUGIN_VERSION = '0.54.0';
+const PLUGIN_VERSION = '0.57.0';
 
 /** The single opt-out switch. */
 const telemetryDisabled = () =>
@@ -246,7 +275,8 @@ const invocationId = (appName, project = {}) => {
     const passed = Boolean(project.key || project.region);
     next.ctProjectKey = project.key || state?.ctProjectKey;
     next.ctRegion = project.region || state?.ctRegion;
-    next.ctProjectSource = passed ? 'model' : state?.ctProjectSource;
+    // `model` unless the caller knows better, e.g. a key read from an MCP server URL.
+    next.ctProjectSource = passed ? project.source || 'model' : state?.ctProjectSource;
 
     try {
       fs.writeFileSync(file, JSON.stringify(next));
@@ -449,7 +479,7 @@ const instrumentationHeaders = ({ appName, model, skillName }) => {
  */
 const applyInstrumentationParams = (
   url,
-  { appName, model, skillName, source, importMetaUrl, projectKey, region },
+  { appName, model, skillName, source, importMetaUrl, projectKey, region, projectSource },
 ) => {
   if (telemetryDisabled()) return;
   if (skillName) url.searchParams.set('skillName', skillName);
@@ -469,6 +499,7 @@ const applyInstrumentationParams = (
   const invocation = invocationId(appName, {
     key: cleanProjectKey(projectKey),
     region: cleanRegion(region),
+    source: projectSource,
   });
   if (invocation) {
     url.searchParams.set('invocation', invocation.id);
@@ -487,9 +518,35 @@ const applyInstrumentationParams = (
 // --- end instrumentation.mjs ---
 
 const CONTEXT_URL = 'https://docs.commercetools.com/apis/rest/tools/documentation-search';
+const MCP_TOOL = 'commercetools-documentation-search';
+
+const USAGE = `Search the commercetools documentation.
+
+Usage:
+  node scripts/docs-search.mjs --query "how to create payment" [options]
+
+Required:
+  --query <string>          Search query
+
+Optional:
+  --limit <number>          Number of results (default: 3, at most 20)
+  --content-types <string>  Comma-separated content types
+
+Optional (telemetry, never gates the search):
+  --app-name <string>       Host app: claude-code, claude-desktop, cursor, codex, copilot
+  --model <string>          Model name
+  --skill-name <string>     Overrides the skill name derived from this file's path
+  --commercetools-project-key <string>
+                            The project the work targets, only if already known
+  --commercetools-region <string>
+                            Its region as in api.{region}.commercetools.com
+
+  -h, --help                Show this help
+
+Opt out of telemetry with COMMERCETOOLS_AI_PLUGIN_TELEMETRY=0.`;
 
 // Parse command line arguments
-const { values } = parseArgs({
+const { values } = parseArgsOrUsage({
   options: {
     query: { type: 'string' },
     limit: { type: 'string', default: '3' },
@@ -500,14 +557,14 @@ const { values } = parseArgs({
     'commercetools-region': { type: 'string' },
     'content-types': { type: 'string' },
   },
+  usage: USAGE,
 });
 
 // Validate the one parameter the request actually needs. Telemetry arguments are
 // never gating: a missing --app-name or --model costs us a log column, it must
 // not cost the user their answer.
 if (!values['query']) {
-  console.error('Error: Missing required parameter: --query');
-  console.error('Usage: node scripts/docs-search.mjs --query "search terms"');
+  process.stderr.write(`Error: Missing required parameter: --query\n\n${USAGE}\n`);
   process.exit(1);
 }
 
@@ -559,18 +616,18 @@ async function main() {
     });
 
     if (res.status !== 200) {
-      process.exit(0);
+      reportServiceFailure({ mcpTool: MCP_TOOL, status: res.status });
     }
 
     let response;
     try {
       response = await res.json();
     } catch (err) {
-      process.exit(0);
+      reportServiceFailure({ mcpTool: MCP_TOOL, status: `${res.status} with an unreadable body` });
     }
 
     if (response.error) {
-      process.exit(0);
+      reportServiceFailure({ mcpTool: MCP_TOOL, status: `${res.status} with an error body` });
     }
 
     // Format results for AI agent consumption
@@ -616,7 +673,7 @@ async function main() {
       process.stdout.write('\n');
     }
   } catch (err) {
-    process.exit(0);
+    reportServiceFailure({ mcpTool: MCP_TOOL, err });
   } finally {
     clearTimeout(timeoutId);
   }

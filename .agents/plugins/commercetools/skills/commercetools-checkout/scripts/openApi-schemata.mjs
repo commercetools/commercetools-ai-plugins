@@ -7,31 +7,64 @@
  * grounding context for the agent, with instrumentation headers. Use this to
  * inspect a resource's REST endpoints, request/response payloads, and update
  * actions before generating REST clients or requests.
- * Results are written to stdout for consumption by AI agents.
- *
- * Usage:
- *   node scripts/openApi-schemata.mjs --resource-name "api-Cart-write" --app-name <name> --model <model>
- *
- * Required:
- *   --resource-name <string>  commercetools resource name (e.g., api-Cart-read, api-Cart-write, api-Customer-write, checkout-Application)
- *
- * Optional (telemetry — never gates the fetch):
- *   --app-name <string>       Host app: claude-code, claude-desktop, cursor, codex, copilot.
- *                             Must match the hook vocabulary or the two layers
- *                             cannot be grouped together.
- *   --model <string>          Model name (e.g., claude-sonnet-4.5, gpt-4)
- *   --skill-name <string>     Overrides the skill name derived from this file's path
- *   --commercetools-project-key <string>
- *                             The project the work targets, only if already known.
- *                             Kept for the rest of the session once passed.
- *   --commercetools-region <string>
- *                             Its region as in api.{region}.commercetools.com, e.g.
- *                             europe-west1.gcp. Same rules as the project key.
- *
- * Opt out of telemetry with COMMERCETOOLS_AI_PLUGIN_TELEMETRY=0.
+ * Results are written to stdout for consumption by AI agents. Usage: see USAGE
+ * below, or run with --help.
  */
 
-import { parseArgs } from 'util';
+// --- inlined from .internal/skill-scripts/cli.mjs — do not edit here ---
+// Command-line handling shared by the skill scripts: --help, usage errors, and
+// the message an agent gets when the docs service cannot be used. INLINED into
+// each script by sync-skill-scripts.mjs, never shipped as its own file.
+//
+// Why the messages matter: an agent that gets no output cannot tell "blocked"
+// from "nothing found", and goes on to read the script's source to find out.
+// So every failure says what happened and what to do next, on stderr. The
+// script still never throws at the agent: a failure is a clear message and
+// exit code 1, not a stack trace.
+
+import { parseArgs } from 'node:util';
+
+const DOCS_HOST = 'docs.commercetools.com';
+
+// parseArgs with --help/-h and readable usage errors. `options` must stay the
+// first key of the argument object: lint-skill-script-usage.mjs reads the
+// allowed flags from that literal.
+const parseArgsOrUsage = ({ options, usage }) => {
+  let parsed;
+  try {
+    parsed = parseArgs({ options: { ...options, help: { type: 'boolean', short: 'h' } } });
+  } catch (err) {
+    process.stderr.write(`Error: ${err.message}\n\n${usage}\n`);
+    process.exit(1);
+  }
+  if (parsed.values.help) {
+    process.stdout.write(`${usage}\n`);
+    process.exit(0);
+  }
+  return parsed;
+};
+
+// The request did not produce a usable answer. `mcpTool` is the Knowledge MCP
+// tool that does the same job: if the agent has it, that is the faster route
+// than asking the user to grant network access.
+const reportServiceFailure = ({ mcpTool, err, status }) => {
+  const viaMcp =
+    `If the commercetools Knowledge MCP tool "${mcpTool}" is available, use it instead.`;
+  if (status !== undefined) {
+    process.stderr.write(
+      `Error: ${DOCS_HOST} returned HTTP ${status}. ${viaMcp} Otherwise retry later.\n`,
+    );
+  } else {
+    const reason = err?.cause?.code || err?.name || 'unknown error';
+    process.stderr.write(
+      `Error: could not reach ${DOCS_HOST} (${reason}). ${viaMcp} ` +
+        `Otherwise the environment may be blocking network access: ask for access to ` +
+        `${DOCS_HOST} and run the command again.\n`,
+    );
+  }
+  process.exit(1);
+};
+// --- end cli.mjs ---
 // --- inlined from .internal/skill-scripts/instrumentation.mjs — do not edit here ---
 /**
  * Shared instrumentation helpers for the commercetools skill scripts.
@@ -55,7 +88,7 @@ import { fileURLToPath } from 'node:url';
 
 // Substituted at install time from .internal/config.json. The one field in the
 // payload that is verified rather than self-reported by the model.
-const PLUGIN_VERSION = '0.54.0';
+const PLUGIN_VERSION = '0.57.0';
 
 /** The single opt-out switch. */
 const telemetryDisabled = () =>
@@ -245,7 +278,8 @@ const invocationId = (appName, project = {}) => {
     const passed = Boolean(project.key || project.region);
     next.ctProjectKey = project.key || state?.ctProjectKey;
     next.ctRegion = project.region || state?.ctRegion;
-    next.ctProjectSource = passed ? 'model' : state?.ctProjectSource;
+    // `model` unless the caller knows better, e.g. a key read from an MCP server URL.
+    next.ctProjectSource = passed ? project.source || 'model' : state?.ctProjectSource;
 
     try {
       fs.writeFileSync(file, JSON.stringify(next));
@@ -448,7 +482,7 @@ const instrumentationHeaders = ({ appName, model, skillName }) => {
  */
 const applyInstrumentationParams = (
   url,
-  { appName, model, skillName, source, importMetaUrl, projectKey, region },
+  { appName, model, skillName, source, importMetaUrl, projectKey, region, projectSource },
 ) => {
   if (telemetryDisabled()) return;
   if (skillName) url.searchParams.set('skillName', skillName);
@@ -468,6 +502,7 @@ const applyInstrumentationParams = (
   const invocation = invocationId(appName, {
     key: cleanProjectKey(projectKey),
     region: cleanRegion(region),
+    source: projectSource,
   });
   if (invocation) {
     url.searchParams.set('invocation', invocation.id);
@@ -486,9 +521,33 @@ const applyInstrumentationParams = (
 // --- end instrumentation.mjs ---
 
 const SCHEMA_URL = 'https://docs.commercetools.com/apis/rest/tools/oas-schemata';
+const MCP_TOOL = 'commercetools-oas-schemata';
+
+const USAGE = `Fetch the commercetools OpenAPI specification for one resource.
+
+Usage:
+  node scripts/openApi-schemata.mjs --resource-name "api-Cart-write" [options]
+
+Required:
+  --resource-name <string>  commercetools resource name, e.g. api-Cart-write,
+                            api-CartDiscount, checkout-Application. An unknown
+                            name prints the list of valid names.
+
+Optional (telemetry, never gates the fetch):
+  --app-name <string>       Host app: claude-code, claude-desktop, cursor, codex, copilot
+  --model <string>          Model name
+  --skill-name <string>     Overrides the skill name derived from this file's path
+  --commercetools-project-key <string>
+                            The project the work targets, only if already known
+  --commercetools-region <string>
+                            Its region as in api.{region}.commercetools.com
+
+  -h, --help                Show this help
+
+Opt out of telemetry with COMMERCETOOLS_AI_PLUGIN_TELEMETRY=0.`;
 
 // Parse command line arguments
-const { values } = parseArgs({
+const { values } = parseArgsOrUsage({
   options: {
     'resource-name': { type: 'string' },
     'app-name': { type: 'string' },
@@ -497,14 +556,14 @@ const { values } = parseArgs({
     'commercetools-project-key': { type: 'string' },
     'commercetools-region': { type: 'string' },
   },
+  usage: USAGE,
 });
 
 // Validate the one parameter the request actually needs. Telemetry arguments are
 // never gating: a missing --app-name or --model costs us a log column, it must
 // not cost the user their answer.
 if (!values['resource-name']) {
-  console.error('Error: Missing required parameter: --resource-name');
-  console.error('Usage: node scripts/openApi-schemata.mjs --resource-name "Cart"');
+  process.stderr.write(`Error: Missing required parameter: --resource-name\n\n${USAGE}\n`);
   process.exit(1);
 }
 
@@ -524,47 +583,55 @@ const url = new URL(SCHEMA_URL);
 url.searchParams.set('resourceName', values['resource-name']);
 applyInstrumentationParams(url, meta);
 
-// Fetch the partial OpenAPI spec and print it (fail soft: exit 0 on any error)
+// Fetch the partial OpenAPI spec and print it. Failures go to stderr with what
+// to do next (see cli.mjs).
+let res;
 try {
-  const res = await fetch(url, {
+  res = await fetch(url, {
     method: 'GET',
     headers: instrumentationHeaders(meta),
     signal: AbortSignal.timeout(60000),
   });
-
-  const response = await res.json();
-
-  // Surface API errors (e.g. an invalid resourceName returns HTTP 400)
-  if (response.error) {
-    const details = response.error.details;
-    const validValues = Array.isArray(details)
-      ? details.find((d) => Array.isArray(d.values))?.values
-      : undefined;
-
-    process.stdout.write(`No schema found for resource "${values['resource-name']}". Check the resource name spelling.\n`);
-    if (validValues?.length) {
-      process.stdout.write(`\nValid resource names:\n${validValues.join(', ')}\n`);
-    }
-    process.exit(0);
-  }
-
-  if (!res.ok) process.exit(0);
-
-  // The result is an OpenAPI specification (YAML string) for the requested resource
-  if (typeof response.result === 'string' && response.result.length > 0) {
-    process.stdout.write(`# OpenAPI Schema for resource: ${values['resource-name']}\n\n`);
-    process.stdout.write('```yaml\n');
-    process.stdout.write(response.result.endsWith('\n') ? response.result : `${response.result}\n`);
-    process.stdout.write('```\n');
-  } else if (response.result && typeof response.result === 'object') {
-    // Fallback: output a structured (JSON) result as-is
-    process.stdout.write(`# OpenAPI Schema for resource: ${values['resource-name']}\n\n`);
-    process.stdout.write('```json\n');
-    process.stdout.write(`${JSON.stringify(response.result, null, 2)}\n`);
-    process.stdout.write('```\n');
-  } else {
-    process.stdout.write(`No schema found for resource "${values['resource-name']}". Check the resource name spelling.\n`);
-  }
 } catch (err) {
+  reportServiceFailure({ mcpTool: MCP_TOOL, err });
+}
+
+let response;
+try {
+  response = await res.json();
+} catch {
+  reportServiceFailure({ mcpTool: MCP_TOOL, status: res.status });
+}
+
+// Surface API errors (e.g. an invalid resourceName returns HTTP 400). This is an
+// answer, not a failure: the valid names let the agent correct itself.
+if (response.error) {
+  const details = response.error.details;
+  const validValues = Array.isArray(details)
+    ? details.find((d) => Array.isArray(d.values))?.values
+    : undefined;
+
+  process.stdout.write(`No schema found for resource "${values['resource-name']}". Check the resource name spelling.\n`);
+  if (validValues?.length) {
+    process.stdout.write(`\nValid resource names:\n${validValues.join(', ')}\n`);
+  }
   process.exit(0);
+}
+
+if (!res.ok) reportServiceFailure({ mcpTool: MCP_TOOL, status: res.status });
+
+// The result is an OpenAPI specification (YAML string) for the requested resource
+if (typeof response.result === 'string' && response.result.length > 0) {
+  process.stdout.write(`# OpenAPI Schema for resource: ${values['resource-name']}\n\n`);
+  process.stdout.write('```yaml\n');
+  process.stdout.write(response.result.endsWith('\n') ? response.result : `${response.result}\n`);
+  process.stdout.write('```\n');
+} else if (response.result && typeof response.result === 'object') {
+  // Fallback: output a structured (JSON) result as-is
+  process.stdout.write(`# OpenAPI Schema for resource: ${values['resource-name']}\n\n`);
+  process.stdout.write('```json\n');
+  process.stdout.write(`${JSON.stringify(response.result, null, 2)}\n`);
+  process.stdout.write('```\n');
+} else {
+  process.stdout.write(`No schema found for resource "${values['resource-name']}". Check the resource name spelling.\n`);
 }

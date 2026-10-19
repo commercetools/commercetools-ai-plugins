@@ -93,12 +93,12 @@ esac
 # not cheap everywhere: on a Mac with endpoint security software it measured
 # ~150 ms each, which added up to 4 s — past Codex's hook timeout, so the hook
 # was killed and reported as failed. Cursor's beforeReadFile is worse off still,
-# because the file read waits for the hook. Handing the payload to a detached
-# copy of this script makes the host wait for one process start, not forty.
-if [ -z "$CT_AI_PLUGIN_TELEMETRY_DETACHED" ]; then
-  (printf '%s' "$INPUT" | CT_AI_PLUGIN_TELEMETRY_DETACHED=1 sh "$0" "$@" >/dev/null 2>&1 &) 2>/dev/null
-  exit 0
-fi
+# because the file read waits for the hook. The rest runs in a detached
+# subshell of this same script, so the host waits for one fork, not forty
+# process starts. A subshell rather than a second run of this file: directory
+# reviews can follow a script but not a script that runs another file.
+(
+(
 
 command -v curl >/dev/null 2>&1 || { dbg "skip: no curl on PATH"; exit 0; }
 
@@ -325,7 +325,7 @@ state_value() {
 
 # What this session already knows, read before the payload is interpreted: the
 # commercetools project the scripts recorded, and the last skill reported.
-CT_PROJECT_KEY=""
+CT_PROJECT=""
 CT_REGION=""
 CT_PROJECT_SOURCE=""
 LAST_SKILL=""
@@ -335,7 +335,7 @@ if [ -n "$SESSION" ]; then
   SESSION_FILE="${TMPDIR_PATH%/}/ct-ai-plugin-invocation-${CLIENT_FAMILY}.json"
   PREVIOUS=$(cat "$SESSION_FILE" 2>/dev/null)
   if [ -n "$PREVIOUS" ] && [ "$(state_value "$PREVIOUS" id)" = "$SESSION" ]; then
-    CT_PROJECT_KEY=$(state_value "$PREVIOUS" ctProjectKey)
+    CT_PROJECT=$(state_value "$PREVIOUS" ctProjectKey)
     CT_REGION=$(state_value "$PREVIOUS" ctRegion)
     CT_PROJECT_SOURCE=$(state_value "$PREVIOUS" ctProjectSource)
     LAST_SKILL=$(state_value "$PREVIOUS" lastSkill)
@@ -370,7 +370,7 @@ MODEL=$(json_field model)
 if [ -n "$SESSION_FILE" ]; then
   LAST_SKILL=$(printf '%s\n' "$EVENTS" | tail -n 1 | cut -d ' ' -f 2)
   STATE=$(printf '{"id":"%s","ts":%s,"seq":%s,"src":"host"' "$SESSION" "$(( $(date +%s) * 1000 ))" "$SEQ")
-  [ -n "$CT_PROJECT_KEY" ] && STATE="$STATE,\"ctProjectKey\":\"$CT_PROJECT_KEY\""
+  [ -n "$CT_PROJECT" ] && STATE="$STATE,\"ctProjectKey\":\"$CT_PROJECT\""
   [ -n "$CT_REGION" ] && STATE="$STATE,\"ctRegion\":\"$CT_REGION\""
   [ -n "$CT_PROJECT_SOURCE" ] && STATE="$STATE,\"ctProjectSource\":\"$CT_PROJECT_SOURCE\""
   [ -n "$LAST_SKILL" ] && STATE="$STATE,\"lastSkill\":\"$LAST_SKILL\""
@@ -454,7 +454,7 @@ send() {
   if [ -n "$MODEL" ]; then
     set -- "$@" --data-urlencode "model=$MODEL" --header "X-Model: $MODEL"
   fi
-  [ -n "$CT_PROJECT_KEY" ] && set -- "$@" --data-urlencode "ctProjectKey=$CT_PROJECT_KEY"
+  [ -n "$CT_PROJECT" ] && set -- "$@" --data-urlencode "ctProjectKey=$CT_PROJECT"
   [ -n "$CT_REGION" ] && set -- "$@" --data-urlencode "ctRegion=$CT_REGION"
   [ -n "$CT_PROJECT_SOURCE" ] && set -- "$@" --data-urlencode "ctProjectSource=$CT_PROJECT_SOURCE"
   if [ -n "$EMAIL_DOMAIN" ]; then
@@ -482,4 +482,6 @@ printf '%s\n' "$EVENTS" | while read -r EVENT_NAME SKILL RESOURCE; do
   send "$EVENT_NAME" "$SKILL" "$RESOURCE"
 done
 
+) </dev/null >/dev/null 2>&1 &
+) 2>/dev/null
 exit 0

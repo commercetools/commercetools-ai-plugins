@@ -88,7 +88,7 @@ import { fileURLToPath } from 'node:url';
 
 // Substituted at install time from .internal/config.json. The one field in the
 // payload that is verified rather than self-reported by the model.
-const PLUGIN_VERSION = '0.57.0';
+const PLUGIN_VERSION = '0.58.0';
 
 /** The single opt-out switch. */
 const telemetryDisabled = () =>
@@ -353,50 +353,44 @@ const domainOf = (email) => {
   return /^[a-z0-9.-]{1,253}$/.test(domain) ? domain : undefined;
 };
 
-// The first executable named git on PATH — what `command -v git` answers, so
-// any install method counts. One exception: macOS ships /usr/bin/git on every
-// machine as a placeholder that, without developer tools, opens an install
-// dialog instead of running. A presence check cannot tell it apart, so it is
-// skipped unless the tools it forwards to exist, and the search moves on to
-// the next PATH entry (Homebrew and the like).
-const isMacPlaceholder = (candidate) =>
-  process.platform === 'darwin' &&
-  candidate === '/usr/bin/git' &&
-  !['/var/db/xcode_select_link', '/Library/Developer/CommandLineTools/usr/bin/git'].some((p) =>
-    fs.existsSync(p),
-  );
-
-const isExecutable = (candidate) => {
-  try {
-    fs.accessSync(candidate, fs.constants.X_OK);
-    return fs.statSync(candidate).isFile();
-  } catch {
-    return false;
-  }
-};
-
-const findGit = () => {
-  const names = process.platform === 'win32' ? ['git.exe', 'git'] : ['git'];
+// macOS ships /usr/bin/git on every machine as a placeholder that, without
+// developer tools, opens an install dialog instead of running. A presence check
+// cannot tell it apart, so git is not run when the git PATH would pick is that
+// placeholder and the tools it forwards to are missing.
+const firstGitIsMacPlaceholder = () => {
+  if (process.platform !== 'darwin') return false;
   for (const dir of (process.env.PATH || '').split(path.delimiter)) {
     if (!dir) continue;
-    for (const name of names) {
-      const candidate = path.join(dir, name);
-      if (isExecutable(candidate) && !isMacPlaceholder(candidate)) return candidate;
+    const candidate = path.join(dir, 'git');
+    try {
+      fs.accessSync(candidate, fs.constants.X_OK);
+    } catch {
+      continue;
     }
+    return (
+      candidate === '/usr/bin/git' &&
+      !['/var/db/xcode_select_link', '/Library/Developer/CommandLineTools/usr/bin/git'].some((p) =>
+        fs.existsSync(p),
+      )
+    );
   }
-  return undefined;
+  return false;
 };
 
-const gitUserEmail = () => {
+// The domain of `git config user.email`. Only the domain leaves this function:
+// the address is reduced to the part after the @ right where git returns it,
+// and never stored or sent.
+const gitEmailDomain = () => {
   try {
-    const git = findGit();
-    if (!git) return undefined;
-    return execFileSync(git, ['config', '--get', 'user.email'], {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-      timeout: 1500,
-      windowsHide: true,
-    }).trim();
+    if (firstGitIsMacPlaceholder()) return undefined;
+    return domainOf(
+      execFileSync('git', ['config', '--get', 'user.email'], {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+        timeout: 1500,
+        windowsHide: true,
+      }),
+    );
   } catch {
     return undefined;
   }
@@ -421,7 +415,7 @@ const emailDomain = () => {
     }
   }
 
-  const domain = domainOf(gitUserEmail());
+  const domain = gitEmailDomain();
   if (!domain) return undefined;
 
   for (const file of locations) {

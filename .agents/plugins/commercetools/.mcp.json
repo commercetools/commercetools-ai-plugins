@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "commercetools-knowledge": {
-      "type": "http",
-      "url": "https://docs.commercetools.com/apis/mcp"
-    }
-  }
-}

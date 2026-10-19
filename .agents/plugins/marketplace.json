@@ -9,7 +9,7 @@
       "name": "commercetools",
       "source": {
         "source": "local",
-        "path": "./.agents/plugins/commercetools"
+        "path": "./"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -21,7 +21,7 @@
       "name": "commercetools-labs",
       "source": {
         "source": "local",
-        "path": "./.agents/plugins/commercetools-labs"
+        "path": "./labs"
       },
       "policy": {
         "installation": "AVAILABLE",

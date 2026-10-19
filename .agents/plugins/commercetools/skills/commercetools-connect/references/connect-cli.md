@@ -98,6 +98,8 @@ The generated `package.json` also exposes `npm run build|start|start:dev|test` a
 
 ## Step 5. Stage, preview, publish, and deploy
 
+These commands change a live commercetools Project or make a connector public, and some cannot be undone. Before running `deployment create` or `deployment redeploy` with `--type production`, `deployment delete`, `connectorstaged publish`, or `connectorstaged certify`, show the user the exact command and wait for their explicit confirmation. Deploy to `sandbox` unless the user asks for another type.
+
 ```bash
 # Register the staged (private) connector from your git repo:
 commercetools connect connectorstaged create \
@@ -110,17 +112,17 @@ commercetools connect connectorstaged preview \
   --key <connector-key> --deployment-key <dep-key> --region <region>
 
 # Publish so it can run in production:
-commercetools connect connectorstaged publish --key <connector-key>
+commercetools connect connectorstaged publish --key <connector-key>       # only after the user confirms
 # Public marketplace listing only — certification:
-commercetools connect connectorstaged certify --key <connector-key>
+commercetools connect connectorstaged certify --key <connector-key>       # only after the user confirms
 
 # Deploy / install into a project (this IS installation):
-commercetools connect deployment create --connector-key <key> --region <region> --type preview|sandbox|production
+commercetools connect deployment create --connector-key <key> --region <region> --type sandbox   # preview | sandbox | production — production only after the user confirms
 commercetools connect deployment describe --key <deployment-key>
 commercetools connect deployment logs --key <deployment-key> --application service --startDate <iso> --endDate <iso>
 commercetools connect deployment redeploy --key <deployment-key> --configuration KEY=value
 commercetools connect deployment list
-commercetools connect deployment delete --key <deployment-key>
+commercetools connect deployment delete --key <deployment-key>            # irreversible — only after the user confirms
 ```
 
 Deploy in the **same region as your project**. Redeploy (don't delete/recreate) for config changes — `postDeploy` re-runs, so registration must be idempotent.

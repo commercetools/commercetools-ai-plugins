@@ -1,6 +1,6 @@
 ---
 name: commercetools-integrations
-description: "Integrate commercetools with an external system through Connect. Thirteen domain sub-areas each start at a native-capability gate, then pick a rung: use a public connector, close the gap with config, fork one, or build new. Build contracts live in commercetools-connect. Use when syncing commercetools to or from an external system, or debugging a deployed connector."
+description: "Integrate commercetools with an external system through Connect. Thirteen domain sub-areas each start at a native-capability gate, then pick a rung: use a public connector, close the gap with config, fork one, or build new. Build contracts live in commercetools-connect. Use when syncing commercetools to or from an external system, or debugging a deployed connector. Not for turning unstructured inbound sales input (a quote, purchase order, email, ticket, PDF, or spreadsheet) into one Cart, Quote Request, or Shopping List (see commercetools-intake)."
 when_to_use:
   - "Payment (Stripe, Adyen, Mollie, PayPal) and gift card (Voucherify) connectors: payment session, capture/refund, redeem"
   - "Tax connectors (Avalara, Vertex, TaxJar): calculator API Extension, ExternalAmount, taxedPrice missing"

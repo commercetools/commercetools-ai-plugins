@@ -1,0 +1,44 @@
+{
+  "skill_name": "commercetools-intake",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "When a Zendesk ticket is tagged order-request, turn it into a commercetools quote request with Intake. The ticket has a requester, an organization we map to a business unit, and a PDF purchase order. Agents then reply on the same ticket with quantity changes.",
+      "expected_output": "Uses the stateless responses endpoint once per new ticket, with outputType QuoteRequest set by the integration. Puts the requester email and a shipping country in the prompt, passes the mapped business unit key, and uploads the PDF as a files part. Conditionally inserts the ticket id as in progress, then acknowledges the Zendesk webhook, then calls Intake. Writes entity id, cartId, and threadId back to the ticket. Later agent comments update the existing entity and do not call Intake again.",
+      "files": [],
+      "expectations": [
+        "Sets outputType to QuoteRequest explicitly rather than asking Intake to infer it from the ticket text",
+        "Uses the requester email as the Customer email in the prompt, not the agent or the Zendesk notification sender",
+        "Passes the organization-to-business-unit mapping as a businessUnit key on the request",
+        "Uploads the purchase order as a multipart files part and does not send the Zendesk notification as an .eml",
+        "Conditionally inserts the ticket id as in progress before acknowledging the webhook, then calls Intake, so two overlapping Zendesk deliveries cannot both POST a Quote Request",
+        "Stores entity id, cartId, and threadId back on the ticket",
+        "Treats later comments on the same ticket as updates to the existing entity, not as new Intake calls"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Our mailbox integration calls the Intake API for every inbound email. Customers keep getting two carts for one purchase order, especially when they reply with a corrected quantity or when the provider retries the webhook.",
+      "expected_output": "Diagnoses duplicates as a second POST to the stateless responses endpoint, which always starts a new run. Separates provider redelivery (same Message-ID) from a reply (In-Reply-To / References). Redelivery must not call Intake again. A reply must update the stored Cart instead of calling Intake.",
+      "files": [],
+      "expectations": [
+        "Identifies that each POST to the responses endpoint creates a new entity and that the API has no idempotency key",
+        "Uses the email Message-ID as the idempotency key for provider redelivery",
+        "Treats a reply matched via In-Reply-To or References as an update to the stored Cart, not a new Intake call",
+        "Treats the two duplicate sources (webhook retry and customer reply) as separate cases rather than one retry bug"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Intake returns 400 MissingCountry and sometimes BusinessUnitAmbiguous for German order emails. The mailbox is only used for Germany and most of these customers belong to two business units. Can we send a follow-up turn so Intake asks the customer which unit?",
+      "expected_output": "Does not propose a second conversational turn. Explains the endpoint cannot resume. Fixes MissingCountry by writing Shipping country: DE into the prompt, and BusinessUnitAmbiguous by passing businessUnit. Notes that locale de-DE does not set the country.",
+      "files": [],
+      "expectations": [
+        "States that the responses endpoint is stateless and cannot ask the customer a follow-up question",
+        "Fixes MissingCountry by putting the shipping country in the prompt rather than by setting locale",
+        "Fixes BusinessUnitAmbiguous by passing a businessUnit resource identifier for the unit the customer belongs to",
+        "Does not recommend calling the endpoint again unchanged, or inventing a conversation id to resume the run"
+      ]
+    }
+  ]
+}

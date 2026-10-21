@@ -10,6 +10,7 @@
         "commercetools-checkout",
         "commercetools-commerce-patterns",
         "commercetools-connect",
+        "commercetools-intake",
         "commercetools-integration-layer",
         "commercetools-integrations",
         "commercetools-mcp",

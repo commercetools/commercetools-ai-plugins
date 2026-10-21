@@ -1,8 +1,8 @@
 ---
 name: verify-and-push
-description: Test a whole CIL bundle before pushing it (schema extensions, resolvers, and Managed API Extension handlers together), then validate, push, and confirm the new revision is running. Orders the test layers from unit tests to real commercetools writes and says what each one catches that the previous cannot.
+description: Test a whole Commerce Integration Layer bundle before pushing it (schema extensions, resolvers, and Managed API Extension handlers together), then validate, push, and confirm the new revision is running. Orders the test layers from unit tests to real commercetools writes and says what each one catches that the previous cannot.
 when_to_use:
-  - "Testing a CIL extension bundle before pushing it"
+  - "Testing a Commerce Integration Layer extension bundle before pushing it"
   - "Unit-testing resolvers or API Extension handlers in an integration-layer workspace"
   - "Checking that API Extension handlers fire on the right cart or order writes"
   - "Understanding what integration-layer validate checks and what push does"
@@ -13,7 +13,7 @@ metadata:
     - "Integrations"
 ---
 
-# Testing, validating, and pushing a CIL bundle
+# Testing, validating, and pushing a Commerce Integration Layer bundle
 
 **Impact: HIGH — a Project runs exactly one bundle, and a push replaces all of it. A handler that never fires, or a schema change that breaks a client, reaches every consumer at once.**
 
@@ -23,7 +23,7 @@ Test the **merged bundle**, because that is what deploys: the root scripts of an
 | :--- | :--- | :--- | :--- |
 | 1. Unit tests | `pnpm test` | Resolver and handler logic, config handling | Nothing |
 | 2. Handlers, offline | `invoke-api-extension --all` | Which handlers fire for a write, and their verdict | Nothing |
-| 3. Schema, composed | `pnpm dev` | Merged schema against the deployed CIL, `@requires`, entity fields, `@override` | Login |
+| 3. Schema, composed | `pnpm dev` | Merged schema against the deployed Experience API, `@requires`, entity fields, `@override` | Login |
 | 4. Real writes | `serve-api-extension --all` | commercetools calling your handlers on real writes, `condition` triggers | Login with `manage_project`, a tunnel, a sandbox Project |
 | 5. Publish gate | `pnpm validate` | Sandbox violations, shape, composition, breaking changes | Login |
 | 6. Push and confirm | `pnpm push`, then `explore --deployed` | The revision actually loads and serves | Login |
@@ -94,7 +94,7 @@ A handler fires locally only when its `resourceTypeId` and `actions` match the p
 
 ## 3. Query the merged schema through a gateway
 
-The workspace's root `pnpm dev` runs `serve --all`: a local federated gateway over your merged extension subgraph **and** the Project's deployed CIL. This is the production topology in miniature, so query core fields and your fields together in one operation:
+The workspace's root `pnpm dev` runs `serve --all`: a local federated gateway over your merged extension subgraph **and** the Project's deployed Experience API. This is the production topology in miniature, so query core fields and your fields together in one operation:
 
 ```graphql
 { product(id: "…") { name loyaltyPoints(price: 1000) } }

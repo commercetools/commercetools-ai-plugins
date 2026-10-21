@@ -1,18 +1,18 @@
 ---
 name: write-path
-description: Change how a commercetools write behaves from a CIL project, or add a write that goes to an external service provider. Walks the order for commercetools writes (Managed API Extension, then commercetools support, then overriding the existing mutation with @override as the final step) and when a custom mutation is the right tool instead.
+description: Change how a commercetools write behaves from a Commerce Integration Layer project, or add a write that goes to an external service provider. Walks the order for commercetools writes (Managed API Extension, then commercetools support, then overriding the existing mutation with @override as the final step) and when a custom mutation is the right tool instead.
 when_to_use:
   - "Porting BFF logic that set or derived a field on a request before it reached commercetools"
   - "A write needs a value to pass validation that the client does not send, such as a distribution channel resolved from the Business Unit"
-  - "Deciding whether to override a core CIL mutation with @override"
-  - "Adding a mutation that calls an external service provider from a CIL project"
+  - "Deciding whether to override a core Experience API mutation with @override"
+  - "Adding a mutation that calls an external service provider from a Commerce Integration Layer project"
 metadata:
   contentType: REFERENCE
   area:
     - "Integrations"
 ---
 
-# The write path in the CIL
+# The write path in the Commerce Integration Layer
 
 **Impact: HIGH — logic tied to one client or one update action silently lapses when another client or a new update action reaches the same data. Choose the earliest option that is correct for every path.**
 
@@ -20,11 +20,11 @@ First decide whose write it is. A write to **commercetools** data follows the or
 
 ## Changing commercetools write behavior
 
-The CIL replaces the customer's BFF, so logic the BFF ran around a commercetools write needs a home inside the CIL. Walk the steps in order and stop at the first that fits. For the wider migration (BFF code the CIL makes redundant, and workloads that belong in Connect), see [Migrate an existing BFF](https://docs.commercetools.com/guides/migration-guides/migrate-existing-bff.md).
+The Commerce Integration Layer replaces the customer's BFF, so logic the BFF ran around a commercetools write needs a home inside it. Walk the steps in order and stop at the first that fits. For the wider migration (BFF code the Commerce Integration Layer makes redundant, and workloads that belong in Connect), see [Migrate an existing BFF](https://docs.commercetools.com/guides/migration-guides/migrate-existing-bff.md).
 
 ### 1. Start with a Managed API Extension
 
-"The BFF set it before the request, so it must be set before the request" is an assumption, not a fact. An [API Extension](https://docs.commercetools.com/api/projects/api-extensions.md) runs after the request is processed and before it is persisted, and it can validate the write or return update actions. That covers most BFF write logic: enforcing a rule, stamping a computed custom field, attaching a loyalty, tax, or pricing attribute, correcting a value. It also applies to every client, not only traffic through the CIL.
+"The BFF set it before the request, so it must be set before the request" is an assumption, not a fact. An [API Extension](https://docs.commercetools.com/api/projects/api-extensions.md) runs after the request is processed and before it is persisted, and it can validate the write or return update actions. That covers most BFF write logic: enforcing a rule, stamping a computed custom field, attaching a loyalty, tax, or pricing attribute, correcting a value. It also applies to every client, not only traffic through the Experience API.
 
 Two conditions put a requirement beyond an API Extension:
 
@@ -46,7 +46,7 @@ When the steps above do not solve it, the extension subgraph can take over an ex
 It is the final step because your resolver now owns the whole operation:
 
 - **It must keep up with the core mutation.** Fields and behavior the core mutation gains later are not inherited automatically. Re-check the override when you update the bundle.
-- **It only covers traffic through the CIL.** Writes from the Merchant Center or direct API clients do not pass through it, unlike an API Extension.
+- **It only covers traffic through the Experience API.** Writes from the Merchant Center or direct API clients do not pass through it, unlike an API Extension.
 
 ## Writes to an external service provider
 

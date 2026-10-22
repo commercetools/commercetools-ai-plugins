@@ -32,6 +32,11 @@ The pipeline is a separate repository, cloned **beside** the engagement rather
 than into it. It is a tool, not engagement content: nothing in it is edited per
 engagement, and a teardown scoped to `keys.prefix` has nothing to do with it.
 
+**Ask before you clone and install it.** `npm install` downloads the pipeline's
+dependencies and runs their install scripts on the user's machine. Name the
+repository and where it will go, and wait for the user's yes, or let them run
+the commands themselves. A request to migrate a catalog is not that yes.
+
 **Ignore it before you clone it.** The engagement is usually itself a git
 repository, and a clone inside one is an *embedded* repository: `git add -A`
 stages it as a **gitlink** — mode `160000`, the pipeline's commit pinned in

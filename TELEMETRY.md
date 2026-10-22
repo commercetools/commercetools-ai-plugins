@@ -1,35 +1,46 @@
 # Telemetry and data processing
 
-The skills make two kinds of request, both to `docs.commercetools.com`:
+The plugin talks to commercetools in two ways, both through `docs.commercetools.com`:
 
-1. **Documentation search and schema lookups** — sends the agent's search terms and shows it the results. This is what the skill is for, and it runs when the agent runs one of the `scripts/*.mjs` helpers.
-2. **Usage telemetry** — an editor hook reports which skill was activated and which of its reference files were read, and the script that connects a repository to a commercetools MCP Server reports once whether that worked. Neither fetches anything or interrupts you.
+1. **Documentation and API tools.** The Knowledge MCP server and the skills' `scripts/*.mjs` helpers search the documentation, look up API schemas, and validate queries. That is what they are for.
+2. **Usage reporting.** Editor hooks report which skill was used and which of its files were read. The script that connects a repository to a commercetools MCP Server reports once whether that worked. Neither fetches anything or interrupts you.
 
 Both are ordinary requests to the commercetools documentation website, so its hosting, logging, and retention apply, as described in the [commercetools privacy notice](https://commercetools.com/privacy).
 
-What the skills add to those requests:
+## Always sent
 
-| | |
-| :--- | :--- |
-| Search terms | Documentation search only — whatever the agent puts in the query, usually a rephrasing of your question. |
-| Skill and resource name | Which skill was used, and which file inside it, for example `references/core/cart.md`. |
-| Host app and model | The AI tool and model, as the tool reports them. |
-| Plugin version | The version of this plugin. |
-| Installation ID | A random value stored in `~/.commercetools/`, or your temp directory when that is not writable. It distinguishes installations rather than people and contains nothing derived from you or your machine. Delete the file to start fresh. |
-| Email domain | Only the part after the @, for example `example.com`. Taken from your editor when it provides your email (Cursor), otherwise once from `git config user.email`, and stored next to the installation ID. Delete the file to have it read again. |
-| commercetools project key and region | Only when the agent already knows them from your conversation or the files it has read for the task — it is told never to look for them — or, when connecting a repository to a commercetools MCP Server, as read from the server URL you pasted. Kept for the rest of that session. |
-| Connection outcome | When connecting a repository to a commercetools MCP Server, whether it worked, for example `added` or `project-mismatch`. Never the server URL, the repository path, or the file. |
+These are part of the requests themselves, or sent by AI tools that offer no way to turn reporting off:
 
-**Never sent:** your name, the part of your email address before the @, account, credentials, environment variables, file contents, your own file paths, or any of your code.
+- **What is asked:** search terms, the schema or resource names looked up, and the GraphQL queries or REST requests sent for validation.
+- **Skill and file:** the skill name and the file read inside it, for example `references/core/cart.md`.
+- **AI tool:** the AI app and model, as they report themselves, and the plugin version.
+- **Request data:** time, network address, and how the client identifies itself (user agent, MCP client name and version). In a cloud-hosted AI app, the network address is the provider's server, not yours.
 
-### Opting out
+## Sent unless you opt out
 
-```bash
-export COMMERCETOOLS_AI_PLUGIN_TELEMETRY=0
-```
+- **Email domain:** the part after the @ of the email address configured in git (`git config user.email`), or of the address your editor signs you in with when it provides one (Cursor). Read once and stored next to the installation ID. Delete that file to have it read again.
+- **Installation ID:** a random value stored in `~/.commercetools/`, or in your temp directory when that isn't writable. It tells installations apart, not people, and contains nothing derived from you or your machine. Delete the file to start fresh.
+- **Session ID:** a value that groups the requests of one agent session: random, or a one-way hash of the AI tool's own session ID.
+- **commercetools project key and region:** only when the agent already knows them from your conversation or from files it read for the task (it is told never to look for them), or from the MCP server URL you pasted when connecting a repository. Kept for the rest of that session.
+- **Connection outcome:** whether connecting a repository to a commercetools MCP Server worked, for example `added` or `project-mismatch`. Never the server URL, the repository path, or the file.
 
-That stops the usage telemetry entirely and removes every identifier from the documentation-search requests — no skill name, installation ID, email domain, project key, host app, or model. Nothing is read or stored for telemetry while it is off. The search terms are still sent, because that is the request that produces the answer.
+## Never sent
 
-The variable is read per process, so setting it in one shell or project does not affect another, and it does not delete the installation ID.
+Your name, the part of your email address before the @, account details, credentials, environment variables, file contents, your own file paths, or your code.
+
+## Opting out
+
+Usage reporting is on by default. To turn it off:
+
+- In Claude Code, turn off the plugin's **Share usage data** setting, offered when you install the plugin and later under `/config`.
+- In any tool, set the environment variable:
+
+  ```bash
+  export COMMERCETOOLS_AI_PLUGIN_TELEMETRY=0
+  ```
+
+Either one stops everything under [Sent unless you opt out](#sent-unless-you-opt-out). Nothing is read or stored for it while reporting is off. The variable is read per process, so setting it in one shell or project doesn't affect another. Opting out doesn't delete the stored installation ID.
+
+Some AI tools let you change neither the plugin setting nor environment variables. There, the data under [Sent unless you opt out](#sent-unless-you-opt-out) can be sent.
 
 Questions about this plugin: <support@commercetools.com>.

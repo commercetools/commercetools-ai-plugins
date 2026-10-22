@@ -109,8 +109,8 @@ The workspace's root `pnpm dev` runs `serve --all`: a local federated gateway ov
 If an edit does not compose, the log lists the collisions and the server keeps serving the last good schema, so watch the log, not only the query result.
 
 - **Fields that use `@requires` or `@override`** only show their real behavior in the composed graph. Test them here, not in a standalone server.
-- **External services:** when you are logged in, resolver `fetch` goes through the same Project host allowlist as production. Add the provider's host with `allowlist add <host>` before testing. Without a login, `fetch` is unrestricted locally, so an allowlist gap only shows up once you log in.
-- **Customer-scoped fields:** `commercetools integration-layer explore --as <email>`, run from an extension directory, composes your working tree against the Project and runs operations as that customer.
+- **External services:** when you are logged in, resolver `fetch` goes through the same Project host allowlist as production. Adding the provider's host with `allowlist add <host>` changes which hosts the Project's resolvers may call, so ask the user before adding it. Without a login, `fetch` is unrestricted locally, so an allowlist gap only shows up once you log in.
+- **Customer-scoped fields:** `commercetools integration-layer explore --as <email>`, run from an extension directory, composes your working tree against the Project and runs operations as that customer. Use a test customer in a sandbox Project, and let the user choose the account.
 - **One extension in isolation:** `pnpm --filter @extensions/<name> dev` serves just that subgraph, offline. Exercise entity fields through the `_entities` query.
 
 ## 4. Run real writes through your local handlers
@@ -122,7 +122,7 @@ ngrok http 4000   # or any HTTPS tunnel
 commercetools integration-layer extension serve-api-extension --all --public-url https://<tunnel-host>
 ```
 
-Use a dedicated sandbox Project and a `manage_project` login. The command refuses to start if the Project already has an API Extension on the same resource and action, which can include the one your deployed bundle registered. It deletes what it registered on exit, and `--cleanup` removes leftovers after a crash.
+Ask the user before starting it: the tunnel makes a server on their machine reachable from the internet, and the command registers an API Extension in their Project. Use a dedicated sandbox Project and a `manage_project` login. The command refuses to start if the Project already has an API Extension on the same resource and action, which can include the one your deployed bundle registered. It deletes what it registered on exit, and `--cleanup` removes leftovers after a crash.
 
 This is the only layer where commercetools itself validates the request before your handler runs. Use it to:
 
@@ -145,12 +145,12 @@ Fix every local failure. A bundle that fails them does not load. A Project's fir
 
 ## 6. Push and confirm the revision is running
 
-`pnpm push` builds, validates, and uploads the merged bundle, replacing the Project's current one. A push **stores** the bundle. The runtime then loads it, and each revision moves from `pending` to `running` (it serves) or `failed` (with a reason). `push` waits for that verdict by default and exits non-zero on `failed`. Keep the wait, and raise `--wait-timeout` instead of using `--no-wait` if loading takes long.
+`pnpm push` builds, validates, and uploads the merged bundle, replacing the Project's current one. Show the user the target Project and wait for their explicit yes before every push; it changes what the Project serves. A push **stores** the bundle. The runtime then loads it, and each revision moves from `pending` to `running` (it serves) or `failed` (with a reason). `push` waits for that verdict by default and exits non-zero on `failed`. Keep the wait, and raise `--wait-timeout` instead of using `--no-wait` if loading takes long.
 
 - **A failed revision drops out of service.** The Project keeps serving the newest revision that did not fail. When a pushed change does not appear, check whether the push reported `running`.
 - **`extension status`** shows the stored bundle (version, size, upload time, recorded source revision), not whether it loaded. The push's wait is where the load verdict is reported.
 - **Rolling back** means pushing the previous code again. There is no unpublish command, and the recorded source revision (from git, or `EXTENSION_SOURCE_REVISION` in CI) tells you which code is deployed.
-- **`--force`** skips only the remote checks, for a coordinated breaking change. Through a package script, forward it explicitly: `pnpm push -- --force`.
+- **`--force`** skips only the remote checks, for a coordinated breaking change, and only after the user has confirmed that change. Through a package script, forward it explicitly: `pnpm push -- --force`.
 - **Configuration** set with `config set <KEY> <VALUE>` (add `--secret` for credentials) takes effect without a new push.
 
 After `running`, check the live edge:

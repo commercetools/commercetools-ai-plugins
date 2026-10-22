@@ -21,7 +21,7 @@ A small standalone app is the fastest way to prove a deployed connector works en
 
 Any minimal stack works (Vite + React, or a single HTML file). It needs to do the 8 steps from [connector-contract.md](./connector-contract.md): get a token, make a non-zero cart, create a session, warm the processor, load the enabler, mount the drop-in, gate Pay on `ready`, submit.
 
-> Security note: a real app does steps 1–3 (token, cart, session) **server-side** so client credentials and `manage_sessions` never reach the browser. A local harness may do them client-side for speed, but say so and never deploy it.
+> Security note: steps 1–3 (token, cart, session) run **server-side**, in the harness too, so the client secret and the `manage_sessions` token never reach the browser. A few lines of local server do it: a Vite dev-server middleware or a small Node endpoint that returns only the `sessionId`. Use a test project and the provider's test mode, and never deploy the harness.
 
 ## Config the harness needs
 
@@ -53,8 +53,10 @@ export default { define: { __PROCESSOR_URL__: JSON.stringify(env.PROCESSOR_URL),
 
 ## The flow (pseudocode)
 
+Steps 1–3 run in the harness's local server endpoint; the page calls it and gets back only the `sessionId`.
+
 ```js
-// 1) token (client_credentials)
+// 1) token (client_credentials), server-side
 const token = await oauth(CT_AUTH_URL, CT_CLIENT_ID, CT_CLIENT_SECRET, 'manage_sessions:'+CT_PROJECT_KEY);
 
 // 2) non-zero cart (ExternalAmount avoids needing a tax category — see contract pitfall 3)
@@ -118,13 +120,13 @@ await page.getByRole('button', { name: /pay/i }).click();                       
 If no iframe-aware driver is available, don't burn time on synthetic events — pick one:
 
 - **Human completes the submit.** Automate through step 7, then have a person enter the test card. Legitimate; this harness is disposable by design.
-- **Bypass the widget entirely.** Create and confirm a payment directly against the provider's API, create the matching commercetools Payment (`interfaceId` = the provider's transaction id, plus a `Charge`/`Success` transaction for the amount), `addPayment` it to the cart, then call your place-order endpoint. This skips the widget's own payment creation but does exercise the real order-confirmation path — including BFF scope gaps, which is exactly where a live charge otherwise strands a customer ([backend-integration.md](./backend-integration.md)).
+- **Bypass the widget entirely, in the provider's test mode only.** With test keys and a test card, create and confirm a payment directly against the provider's API, create the matching commercetools Payment (`interfaceId` = the provider's transaction id, plus a `Charge`/`Success` transaction for the amount), `addPayment` it to the cart, then call your place-order endpoint. This skips the widget's own payment creation but does exercise the real order-confirmation path — including BFF scope gaps, which is exactly where a live charge otherwise strands a customer ([backend-integration.md](./backend-integration.md)).
 
 Note that some providers only expose an inspectable session/intent object *after* submission, so "just confirm it via the provider's API" may have nothing to look at while the drop-in is merely mounted. Check the provider's docs before designing a test strategy around it. Whatever works here is confirmed against this hand-rolled enabler/processor flow only — re-verify if the storefront later goes through the Checkout Sessions API and Browser SDK, where the widget markup can differ.
 
 ## After it works
 - Verify the Payment (→ [verification.md](./verification.md)).
-- Move steps 1–3 server-side for the real integration, and add Order creation + post-purchase operations (→ [backend-integration.md](./backend-integration.md)); the browser only ever gets the `sessionId`, processor URL, and enabler URL.
+- Keep steps 1–3 server-side in the real integration, and add Order creation + post-purchase operations (→ [backend-integration.md](./backend-integration.md)); the browser only ever gets the `sessionId`, processor URL, and enabler URL.
 - Delete the harness or scrub its secrets.
 
 ## Checklist

@@ -19,6 +19,8 @@ metadata:
 
 CSR agents authenticate with their own credentials, then impersonate a customer. The server-managed session carries both identities simultaneously. All price-override endpoints are hard-gated behind a `csrId` presence check — UI hiding the input is not sufficient.
 
+Build this only when the user asks for it: it lets customer service staff act on a customer's behalf. Only members of the merchant's CSR customer group can start a CSR session, every CSR action is checked server-side against that session, and the agent's identity stays in the session, so the merchant can record which agent did what.
+
 ## Key Takeaways
 
 **Two identities in one session.** Normal session fields (`customerId`, `email`, etc.) hold the *impersonated* customer's data. CSR identity lives in `csrId`, `csrEmail`, `csrFirstName`, `csrLastName`.

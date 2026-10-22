@@ -1,487 +1,325 @@
 #!/bin/sh
-# commercetools AI plugin telemetry — editor hook sensor.
+# commercetools AI plugin: usage reporting hook. What it sends is listed in
+# TELEMETRY.md; how to debug and test it is in .internal/README.md.
 #
-# Reports skill activations and reference-file reads. This is the only layer that
-# can see a PASSIVE reference read (the agent opening references/*.md without
-# running anything). Runtimes without working plugin hooks — Copilot today —
-# are covered by the in-skill scripts alone.
+# Usage: telemetry.sh <client-type> <mode> <plugin-root> [trigger]
+#   client-type  claude-code, cursor or codex
+#   mode         activation  the payload names the skill (Claude Code's Skill tool)
+#                prompt      the user typed `$commercetools-…` (Codex)
+#                resource    every matching path is a file read, SKILL.md too
+#                auto        a SKILL.md read is an activation, any other a read
+#   trigger      user-invoked or model-invoked, for activations
 #
-# Shared by Claude Code (hooks/hooks.json), Cursor (hooks/cursor-hooks.json) and
-# Codex (hooks/codex-hooks.json, shipped as hooks/hooks.json in the Codex
-# bundle), whose hook systems differ in event names, payload fields and root
-# variable but agree on "spawn a process, hand it JSON on stdin".
+# Reads the hook payload (JSON) on stdin. Sends one GET request per event to
+# docs.commercetools.com and nothing else. Never blocks, never prints, always
+# exits 0: everything after the first check runs in the background.
 #
-# Invoked as: telemetry.sh <client-type> <mode> <plugin-root> [trigger]
-#   mode     activation  the payload names the skill (Claude Code's Skill tool
-#                        and slash-command expansion)
-#            prompt      the user typed `$commercetools-…` (Codex, where the
-#                        skill is injected without any file read to see)
-#            resource    every matching path is a resource read, SKILL.md too
-#            auto        a SKILL.md read is an activation, anything else a
-#                        resource read (Cursor and Codex, which have no
-#                        distinct skill-invocation event)
-#   trigger  how an activation came about: user-invoked (the user named the
-#            skill) or model-invoked (the model chose it). Resource reads are
-#            always `read`. Sent because "did someone ask for this skill or did
-#            the model reach for it" is a different question from how often it
-#            is used.
-#
-# Which paths count. A path segment starting with `commercetools-` directly
-# followed by `SKILL.md` or `references/…`, wherever it sits — absolute,
-# relative, or relative to the payload's cwd when the agent works from inside
-# the skill folder. Nothing else in a skill (examples/, scripts/) counts. The
-# name must also exist under <plugin-root>/skills/: teams write their own skills
-# with our prefix, and those names are theirs, not ours to collect.
-#
-# Contract, in order of importance:
-#   1. Never block, never fail, never print. Always exit 0.
-#   2. Cost nothing on the overwhelming majority of calls. The read matchers fire
-#      on EVERY file the agent opens, so the first test below is a substring
-#      check that bails before doing any work.
-#   3. Send the skill name, the resource path within the skill, the runtime, the
-#      model where the payload states it, a hashed conversation id, the
-#      commercetools project the in-skill scripts recorded for this session, and
-#      the domain of the developer's email address. Never an absolute path, and
-#      never the part of an email address before the @.
-#
-# Opt out with COMMERCETOOLS_AI_PLUGIN_TELEMETRY=0.
-#
-# Debugging: `touch ~/.commercetools-telemetry-debug` and every invocation
-# appends a line to that file saying what it decided and why. A marker file
-# rather than an env var because the editors that run this are GUI apps, where
-# exporting a variable into the process is awkward. Delete the file to stop.
-
-# Overridable so the pipeline can be pointed at a local receiver for testing.
-ENDPOINT="${COMMERCETOOLS_AI_PLUGIN_TELEMETRY_ENDPOINT:-https://docs.commercetools.com/apis/rest/tools/ai-plugin-telemetry}"
-
-[ "$COMMERCETOOLS_AI_PLUGIN_TELEMETRY" = "0" ] && exit 0
-[ "$COMMERCETOOLS_AI_PLUGIN_TELEMETRY" = "off" ] && exit 0
+# Off when COMMERCETOOLS_AI_PLUGIN_TELEMETRY is 0 or off, or when the plugin's
+# "Share usage data" setting is off (CLAUDE_PLUGIN_OPTION_TELEMETRY=false).
 
 CLIENT_TYPE="$1"
 MODE="$2"
 PLUGIN_ROOT="$3"
 TRIGGER="$4"
 
-DEBUG_LOG=""
-[ -f "$HOME/.commercetools-telemetry-debug" ] && DEBUG_LOG="$HOME/.commercetools-telemetry-debug"
+[ "$COMMERCETOOLS_AI_PLUGIN_TELEMETRY" = "0" ] && exit 0
+[ "$COMMERCETOOLS_AI_PLUGIN_TELEMETRY" = "off" ] && exit 0
+[ "$CLAUDE_PLUGIN_OPTION_TELEMETRY" = "false" ] && exit 0
+
+ENDPOINT="https://docs.commercetools.com/apis/rest/tools/ai-plugin-telemetry"
+# A local receiver for testing is the only other place it may send to.
+is_local_receiver() {
+  REST="${1#http://localhost:}"
+  [ "$REST" = "$1" ] && REST="${1#http://127.0.0.1:}"
+  [ "$REST" = "$1" ] && return 1
+  case "${REST%%/*}" in '' | *[!0-9]*) return 1 ;; esac
+}
+is_local_receiver "$COMMERCETOOLS_AI_PLUGIN_TELEMETRY_ENDPOINT" &&
+  ENDPOINT="$COMMERCETOOLS_AI_PLUGIN_TELEMETRY_ENDPOINT"
+
+# `touch ~/.commercetools-telemetry-debug` logs every decision to that file.
+DEBUG_LOG="$HOME/.commercetools-telemetry-debug"
+[ -f "$DEBUG_LOG" ] || DEBUG_LOG=""
+TMP="${TMPDIR:-/tmp}"
+TMP="${TMP%/}"
+
+INPUT=$(cat 2>/dev/null) || exit 0
+
+# Most reads are the user's own files: leave before doing any work. A bare
+# `references/…` or `SKILL.md` passes, for reads made from inside a skill folder.
+case "$INPUT" in
+  *commercetools-* | *references/* | *SKILL.md*) ;;
+  *) exit 0 ;;
+esac
+
+# ---------------------------------------------------------------------------
+# Helpers. None of them reads a variable that main sets after calling it.
+# ---------------------------------------------------------------------------
+
 dbg() {
   [ -n "$DEBUG_LOG" ] && printf '%s %-11s %-10s %s\n' \
     "$(date -u '+%H:%M:%S')" "$CLIENT_TYPE" "$MODE" "$*" >> "$DEBUG_LOG" 2>/dev/null
   return 0
 }
 
-# The plugin-level toggle the user is shown when enabling the plugin. Read from
-# the environment, not from an argument: the host REJECTS a shell-form command
-# that interpolates ${user_config.*}, because the substituted value would be
-# re-parsed by the shell. Interpolating it silently disabled every hook in this
-# plugin — the error is only visible under `claude --debug hooks`.
-[ "$CLAUDE_PLUGIN_OPTION_TELEMETRY" = "false" ] && { dbg "skip: plugin setting is off"; exit 0; }
+# A value as sent: an unknown value is an empty string, never "null".
+plain() {
+  case "$1" in
+    null | undefined) printf '' ;;
+    *) printf '%s' "$1" ;;
+  esac
+}
 
-INPUT=$(cat 2>/dev/null) || exit 0
-
-# Fast path: bail before spending anything on the ~99% of reads that are the
-# user's own files. A bare `references/…` or `SKILL.md` passes too: a read
-# made from inside a skill folder names no skill (see skill_paths), and whether
-# it is ours is decided later, in the background.
-case "$INPUT" in
-  *commercetools-* | *references/* | *SKILL.md*) ;;
-  *) dbg "skip: payload mentions no commercetools skill"; exit 0 ;;
-esac
-
-# Everything past this point runs in the background, and the hook returns now.
-# The work below is a few dozen short-lived processes, and a process start is
-# not cheap everywhere: on a Mac with endpoint security software it measured
-# ~150 ms each, which added up to 4 s — past Codex's hook timeout, so the hook
-# was killed and reported as failed. Cursor's beforeReadFile is worse off still,
-# because the file read waits for the hook. The rest runs in a detached
-# subshell of this same script, so the host waits for one fork, not forty
-# process starts. A subshell rather than a second run of this file: directory
-# reviews can follow a script but not a script that runs another file.
-(
-(
-
-command -v curl >/dev/null 2>&1 || { dbg "skip: no curl on PATH"; exit 0; }
-
-
-# Read the version we ship rather than baking it in, so a release never has to
-# rewrite this file. Empty if unreadable — an empty column, not a failure. The
-# Codex bundle has no root plugin.json, only its own manifest.
-PLUGIN_VERSION=""
-for MANIFEST in "$PLUGIN_ROOT/plugin.json" "$PLUGIN_ROOT/.codex-plugin/plugin.json"; do
-  [ -n "$PLUGIN_VERSION" ] && break
-  [ -n "$PLUGIN_ROOT" ] && [ -r "$MANIFEST" ] || continue
-  PLUGIN_VERSION=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$MANIFEST" | head -n 1)
-done
-
-# A random id for this installation, stable across sessions. Never removed when
-# telemetry is switched off: the switch is an environment variable, so it is
-# per-shell and per-directory, and a session that has it set must not destroy
-# state belonging to sessions that do not. Nothing is written while it is off
-# either — the opt-out check above returns before this point.
-# Home first, then the temp dir. A sandbox commonly denies $HOME while allowing
-# temp writes, and such a sandbox is often kept for a whole task rather than
-# rebuilt per command, so a temp-scoped id still identifies something real —
-# just something shorter-lived. Reported as installIdSource so the two are never
-# confused: `home` is durable, `temp` dies with the temp dir.
-#
-# An id that cannot be persisted is never sent: it would be new on every call
-# and would report one machine as many. Written 0600 so a shared /tmp does not
-# hand one id to two users.
-INSTALL_ID=""
-INSTALL_ID_SOURCE=""
-TMPDIR_PATH="${TMPDIR:-/tmp}"
-
-for CANDIDATE_SOURCE in home temp; do
-  [ -n "$INSTALL_ID" ] && break
-  if [ "$CANDIDATE_SOURCE" = home ]; then
-    CANDIDATE_DIR="$HOME/.commercetools"
-    CANDIDATE_FILE="$CANDIDATE_DIR/ai-plugin-install-id"
-  else
-    CANDIDATE_DIR="${TMPDIR_PATH%/}"
-    CANDIDATE_FILE="$CANDIDATE_DIR/ct-ai-plugin-install-id"
-  fi
-
-  if [ -r "$CANDIDATE_FILE" ]; then
-    INSTALL_ID=$(head -n 1 "$CANDIDATE_FILE" 2>/dev/null | tr -dc 'a-f0-9')
-    [ -n "$INSTALL_ID" ] && INSTALL_ID_SOURCE="$CANDIDATE_SOURCE"
-  fi
-done
-
-if [ -z "$INSTALL_ID" ] && [ -r /dev/urandom ]; then
-  NEW_ID=$(od -An -tx1 -N16 /dev/urandom 2>/dev/null | tr -dc 'a-f0-9')
-  if [ -n "$NEW_ID" ]; then
-    for CANDIDATE_SOURCE in home temp; do
-      [ -n "$INSTALL_ID" ] && break
-      if [ "$CANDIDATE_SOURCE" = home ]; then
-        CANDIDATE_DIR="$HOME/.commercetools"
-        CANDIDATE_FILE="$CANDIDATE_DIR/ai-plugin-install-id"
-      else
-        CANDIDATE_DIR="${TMPDIR_PATH%/}"
-        CANDIDATE_FILE="$CANDIDATE_DIR/ct-ai-plugin-install-id"
-      fi
-      { mkdir -p "$CANDIDATE_DIR" &&
-        (umask 077 && printf '%s\n' "$NEW_ID" > "$CANDIDATE_FILE"); } 2>/dev/null || true
-      # Read back rather than trusting the write: a read-only mount can fail
-      # silently, and an id we did not store must not be sent.
-      if [ -r "$CANDIDATE_FILE" ]; then
-        INSTALL_ID=$(head -n 1 "$CANDIDATE_FILE" 2>/dev/null | tr -dc 'a-f0-9')
-        [ -n "$INSTALL_ID" ] && INSTALL_ID_SOURCE="$CANDIDATE_SOURCE"
-      fi
-    done
-  fi
-fi
-
-# Coarse vendor, sent alongside the precise clientType. The same runtime has
-# been reported three different ways over time, and folding those together
-# belongs in the data rather than in whatever queries the logs. Substring match,
-# so "vscode-copilot" folds to copilot rather than vscode.
-CLIENT_FAMILY=$(printf '%s' "$CLIENT_TYPE" | tr '[:upper:]' '[:lower:]')
-case "$CLIENT_FAMILY" in
-  *claude*) CLIENT_FAMILY=claude ;;
-  *copilot*) CLIENT_FAMILY=copilot ;;
-  *codex*) CLIENT_FAMILY=codex ;;
-  *cursor*) CLIENT_FAMILY=cursor ;;
-esac
-
-# ---------------------------------------------------------------------------
-# Reading the payload, without assuming jq is installed.
-# ---------------------------------------------------------------------------
-
-# Everything from "tool_response" on is dropped before anything is scanned. It
-# holds what the tool returned — the text of the skill that was just read —
-# and a skill that links to another skill would otherwise report a read of it.
-SCAN_INPUT=$(printf '%s' "$INPUT" | sed 's/"tool_response".*//')
-
-# The raw value of one JSON string field. Escaped quotes inside the value are
-# kept, so a shell command that quotes a path is not cut short at the quote.
+# The raw value of one JSON string field of the payload. Escaped quotes inside
+# the value are kept, so a command that quotes a path isn't cut short.
 json_field() {
   printf '%s' "$SCAN_INPUT" |
     sed -n -E "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"(([^\"\\\\]|\\\\.)*)\".*/\1/p" |
     head -n 1
 }
 
-# Undo the JSON escaping that matters for paths. An escaped backslash becomes a
-# forward slash, which also turns a Windows path into one the patterns below
-# understand; escaped newlines and tabs separate words like spaces do.
+# Undo the JSON escaping that matters for paths. `\\` becomes `/`, which also
+# turns a Windows path into one the patterns below understand.
 json_unescape() {
   sed -e 's/\\\\/\//g' -e 's/\\[nt]/ /g' -e 's/\\"/"/g' -e 's/\\\//\//g'
 }
 
-# One word per line: splits a shell command, or a list of paths, at anything a
-# path cannot contain unquoted.
+# One word per line: splits a shell command or a list of paths.
 words() {
   tr ' \t"'"'"'=;|&<>(),`' '\n\n\n\n\n\n\n\n\n\n\n\n\n' | sed '/^$/d'
 }
 
-is_shipped() {
-  [ -z "$PLUGIN_ROOT" ] && return 0
-  [ -d "$PLUGIN_ROOT/skills/$1" ]
+# A plain value from our own state files: key, region, domain or id characters.
+state_value() {
+  printf '%s' "$1" | sed -n "s/.*\"$2\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p" |
+    head -n 1 | tr -dc 'A-Za-z0-9_.-'
 }
 
-# Lines of "<skill> <resource>" for every path in the payload that points into
-# one of our skills. The resource is everything after the skill folder, e.g.
-# `references/b2b/quotes.md` — the in-skill path rather than a basename, because
-# reference layouts keep evolving and the shape is worth knowing.
+# Only skills this plugin ships count: other teams use our prefix too.
+is_shipped() {
+  [ -z "$PLUGIN_ROOT" ] || [ -d "$PLUGIN_ROOT/skills/$1" ]
+}
+
+# Lines of "<skill> <file in the skill>" for every path in the payload that
+# points into one of our skills: `…/commercetools-x/SKILL.md` or
+# `…/commercetools-x/references/…`. A bare `references/…` is attributed to the
+# skill folder the payload's cwd names, else to the skill this session last
+# reported ($1) when that skill has the file (Codex reports no command cwd).
 skill_paths() {
+  LAST="$1"
   TEXT=$(for FIELD in file_path path command; do json_field "$FIELD"; done | json_unescape)
-  CWD=$(json_field cwd | json_unescape)
-  CWD_SKILL=$(printf '%s' "$CWD" | sed -n -E 's#^(.*/)?(commercetools-[a-z0-9-]+)/?$#\2#p')
+  CWD_SKILL=$(json_field cwd | json_unescape |
+    sed -n -E 's#^(.*/)?(commercetools-[a-z0-9-]+)/?$#\2#p')
 
   printf '%s\n' "$TEXT" | words | while IFS= read -r WORD; do
     MATCH=$(printf '%s' "$WORD" |
       sed -n -E 's#^(.*/)?(commercetools-[a-z0-9-]+)/(SKILL\.md|references(/[A-Za-z0-9_./-]*)?)$#\2 \3#p')
     if [ -z "$MATCH" ]; then
-      # Working from inside the skill folder: `cat references/cart.md`. The
-      # folder is the payload's cwd when the host reports it that way. Codex
-      # does not — its cwd is the session root and a command's own working
-      # directory is not in the payload — so the fallback is the skill this
-      # session last reported, and only when that skill really has the file.
       BARE=$(printf '%s' "$WORD" |
         sed -n -E 's#^(\./)?(SKILL\.md|references(/[A-Za-z0-9_./-]*)?)$#\2#p')
       BARE="${BARE%/}"
-      if [ -n "$BARE" ]; then
-        if [ -n "$CWD_SKILL" ]; then
-          MATCH="$CWD_SKILL $BARE"
-        elif [ -n "$LAST_SKILL" ] && [ -n "$PLUGIN_ROOT" ] && [ -e "$PLUGIN_ROOT/skills/$LAST_SKILL/$BARE" ]; then
-          MATCH="$LAST_SKILL $BARE"
-        fi
+      if [ -n "$BARE" ] && [ -n "$CWD_SKILL" ]; then
+        MATCH="$CWD_SKILL $BARE"
+      elif [ -n "$BARE" ] && [ -n "$LAST" ] && [ -e "$PLUGIN_ROOT/skills/$LAST/$BARE" ]; then
+        MATCH="$LAST $BARE"
       fi
     fi
     [ -n "$MATCH" ] && printf '%s\n' "${MATCH%/}"
   done
 }
 
-# Lines of "<skill>" named by the payload itself.
+# Lines of "<skill>" the payload names. The namespaced form
+# (`commercetools:commercetools-x`) first: it is the invoked skill.
 skill_names() {
-  case "$MODE" in
-    prompt)
-      json_field prompt | grep -oE '\$(commercetools:)?commercetools-[a-z0-9-]+' |
-        sed 's/.*\(commercetools-[a-z0-9-]*\)$/\1/'
-      ;;
-    *)
-      # The namespaced form first (`commercetools:commercetools-cart`): it is
-      # the invoked skill, whereas a bare name can be any skill the payload
-      # happens to mention.
-      printf '%s' "$SCAN_INPUT" | grep -oE 'commercetools:commercetools-[a-z0-9-]+' |
-        sed 's/^commercetools://'
-      printf '%s' "$SCAN_INPUT" | grep -oE 'commercetools-[a-z0-9-]+'
-      ;;
-  esac
+  if [ "$MODE" = prompt ]; then
+    json_field prompt | grep -oE '\$(commercetools:)?commercetools-[a-z0-9-]+' |
+      sed 's/.*\(commercetools-[a-z0-9-]*\)$/\1/'
+  else
+    printf '%s' "$SCAN_INPUT" | grep -oE 'commercetools:commercetools-[a-z0-9-]+' | sed 's/^commercetools://'
+    printf '%s' "$SCAN_INPUT" | grep -oE 'commercetools-[a-z0-9-]+'
+  fi
 }
 
-# Lines of "<event> <skill> <resource-or-dash>", deduplicated. Capped, so a
-# command listing a whole directory tree cannot fan out into a burst of requests.
+# Lines of "<event> <skill> <file or ->".
 collect_events() {
   case "$MODE" in
     activation)
       for NAME in $(skill_names); do
         is_shipped "$NAME" && { printf 'activation %s -\n' "$NAME"; break; }
-      done
-      ;;
+      done ;;
     prompt)
       for NAME in $(skill_names); do
         is_shipped "$NAME" && printf 'activation %s -\n' "$NAME"
-      done
-      ;;
+      done ;;
     resource | auto)
-      skill_paths | while read -r NAME RESOURCE; do
+      skill_paths "$1" | while read -r NAME FILE; do
         is_shipped "$NAME" || continue
-        if [ "$MODE" = auto ] && [ "$RESOURCE" = SKILL.md ]; then
-          printf 'activation %s %s\n' "$NAME" "$RESOURCE"
+        if [ "$MODE" = auto ] && [ "$FILE" = SKILL.md ]; then
+          printf 'activation %s %s\n' "$NAME" "$FILE"
         else
-          printf 'resource %s %s\n' "$NAME" "$RESOURCE"
+          printf 'resource %s %s\n' "$NAME" "$FILE"
         fi
-      done
-      ;;
+      done ;;
   esac
 }
-# ---------------------------------------------------------------------------
-# Session, and the commercetools project recorded for it.
-# ---------------------------------------------------------------------------
 
-# Correlate the calls of one session without learning anything about the user:
-# the raw id is hashed and only a prefix is sent. Claude Code and Codex call it
-# session_id, Cursor conversation_id, Copilot sessionId.
-SESSION_RAW=""
-for FIELD in session_id conversation_id sessionId; do
-  [ -n "$SESSION_RAW" ] && break
-  SESSION_RAW=$(json_field "$FIELD")
-done
-SESSION=""
-if [ -n "$SESSION_RAW" ]; then
-  if command -v shasum >/dev/null 2>&1; then
-    SESSION=$(printf '%s' "$SESSION_RAW" | shasum -a 256 2>/dev/null | cut -c1-32)
-  elif command -v sha256sum >/dev/null 2>&1; then
-    SESSION=$(printf '%s' "$SESSION_RAW" | sha256sum 2>/dev/null | cut -c1-32)
-  fi
-fi
-
-# A plain value from our own state files, restricted to what a key, region or
-# domain can contain.
-state_value() {
-  printf '%s' "$1" | sed -n "s/.*\"$2\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p" |
-    head -n 1 | tr -dc 'A-Za-z0-9_.-'
-}
-
-# What this session already knows, read before the payload is interpreted: the
-# commercetools project the scripts recorded, and the last skill reported.
-CT_PROJECT=""
-CT_REGION=""
-CT_PROJECT_SOURCE=""
-LAST_SKILL=""
-SEQ=1
-SESSION_FILE=""
-if [ -n "$SESSION" ]; then
-  SESSION_FILE="${TMPDIR_PATH%/}/ct-ai-plugin-invocation-${CLIENT_FAMILY}.json"
-  PREVIOUS=$(cat "$SESSION_FILE" 2>/dev/null)
-  if [ -n "$PREVIOUS" ] && [ "$(state_value "$PREVIOUS" id)" = "$SESSION" ]; then
-    CT_PROJECT=$(state_value "$PREVIOUS" ctProjectKey)
-    CT_REGION=$(state_value "$PREVIOUS" ctRegion)
-    CT_PROJECT_SOURCE=$(state_value "$PREVIOUS" ctProjectSource)
-    LAST_SKILL=$(state_value "$PREVIOUS" lastSkill)
-    SEQ=$(printf '%s' "$PREVIOUS" | sed -n 's/.*"seq"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' | head -n 1)
-    [ -n "$SEQ" ] || SEQ=1
-  fi
-fi
-
-EVENTS=$(collect_events | awk '!seen[$0]++' | head -n 10)
-
-[ -z "$EVENTS" ] && { dbg "skip: no shipped skill in payload"; exit 0; }
-
-# Cursor and Codex state the model in every hook payload, so on those runtimes
-# this is a verified value rather than the model's self-report. Claude Code
-# payloads carry no model field and the column stays empty.
-MODEL=$(json_field model)
-
-# Seed the id the in-skill scripts read, so a docs search that follows this
-# activation lands in the same correlation space. The hooks are the only layer
-# that knows the real session, so they are the right side to write it.
-#
-# The scripts store the commercetools project key and region in the same file
-# once the agent passes them. Those are kept for as long as the session is the
-# same one, and reported with every hook event of it; a new session starts
-# without them. `lastSkill` is this hook's own note, for the bare relative
-# paths above.
-#
-# The braces matter: `2>/dev/null` on the printf alone silences printf, not the
-# shell's own "cannot create" message when the redirect target is unwritable.
-# A sandbox with a read-only TMPDIR would otherwise make this hook print to
-# stderr, which the host may surface as a hook failure.
-if [ -n "$SESSION_FILE" ]; then
-  LAST_SKILL=$(printf '%s\n' "$EVENTS" | tail -n 1 | cut -d ' ' -f 2)
-  STATE=$(printf '{"id":"%s","ts":%s,"seq":%s,"src":"host"' "$SESSION" "$(( $(date +%s) * 1000 ))" "$SEQ")
-  [ -n "$CT_PROJECT" ] && STATE="$STATE,\"ctProjectKey\":\"$CT_PROJECT\""
-  [ -n "$CT_REGION" ] && STATE="$STATE,\"ctRegion\":\"$CT_REGION\""
-  [ -n "$CT_PROJECT_SOURCE" ] && STATE="$STATE,\"ctProjectSource\":\"$CT_PROJECT_SOURCE\""
-  [ -n "$LAST_SKILL" ] && STATE="$STATE,\"lastSkill\":\"$LAST_SKILL\""
-  { printf '%s}' "$STATE" > "$SESSION_FILE"; } 2>/dev/null || true
-fi
-
-# ---------------------------------------------------------------------------
-# Email domain, per installation.
-# ---------------------------------------------------------------------------
-
-# Precedence: what the host states, then what is stored. A host that hands us
-# the signed-in user's email (Cursor) is the best source there is, so its domain
-# is stored on every event and overwrites whatever the scripts took from git.
-# Only the part after the @ is ever read out of it.
-EMAIL_DOMAIN=""
-EMAIL_DOMAIN_SOURCE=""
-HOST_EMAIL=$(json_field user_email)
-[ -z "$HOST_EMAIL" ] && HOST_EMAIL="$CURSOR_USER_EMAIL"
-case "$HOST_EMAIL" in
-  *@*)
-    EMAIL_DOMAIN=$(printf '%s' "${HOST_EMAIL##*@}" | tr '[:upper:]' '[:lower:]' | tr -dc 'a-z0-9.-')
-    EMAIL_DOMAIN_SOURCE="$CLIENT_FAMILY"
-    ;;
-esac
-
-for CANDIDATE_FILE in "$HOME/.commercetools/ai-plugin-email-domain" "${TMPDIR_PATH%/}/ct-ai-plugin-email-domain"; do
-  STORED=$(cat "$CANDIDATE_FILE" 2>/dev/null)
-  if [ -n "$EMAIL_DOMAIN" ]; then
-    # Stored where the scripts will look first, and only when it changed.
-    if [ "$(state_value "$STORED" domain)" != "$EMAIL_DOMAIN" ] ||
-       [ "$(state_value "$STORED" source)" != "$EMAIL_DOMAIN_SOURCE" ]; then
-      { mkdir -p "${CANDIDATE_FILE%/*}" &&
-        (umask 077 && printf '{"domain":"%s","source":"%s"}\n' "$EMAIL_DOMAIN" "$EMAIL_DOMAIN_SOURCE" \
-          > "$CANDIDATE_FILE"); } 2>/dev/null && break
-    else
-      break
-    fi
-  elif [ -n "$STORED" ]; then
-    EMAIL_DOMAIN=$(state_value "$STORED" domain)
-    EMAIL_DOMAIN_SOURCE=$(state_value "$STORED" source)
-    [ -n "$EMAIL_DOMAIN" ] && break
-  fi
-done
-
-# ---------------------------------------------------------------------------
-# Send.
-# ---------------------------------------------------------------------------
-
-send() {
-  EVENT_NAME="$1"
-  SKILL="$2"
-  RESOURCE="$3"
-  [ "$RESOURCE" = "-" ] && RESOURCE=""
-  if [ "$EVENT_NAME" = activation ]; then EVENT_TRIGGER="$TRIGGER"; else EVENT_TRIGGER=read; fi
-
-  # --data-urlencode -G keeps paths and slugs safe without hand-rolled escaping.
-  set -- \
-    --get \
-    --silent --show-error --output /dev/null \
-    --max-time 2 \
-    --user-agent "$CLIENT_TYPE/1.0 (hook)" \
-    --header "X-Client-Type: $CLIENT_TYPE" \
-    --header "X-Skill-Name: $SKILL" \
-    --data-urlencode "event=$EVENT_NAME" \
-    --data-urlencode "skillName=$SKILL" \
-    --data-urlencode "clientType=$CLIENT_TYPE" \
-    --data-urlencode "clientFamily=$CLIENT_FAMILY" \
-    --data-urlencode "pluginVersion=$PLUGIN_VERSION" \
-    --data-urlencode "source=hook"
-
-  [ -n "$EVENT_TRIGGER" ] && set -- "$@" --data-urlencode "trigger=$EVENT_TRIGGER"
-  [ -n "$RESOURCE" ] && set -- "$@" --data-urlencode "resource=$RESOURCE"
-  if [ -n "$INSTALL_ID" ]; then
-    set -- "$@" --data-urlencode "installId=$INSTALL_ID" \
-                --data-urlencode "installIdSource=$INSTALL_ID_SOURCE"
-  fi
-  if [ -n "$SESSION" ]; then
-    set -- "$@" --data-urlencode "invocation=$SESSION" \
-                --data-urlencode "invocationSource=host"
-  fi
-  if [ -n "$MODEL" ]; then
-    set -- "$@" --data-urlencode "model=$MODEL" --header "X-Model: $MODEL"
-  fi
-  [ -n "$CT_PROJECT" ] && set -- "$@" --data-urlencode "ctProjectKey=$CT_PROJECT"
-  [ -n "$CT_REGION" ] && set -- "$@" --data-urlencode "ctRegion=$CT_REGION"
-  [ -n "$CT_PROJECT_SOURCE" ] && set -- "$@" --data-urlencode "ctProjectSource=$CT_PROJECT_SOURCE"
-  if [ -n "$EMAIL_DOMAIN" ]; then
-    set -- "$@" --data-urlencode "emailDomain=$EMAIL_DOMAIN" \
-                --data-urlencode "emailDomainSource=$EMAIL_DOMAIN_SOURCE"
-  fi
-
-  # Fire and forget. A PostToolUse hook is synchronous — the agent waits for it —
-  # and a blocking request adds most of a second to every read of one of our
-  # reference files. Detaching drops that to the cost of spawning a shell. It
-  # also means delivery is not guaranteed if the process group is torn down
-  # straight after, which is the right trade for telemetry: the user's latency
-  # matters and a lost beacon does not.
-  if [ -n "$DEBUG_LOG" ]; then
-    # Synchronous while debugging, so the log can record what came back. This
-    # is the one path where blocking is acceptable: you asked for it.
-    CODE=$(curl "$@" --write-out '%{http_code}' "$ENDPOINT" 2>/dev/null)
-    dbg "sent $EVENT_NAME trigger=${EVENT_TRIGGER:-none} skill=$SKILL resource=${RESOURCE:-none} -> HTTP ${CODE:-no-response} $ENDPOINT"
+install_id_file() {
+  if [ "$1" = home ]; then
+    printf '%s' "$HOME/.commercetools/ai-plugin-install-id"
   else
-    (curl "$@" "$ENDPOINT" >/dev/null 2>&1 &) 2>/dev/null
+    printf '%s' "$TMP/ct-ai-plugin-install-id"
   fi
 }
 
-printf '%s\n' "$EVENTS" | while read -r EVENT_NAME SKILL RESOURCE; do
-  send "$EVENT_NAME" "$SKILL" "$RESOURCE"
-done
+read_install_id() {
+  head -n 1 "$1" 2>/dev/null | tr -dc 'a-f0-9'
+}
 
-) </dev/null >/dev/null 2>&1 &
-) 2>/dev/null
+# ---------------------------------------------------------------------------
+# main: read what is known, decide what happened, send it. Runs in the background.
+# ---------------------------------------------------------------------------
+
+main() {
+  command -v curl >/dev/null 2>&1 || { dbg "skip: no curl"; return; }
+
+  # The tool response holds the text that was read; a skill linking to another
+  # skill would otherwise report a read of that one.
+  SCAN_INPUT=$(printf '%s' "$INPUT" | sed 's/"tool_response".*//')
+
+  PLUGIN_VERSION=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
+    "$PLUGIN_ROOT/plugin.json" "$PLUGIN_ROOT/.codex-plugin/plugin.json" 2>/dev/null | head -n 1)
+
+  CLIENT_FAMILY=$(printf '%s' "$CLIENT_TYPE" | tr '[:upper:]' '[:lower:]')
+  case "$CLIENT_FAMILY" in
+    *claude*) CLIENT_FAMILY=claude ;;
+    *copilot*) CLIENT_FAMILY=copilot ;;
+    *codex*) CLIENT_FAMILY=codex ;;
+    *cursor*) CLIENT_FAMILY=cursor ;;
+  esac
+
+  # Installation ID: an existing one from home, then temp; otherwise a new one,
+  # stored in the first place that takes it. Only an ID read back from disk is
+  # sent: one that can't be stored would be new on every call.
+  INSTALL_ID=""
+  INSTALL_ID_SOURCE=""
+  for SOURCE in home temp; do
+    INSTALL_ID=$(read_install_id "$(install_id_file "$SOURCE")")
+    [ -n "$INSTALL_ID" ] && { INSTALL_ID_SOURCE="$SOURCE"; break; }
+  done
+  if [ -z "$INSTALL_ID" ]; then
+    NEW_ID=$(od -An -tx1 -N16 /dev/urandom 2>/dev/null | tr -dc 'a-f0-9')
+    for SOURCE in home temp; do
+      [ -n "$NEW_ID" ] || break
+      FILE=$(install_id_file "$SOURCE")
+      { mkdir -p "${FILE%/*}" && (umask 077 && printf '%s\n' "$NEW_ID" > "$FILE"); } 2>/dev/null
+      INSTALL_ID=$(read_install_id "$FILE")
+      [ -n "$INSTALL_ID" ] && { INSTALL_ID_SOURCE="$SOURCE"; break; }
+    done
+  fi
+
+  # Session: a hash of the host's session ID (Claude Code and Codex session_id,
+  # Cursor conversation_id, Copilot sessionId), never the ID itself.
+  SESSION=""
+  for FIELD in session_id conversation_id sessionId; do
+    RAW=$(json_field "$FIELD")
+    [ -n "$RAW" ] || continue
+    SESSION=$( { printf '%s' "$RAW" | shasum -a 256 || printf '%s' "$RAW" | sha256sum; } 2>/dev/null | cut -c1-32)
+    break
+  done
+
+  # Session state, shared with the skill scripts: the project key and region
+  # they recorded, and the last skill this hook reported.
+  CT_PROJECT=""; CT_REGION=""; CT_PROJECT_SOURCE=""; LAST_SKILL=""; SEQ=1
+  SESSION_FILE="$TMP/ct-ai-plugin-invocation-$CLIENT_FAMILY.json"
+  if [ -n "$SESSION" ]; then
+    PREVIOUS=$(cat "$SESSION_FILE" 2>/dev/null)
+    if [ "$(state_value "$PREVIOUS" id)" = "$SESSION" ]; then
+      CT_PROJECT=$(state_value "$PREVIOUS" ctProjectKey)
+      CT_REGION=$(state_value "$PREVIOUS" ctRegion)
+      CT_PROJECT_SOURCE=$(state_value "$PREVIOUS" ctProjectSource)
+      LAST_SKILL=$(state_value "$PREVIOUS" lastSkill)
+      SEQ=$(printf '%s' "$PREVIOUS" | sed -n 's/.*"seq"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' | head -n 1)
+      [ -n "$SEQ" ] || SEQ=1
+    fi
+  fi
+
+  # At most ten events per call, so a command listing a whole tree can't fan out.
+  EVENTS=$(collect_events "$LAST_SKILL" | awk '!seen[$0]++' | head -n 10)
+  [ -n "$EVENTS" ] || { dbg "skip: no shipped skill in payload"; return; }
+
+  if [ -n "$SESSION" ]; then
+    LAST_SKILL=$(printf '%s\n' "$EVENTS" | tail -n 1 | cut -d ' ' -f 2)
+    STATE="{\"id\":\"$SESSION\",\"ts\":$(( $(date +%s) * 1000 )),\"seq\":$SEQ,\"src\":\"host\""
+    [ -n "$CT_PROJECT" ] && STATE="$STATE,\"ctProjectKey\":\"$CT_PROJECT\""
+    [ -n "$CT_REGION" ] && STATE="$STATE,\"ctRegion\":\"$CT_REGION\""
+    [ -n "$CT_PROJECT_SOURCE" ] && STATE="$STATE,\"ctProjectSource\":\"$CT_PROJECT_SOURCE\""
+    STATE="$STATE,\"lastSkill\":\"$LAST_SKILL\"}"
+    { printf '%s' "$STATE" > "$SESSION_FILE"; } 2>/dev/null
+  fi
+
+  # Email domain: from the host when it states the signed-in user's email
+  # (Cursor), stored for the scripts; else what the scripts stored from
+  # `git config user.email`. Only the part after the @ is ever read.
+  EMAIL_DOMAIN=""
+  EMAIL_DOMAIN_SOURCE=""
+  HOST_EMAIL=$(json_field user_email)
+  [ -n "$HOST_EMAIL" ] || HOST_EMAIL="$CURSOR_USER_EMAIL"
+  case "$HOST_EMAIL" in
+    *@*)
+      EMAIL_DOMAIN=$(printf '%s' "${HOST_EMAIL##*@}" | tr '[:upper:]' '[:lower:]' | tr -dc 'a-z0-9.-')
+      EMAIL_DOMAIN_SOURCE="$CLIENT_FAMILY" ;;
+  esac
+  for FILE in "$HOME/.commercetools/ai-plugin-email-domain" "$TMP/ct-ai-plugin-email-domain"; do
+    STORED=$(cat "$FILE" 2>/dev/null)
+    if [ -z "$EMAIL_DOMAIN" ]; then
+      EMAIL_DOMAIN=$(state_value "$STORED" domain)
+      EMAIL_DOMAIN_SOURCE=$(state_value "$STORED" source)
+      [ -n "$EMAIL_DOMAIN" ] && break
+    elif [ "$(state_value "$STORED" domain)" = "$EMAIL_DOMAIN" ] &&
+         [ "$(state_value "$STORED" source)" = "$EMAIL_DOMAIN_SOURCE" ]; then
+      break
+    else
+      { mkdir -p "${FILE%/*}" && (umask 077 &&
+        printf '{"domain":"%s","source":"%s"}\n' "$EMAIL_DOMAIN" "$EMAIL_DOMAIN_SOURCE" > "$FILE"); } 2>/dev/null && break
+    fi
+  done
+
+  # Cursor and Codex state the model in the payload; Claude Code doesn't.
+  MODEL=$(json_field model)
+
+  printf '%s\n' "$EVENTS" | while read -r EVENT SKILL FILE; do
+    [ "$FILE" = "-" ] && FILE=""
+    if [ "$EVENT" = activation ]; then EVENT_TRIGGER="$TRIGGER"; else EVENT_TRIGGER=read; fi
+    # Every field is sent, empty when unknown.
+    CODE=$(curl --get --silent --output /dev/null --max-time 2 \
+      --write-out '%{http_code}' \
+      --user-agent "$CLIENT_TYPE/1.0 (hook)" \
+      --data-urlencode "event=$EVENT" \
+      --data-urlencode "trigger=$(plain "$EVENT_TRIGGER")" \
+      --data-urlencode "skillName=$(plain "$SKILL")" \
+      --data-urlencode "resource=$(plain "$FILE")" \
+      --data-urlencode "source=hook" \
+      --data-urlencode "clientType=$(plain "$CLIENT_TYPE")" \
+      --data-urlencode "clientFamily=$(plain "$CLIENT_FAMILY")" \
+      --data-urlencode "model=$(plain "$MODEL")" \
+      --data-urlencode "pluginVersion=$(plain "$PLUGIN_VERSION")" \
+      --data-urlencode "installId=$(plain "$INSTALL_ID")" \
+      --data-urlencode "installIdSource=$(plain "$INSTALL_ID_SOURCE")" \
+      --data-urlencode "invocation=$(plain "$SESSION")" \
+      --data-urlencode "invocationSource=${SESSION:+host}" \
+      --data-urlencode "ctProjectKey=$(plain "$CT_PROJECT")" \
+      --data-urlencode "ctRegion=$(plain "$CT_REGION")" \
+      --data-urlencode "ctProjectSource=$(plain "$CT_PROJECT_SOURCE")" \
+      --data-urlencode "emailDomain=$(plain "$EMAIL_DOMAIN")" \
+      --data-urlencode "emailDomainSource=$(plain "$EMAIL_DOMAIN_SOURCE")" \
+      "$ENDPOINT" 2>/dev/null)
+    dbg "sent $EVENT trigger=${EVENT_TRIGGER:-none} skill=$SKILL resource=${FILE:-none} -> HTTP ${CODE:-none} $ENDPOINT"
+  done
+}
+
+# Redirect the shell itself first: with dash (/bin/sh on Debian and Ubuntu),
+# redirecting only the background call keeps the host's output pipe open, and
+# the host would wait for main to finish.
+exec </dev/null >/dev/null 2>&1
+main &
 exit 0

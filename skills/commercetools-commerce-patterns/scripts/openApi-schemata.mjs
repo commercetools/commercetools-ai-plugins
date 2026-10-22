@@ -75,8 +75,9 @@ const reportServiceFailure = ({ mcpTool, err, status }) => {
  * What is sent: skill name, host app, model, plugin version, random installation
  * and invocation ids, the commercetools project key and region when the agent
  * already knows them, and the domain of the developer's email address. Never
- * file contents, paths, or the part of an email address before the @. Set
- * COMMERCETOOLS_AI_PLUGIN_TELEMETRY=0 to disable.
+ * file contents, paths, or the part of an email address before the @. Off when
+ * COMMERCETOOLS_AI_PLUGIN_TELEMETRY=0, or when the user turned off the plugin's
+ * "Share usage data" setting in Claude Code.
  */
 
 import { execFileSync } from 'node:child_process';
@@ -88,12 +89,40 @@ import { fileURLToPath } from 'node:url';
 
 // Substituted at install time from .internal/config.json. The one field in the
 // payload that is verified rather than self-reported by the model.
-const PLUGIN_VERSION = '0.61.0';
+const PLUGIN_VERSION = '0.62.0';
 
-/** The single opt-out switch. */
+// The plugin's "Share usage data" setting in Claude Code. Hooks get it as
+// CLAUDE_PLUGIN_OPTION_TELEMETRY; commands the agent runs don't, so read it
+// where Claude Code saves it: pluginConfigs in the user settings, keyed
+// "<plugin>@<marketplace>", as { "options": { "telemetry": false } } (the docs
+// omit the "options" level, so both are read). Any marketplace counts.
+// No settings file means not set. A file that exists but can't be read (a
+// sandbox denying the home folder) counts as off: the choice is unknown.
+const claudeSettingOff = () => {
+  const dir = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
+  let text;
+  try {
+    text = fs.readFileSync(path.join(dir, 'settings.json'), 'utf8');
+  } catch (err) {
+    return err?.code !== 'ENOENT' && err?.code !== 'ENOTDIR';
+  }
+  try {
+    const configs = JSON.parse(text).pluginConfigs;
+    return Object.entries(configs || {}).some(([id, values]) => {
+      if (!/^commercetools(-labs)?@/.test(id)) return false;
+      const value = values?.options?.telemetry ?? values?.telemetry;
+      return value === false || value === 'false';
+    });
+  } catch {
+    return false;
+  }
+};
+
+/** The opt-out switches: the environment variable, or the Claude Code setting. */
 const telemetryDisabled = () =>
   process.env.COMMERCETOOLS_AI_PLUGIN_TELEMETRY === '0' ||
-  process.env.COMMERCETOOLS_AI_PLUGIN_TELEMETRY === 'off';
+  process.env.COMMERCETOOLS_AI_PLUGIN_TELEMETRY === 'off' ||
+  claudeSettingOff();
 
 /**
  * Resolve the skill name from the script's own location rather than asking the
@@ -225,7 +254,7 @@ const installId = () => {
  * silently merged unrelated projects.
  *
  * Every failure mode (read-only tmp, sandboxed fs, concurrent writers) resolves
- * to `undefined`, which omits the parameter. Correlation is a nice to have,
+ * to `undefined`, which sends the parameter empty. Correlation is a nice to have,
  * never a reason to fail or complain.
  *
  * Known limitation: two agent sessions running concurrently on one machine share
@@ -306,13 +335,12 @@ const invocationId = (appName, project = {}) => {
 const PLAIN_VALUE = /^[A-Za-z0-9_.-]{1,64}$/;
 
 const cleanProjectKey = (value) => {
-  const key = String(value ?? '').trim();
+  const key = plain(value);
   return PLAIN_VALUE.test(key) ? key : undefined;
 };
 
 const cleanRegion = (value) => {
-  const region = String(value ?? '')
-    .trim()
+  const region = plain(value)
     .toLowerCase()
     .replace(/^[a-z]+:\/\//, '')
     .replace(/\/.*$/, '')
@@ -455,62 +483,57 @@ const clientFamily = (appName) => {
   );
 };
 
-/**
- * The four instrumentation headers, unchanged across every endpoint. Empty when
- * telemetry is off — the grounding request itself still runs, it just carries no
- * identifying metadata.
- */
-const instrumentationHeaders = ({ appName, model, skillName }) => {
-  const headers = {};
-  if (telemetryDisabled()) return headers;
-  if (appName || model) headers['User-Agent'] = `${appName || 'unknown'}/1.0 (${model || 'unknown'})`;
-  if (model) headers['X-Model'] = model;
-  if (appName) headers['X-Client-Type'] = appName;
-  if (skillName) headers['X-Skill-Name'] = skillName;
-  return headers;
+// A value as sent: an unknown value is an empty string, never "null" or
+// "undefined". An empty parameter means "not known in this situation"; a
+// parameter that is missing altogether means this client doesn't report it.
+const plain = (value) => {
+  const text = value == null ? '' : String(value).trim();
+  return text === 'null' || text === 'undefined' ? '' : text;
 };
 
 /**
- * Mirror the header values onto the query string, using the same names on every
- * endpoint so one log filter covers all of them. Only sets what it actually has.
+ * The User-Agent of the request. Nothing when telemetry is off: the request
+ * itself still runs, it just carries no identifying metadata.
+ */
+const instrumentationHeaders = ({ appName, model }) =>
+  telemetryDisabled() ? {} : { 'User-Agent': `${plain(appName) || 'unknown'}/1.0 (${plain(model) || 'unknown'})` };
+
+/**
+ * The usage fields, on the query string with the same names on every endpoint,
+ * so one log filter covers all of them. Every field is set, empty when unknown.
  */
 const applyInstrumentationParams = (
   url,
   { appName, model, skillName, source, importMetaUrl, projectKey, region, projectSource },
 ) => {
   if (telemetryDisabled()) return;
-  if (skillName) url.searchParams.set('skillName', skillName);
-  if (appName) url.searchParams.set('clientType', appName);
-  const family = clientFamily(appName);
-  if (family) url.searchParams.set('clientFamily', family);
-  if (model) url.searchParams.set('model', model);
-  url.searchParams.set('pluginVersion', PLUGIN_VERSION);
-  url.searchParams.set('source', source || 'script');
-  const install = importMetaUrl ? installKind(importMetaUrl) : undefined;
-  if (install) url.searchParams.set('install', install);
   const identity = installId();
-  if (identity) {
-    url.searchParams.set('installId', identity.id);
-    url.searchParams.set('installIdSource', identity.source);
-  }
   const invocation = invocationId(appName, {
     key: cleanProjectKey(projectKey),
     region: cleanRegion(region),
     source: projectSource,
   });
-  if (invocation) {
-    url.searchParams.set('invocation', invocation.id);
-    url.searchParams.set('invocationSource', invocation.src);
-    url.searchParams.set('seq', String(invocation.seq));
-    if (invocation.ctProjectKey) url.searchParams.set('ctProjectKey', invocation.ctProjectKey);
-    if (invocation.ctRegion) url.searchParams.set('ctRegion', invocation.ctRegion);
-    if (invocation.ctProjectSource) url.searchParams.set('ctProjectSource', invocation.ctProjectSource);
-  }
   const email = emailDomain();
-  if (email) {
-    url.searchParams.set('emailDomain', email.domain);
-    url.searchParams.set('emailDomainSource', email.source);
-  }
+  const fields = {
+    skillName,
+    clientType: appName,
+    clientFamily: clientFamily(appName),
+    model,
+    pluginVersion: PLUGIN_VERSION,
+    source: source || 'script',
+    install: importMetaUrl ? installKind(importMetaUrl) : undefined,
+    installId: identity?.id,
+    installIdSource: identity?.source,
+    invocation: invocation?.id,
+    invocationSource: invocation?.src,
+    seq: invocation?.seq,
+    ctProjectKey: invocation?.ctProjectKey,
+    ctRegion: invocation?.ctRegion,
+    ctProjectSource: invocation?.ctProjectSource,
+    emailDomain: email?.domain,
+    emailDomainSource: email?.source,
+  };
+  for (const [name, value] of Object.entries(fields)) url.searchParams.set(name, plain(value));
 };
 // --- end instrumentation.mjs ---
 

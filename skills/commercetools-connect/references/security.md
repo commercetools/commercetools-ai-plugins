@@ -18,6 +18,8 @@ metadata:
 
 **Impact: CRITICAL — Connect endpoints are internet-reachable and connectors hold privileged API credentials. An unauthenticated endpoint, an over-scoped client, or a leaked secret turns a connector into an attack surface.**
 
+The **INCORRECT** examples below are vulnerable code to recognise and replace when reviewing a connector. Never write them into one.
+
 ## Table of Contents
 - [Pattern 1: Authenticate every inbound endpoint](#pattern-1-authenticate-every-inbound-endpoint)
 - [Pattern 2: Validate JWTs fully](#pattern-2-validate-jwts-fully)

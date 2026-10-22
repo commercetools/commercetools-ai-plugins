@@ -15,6 +15,8 @@ metadata:
 
 Superusers are associates whose commercetools associate role has the key `superuser`. They can view all active carts in their store, switch the active cart to any of them, create merchant-originated carts, and reassign carts to other associates.
 
+Build this only when the user asks for it: it gives selected staff access to carts that aren't theirs. Every superuser endpoint checks the role server-side from the session, never from a flag the client sends, and only the merchant's own administrators assign the `superuser` role.
+
 ## Session Flag
 
 `isSuperuser: boolean` is stored in the server-managed session. It is detected at login and re-evaluated on BU selection.

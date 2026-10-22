@@ -94,7 +94,11 @@ guarantee a schema extension cannot give.
 A Project must be [enrolled and activated](https://docs.commercetools.com/commerce-integration-layer/overview.md#enrollment)
 for the Commerce Integration Layer before extensions can be published. The flow, from the
 [Get started](https://docs.commercetools.com/commerce-integration-layer/development/get-started.md) guide;
-the `commerce-integration-layer-extensions` repo holds standalone example extensions, one per pattern:
+the `commerce-integration-layer-extensions` repo holds standalone example extensions, one per pattern.
+
+Ask the user before installing anything and before every push: the first two commands install
+the CLI and its plugin on the user's machine, and `pnpm push` replaces what the Project serves.
+Name the command and the target Project, and wait for an explicit yes. The user signs in themselves.
 
 ```bash
 # Install the CLI and the integration-layer topic (once), then log in

@@ -10,14 +10,14 @@ Customer groups are typically used in conjunction with Currency Code, Country an
 
 - CurrencyCode
 - Country
-- Customer Group (single group; on Product Projection search / price selection, the parameter is `priceCustomerGroup`)
-- Customer Group Assignments (multi-group resolution; on Product Projection search / price selection, the parameter is `priceCustomerGroupAssignments`)
+- Customer Group (single group; on Product Projection queries / price selection, the parameter is `priceCustomerGroup`)
+- Customer Group Assignments (multi-group resolution; on Product Projection queries / price selection, the parameter is `priceCustomerGroupAssignments`)
 - Channel
 - PriceDate (represented as `validFrom` and `validTo`)
 
 ---
 
-1. If price currency and additional price selection parameters are included in product projection search, the platform will use price selection logic to return the matching price to the customer.
+1. If price currency and additional price selection parameters are included in product projection queries, the platform will use price selection logic to return the matching price to the customer.
    - Reference: https://docs.commercetools.com/api/pricing-and-discounts-overview#price-selection
 
 2. When adding lineItems to carts, the platform will use the currency and additional price selection parameters to select the same price. In order for price selection to work when calling `addLineItem`, the price selection parameters (i.e. `currencyCode`, `country`, `customerGroup`...) must be present on the cart. See: https://docs.commercetools.com/api/projects/carts

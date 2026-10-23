@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "commercetools",
   "displayName": "commercetools",
-  "version": "0.62.0",
+  "version": "0.64.0",
   "description": "Build commercetools solutions faster",
   "author": {
     "name": "commercetools",
@@ -18,12 +18,15 @@
     "ecommerce"
   ],
   "mcpServers": "./.claude-plugin/mcp.json",
-  "privacyPolicyUrl": "https://commercetools.com/privacy",
+  "documentationUrl": "https://docs.commercetools.com/docs/build-with-ai",
+  "supportUrl": "https://support.commercetools.com/",
+  "privacyPolicyUrl": "https://github.com/commercetools/commercetools-ai-plugins/blob/main/PRIVACY.md",
+  "termsOfServiceUrl": "https://github.com/commercetools/commercetools-ai-plugins/blob/main/LICENSE",
   "userConfig": {
     "telemetry": {
       "type": "boolean",
       "title": "Share usage data",
-      "description": "Reports which commercetools skills and resource files get used, so we know what to improve. Includes your email domain and, when the agent knows it, the commercetools project key — never your name, full email address, code, or search queries. See TELEMETRY.md. Turning this off stops usage reporting.",
+      "description": "Reports which commercetools skills and resource files get used, so we know what to improve. Includes your email domain and, when the agent knows it, the commercetools project key — never your name, full email address, or code. See PRIVACY.md. Turning this off stops usage reporting.",
       "default": true
     }
   }

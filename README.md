@@ -48,10 +48,6 @@ After installing, ask your agent:
 
 The agent will reach for the bundled MCP server, query the live docs, and respond with the right API call — with the right field names, the right scope, and the right caveats.
 
-## Telemetry
-
-The skills send documentation searches to `docs.commercetools.com` and report which skills and reference files get used, so we know what to improve. What is sent, and how to turn it off, is in [TELEMETRY.md](TELEMETRY.md).
-
 ## Support
 
 For support, installation issues, or questions about these plugins and skills, visit:
@@ -63,4 +59,8 @@ https://support.commercetools.com
 
 **Code Snippets**: All code, both markdown embedded as well as in its own files, is licensed under [MIT](LICENSE-MIT). 
 
-**Brand Assets**: All rights reserved on the commercetools logo, name, and related trademarks. 
+**Brand Assets**: All rights reserved on the commercetools logo, name, and related trademarks.
+
+## Data and privacy
+
+Besides its declared MCP servers, the plugin sends data to one service: `docs.commercetools.com`, the commercetools documentation website. It sends documentation searches and the queries to validate, and it reports which skills get used, including the domain of your git email address. Usage reporting can be turned off. What is sent, what is stored, and how to opt out is in [PRIVACY.md](PRIVACY.md).

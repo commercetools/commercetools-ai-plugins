@@ -60,7 +60,7 @@ Write these as a short requirements block and **confirm with the user** before c
 
 ### Step 1.4 — Rung 0: is native search enough? (STRONG — rule it out first)
 
-commercetools ships its **own** search: [Product Search](https://docs.commercetools.com/api/projects/product-search.md) and [Product Projection Search](https://docs.commercetools.com/api/projects/product-projection-search.md) cover full-text, fuzzy/prefix/wildcard matching, faceting, and price/Store/Product-Selection scoping ([storefront-search-overview](https://docs.commercetools.com/api/storefront-search-overview.md); Product Search reached general availability in June 2024, with facets GA in October 2025 — [Use Product Search](https://docs.commercetools.com/learning-implement-product-discovery-and-presentation/build-product-listing-pages/use-product-search.md)). An external engine is a **standing indexing pipeline to own, secure, and pay for**, plus an eventual-consistency lag and an operational dependency on the cart-adjacent PLP.
+commercetools ships its **own** search: [Product Search](https://docs.commercetools.com/api/projects/product-search.md) covers full-text, fuzzy/prefix/wildcard matching, faceting, and price/Store/Product-Selection scoping ([storefront-search-overview](https://docs.commercetools.com/api/storefront-search-overview.md); Product Search reached general availability in June 2024, with facets GA in October 2025 — [Use Product Search](https://docs.commercetools.com/learning-implement-product-discovery-and-presentation/build-product-listing-pages/use-product-search.md)). An external engine is a **standing indexing pipeline to own, secure, and pay for**, plus an eventual-consistency lag and an operational dependency on the cart-adjacent PLP.
 
 **Stop at rung 0** when the requirement is basic PLP/search — full-text, typo tolerance, facets, sort, price/Store scoping. Say so plainly and stop; do not build a connector for what the platform already does. **Go past rung 0** only when a stated need genuinely exceeds native: visual/AI merchandising and curation, synonym/redirect rule sets, recommendations, search analytics dashboards, A/B testing, learned/personalized ranking, or a discovery engine the front end is already committed to. The full gate and the native-capability table are in [connector-selection.md](./connector-selection.md).
 
@@ -110,7 +110,7 @@ Requirements
 - [ ] Requirements block written and confirmed with the user
 
 Path (decide before wiring/building)
-- [ ] **Rung 0 ruled out explicitly** — native Product Search / Product Projection Search can't do it, and you said why
+- [ ] **Rung 0 ruled out explicitly** — native Product Search can't do it, and you said why
 - [ ] Checked **live** marketplace + docs (not memory); a hosted engine integration surfaced with the not-a-Connect-connector warning
 - [ ] Path **presented to the user and chosen by them**: use (1) · config-closes-gap (2) · fork (3) · build-from-template (4)
 

@@ -10,6 +10,7 @@
         "commercetools-checkout",
         "commercetools-commerce-patterns",
         "commercetools-connect",
+        "commercetools-custom-application",
         "commercetools-intake",
         "commercetools-integration-layer",
         "commercetools-integrations",

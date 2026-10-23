@@ -1,0 +1,10 @@
+{
+  "form": { "appName": "Fixture App", "projectKey": "fct-dev", "contactEmail": "me@example.com" },
+  "owners": [{ "id": "o1", "name": "Alpha" }],
+  "projects": [{ "key": "fct-dev", "name": "Dev", "owner": { "id": "o1" } }],
+  "loginDelayMs": 400,
+  "delayMs": 10,
+  "answers": [
+    ["preflight.mjs", { "stdout": "{\"ok\":true,\"checks\":[]}" }]
+  ]
+}

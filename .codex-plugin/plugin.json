@@ -1,7 +1,7 @@
 {
   "name": "commercetools",
   "displayName": "commercetools",
-  "version": "0.62.0",
+  "version": "0.64.0",
   "description": "Build commercetools solutions faster",
   "author": {
     "name": "commercetools",
@@ -26,7 +26,7 @@
     "developerName": "commercetools",
     "websiteURL": "https://docs.commercetools.com/docs/build-with-ai",
     "supportURL": "https://support.commercetools.com/",
-    "privacyPolicyURL": "https://commercetools.com/privacy",
+    "privacyPolicyURL": "https://github.com/commercetools/commercetools-ai-plugins/blob/main/PRIVACY.md",
     "termsOfServiceURL": "https://github.com/commercetools/commercetools-ai-plugins/blob/main/LICENSE",
     "shortDescription": "Build on commercetools",
     "longDescription": "Developer tooling for building applications on commercetools, the composable commerce platform. The plugin connects your coding agent to the commercetools Knowledge MCP server, which searches the commercetools documentation, returns the GraphQL and OpenAPI schemas, and validates GraphQL queries and REST requests. The Knowledge MCP needs no API key and has no access to your commercetools Project data. The skills give the agent commercetools guidance for SDK setup and API usage, B2C and B2B storefronts, Checkout and payment connectors, Connect applications and integrations, pricing, discount, tax and catalog modeling, catalog migration, and spec-driven development.",

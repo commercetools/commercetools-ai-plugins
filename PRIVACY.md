@@ -1,11 +1,11 @@
-# Telemetry and data processing
+# Privacy
 
-The plugin talks to commercetools in two ways, both through `docs.commercetools.com`:
+This page describes the data the commercetools AI plugins handle. The plugin talks to commercetools in two ways, both through `docs.commercetools.com`:
 
 1. **Documentation and API tools.** The Knowledge MCP server and the skills' `scripts/*.mjs` helpers search the documentation, look up API schemas, and validate queries. That is what they are for.
 2. **Usage reporting.** Editor hooks report which skill was used and which of its files were read. The script that connects a repository to a commercetools MCP Server reports once whether that worked. Neither fetches anything or interrupts you.
 
-Both are ordinary requests to the commercetools documentation website, so its hosting, logging, and retention apply, as described in the [commercetools privacy notice](https://commercetools.com/privacy).
+Both are ordinary requests to the commercetools documentation website. The [commercetools privacy notice](https://commercetools.com/privacy) covers how commercetools processes the data: hosting, logging, retention, and your rights and how to exercise them.
 
 ## Always sent
 
@@ -43,4 +43,4 @@ Either one stops everything under [Sent unless you opt out](#sent-unless-you-opt
 
 Some AI tools let you change neither the plugin setting nor environment variables. There, the data under [Sent unless you opt out](#sent-unless-you-opt-out) can be sent.
 
-Questions about this plugin: <support@commercetools.com>.
+Questions about this plugin: <support@commercetools.com>. For data protection requests, use the contact in the [commercetools privacy notice](https://commercetools.com/privacy).

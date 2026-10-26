@@ -1,6 +1,6 @@
 #!/bin/sh
 # commercetools AI plugin: usage reporting hook. What it sends is listed in
-# TELEMETRY.md; how to debug and test it is in .internal/README.md.
+# PRIVACY.md; how to debug and test it is in .internal/README.md.
 #
 # Usage: telemetry.sh <client-type> <mode> <plugin-root> [trigger]
 #   client-type  claude-code, cursor or codex

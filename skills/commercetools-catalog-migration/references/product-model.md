@@ -79,19 +79,14 @@ attribute present on some variants but not others is refused.
 
 `AttributeLevelEnum` is `Product` or `Variant`, and the trade-off is real:
 
-- **`Product`** — a native product-level attribute. Supported by
-  [Product Search](https://docs.commercetools.com/api/projects/product-search.md)
-  but **not** by
-  [Product Projection Search](https://docs.commercetools.com/api/projects/product-projection-search.md).
-- **`Variant` + `SameForAll`** — readable from both search APIs.
+- **`Product`** — a native product-level attribute supported by
+  [Product Search](https://docs.commercetools.com/api/projects/product-search.md).
+- **`Variant` + `SameForAll`** — writes the same value on every variant and is
+  the shape supported by the migration pipeline.
 
-Product Projection Search is deprecated and cannot be activated on Projects
-created after 31 August 2026; Product Search replaces it, and the
-[migration guide](https://docs.commercetools.com/guides/migration-guides/product-search-migration-guide.md)
-covers the move. So on a new Project Product Search is the only search API
-there is, and the case against `native` is not the other API's gap: `derive`
-accepts `native`, but `plan` refuses it (`native-product-level-not-mapped`)
-because it writes Product-level attributes in a different shape.
+`derive` accepts `native`, but `plan` refuses it
+(`native-product-level-not-mapped`) because it writes Product-level attributes
+in a different shape.
 `productTypes.productLevelStrategy` defaults to `sameForAll` for that reason,
 and `sameForAll` is the value to use.
 

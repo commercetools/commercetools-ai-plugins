@@ -88,7 +88,7 @@ import { fileURLToPath } from 'node:url';
 
 // Substituted at install time from .internal/config.json. The one field in the
 // payload that is verified rather than self-reported by the model.
-const PLUGIN_VERSION = '0.62.0';
+const PLUGIN_VERSION = '0.65.0';
 
 // The plugin's "Share usage data" setting in Claude Code. Hooks get it as
 // CLAUDE_PLUGIN_OPTION_TELEMETRY; commands the agent runs don't, so read it

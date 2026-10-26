@@ -20,6 +20,8 @@ metadata:
 
 This is the judgment layer. For the CLI commands themselves (scaffold, run, build, login) see [merchant-center-cli.md](./merchant-center-cli.md); for the shared Connect deploy lifecycle see [deployment-installation.md](./deployment-installation.md). The official docs are the source of truth for every field and step — this reference tells you *which* decisions matter and *why*, and links the rest.
 
+> To go from nothing to an installed custom application (scaffold, host, register, install in chosen Organizations, open it), including hosting on Connect, use [commercetools-custom-application](../../commercetools-custom-application/SKILL.md). It asks for your details and runs the steps. This page is for the design decisions and for deploying by hand.
+
 ## Table of Contents
 - [Contract facts (verified)](#contract-facts)
 - [Pattern 1: Custom application vs custom view](#pattern-1-custom-application-vs-custom-view)
@@ -78,7 +80,9 @@ Test through the application-shell, not bare React — the shell provides the da
 
 ## Pattern 5: Deploy via Connect (the vessel)
 
-Connect is the recommended host: it builds the bundle, serves it on a managed URL, and ties the customization into the same connector lifecycle as the rest of your Connect apps. (Other hosts — Vercel, Netlify, Render, AWS, Azure, Cloudflare, Google Cloud — are documented alternatives; verified: [deployment](https://docs.commercetools.com/merchant-center-customizations/deployment.md).)
+Connect is one of several hosts for a custom application. If the user hasn't chosen one, or wants the register-and-install steps run for them, hand off to [commercetools-custom-application](../../commercetools-custom-application/SKILL.md), which offers Connect hosting among its options.
+
+Connect is the recommended host: it builds the bundle, serves it on a managed URL, and ties the customization into the same connector lifecycle as the rest of your Connect apps. (Other hosts — Vercel, Netlify, Render, AWS, Azure, Cloudflare, Google Cloud — are documented alternatives; verified: [deployment](https://docs.commercetools.com/merchant-center-customizations/deployment/overview.md).)
 
 **Declare the customization in `connect.yaml`** with the MC-specific `applicationType`. Unlike `service`/`event`/`job`, there is **no `endpoint` and no `securedConfiguration`**, and you do **not** declare `APPLICATION_URL` — Connect provides it automatically (verified: [deploy via Connect](https://docs.commercetools.com/merchant-center-customizations/deployment/commercetools-connect.md)):
 
@@ -110,6 +114,8 @@ A custom view uses `applicationType: merchant-center-custom-view` with `CUSTOM_V
 5. **Stage → publish → deploy** with the Connect CLI: `connectorstaged create` → `publish` → `deployment create`, supplying the ID, entry-point path, and region — exact commands and flags in [connect-cli.md Step 5](./connect-cli.md#step-5-stage-preview-publish-and-deploy).
 6. **Retrieve** the deployed URL from the deployment.
 7. **Update** the Merchant Center registration, replacing the placeholder URL with the deployed one.
+
+Steps 1, 4, 5 and 7 change remote state (a Merchant Center registration, a git push and tag, a published connector and a deployment). Show each one and get the user's explicit yes before running it.
 
 Deploy in the **same region** as the project and keep `cloudIdentifier` consistent with it. For the connector-level lifecycle (deployment types, redeploy on config change, regions, troubleshooting) see [deployment-installation.md](./deployment-installation.md).
 

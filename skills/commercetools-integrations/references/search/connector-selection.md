@@ -21,7 +21,6 @@ Before any marketplace lookup, test the requirement against the native surface (
 | Native capability | Covers |
 |---|---|
 | [Product Search](https://docs.commercetools.com/api/projects/product-search.md) | Full-text, fuzzy/prefix/wildcard matching, faceting (distinct/range/count/stats/filtered), sorting, price/Store/Product-Selection scoping. GA June 2024; facets GA October 2025 ([Use Product Search](https://docs.commercetools.com/learning-implement-product-discovery-and-presentation/build-product-listing-pages/use-product-search.md)) |
-| [Product Projection Search](https://docs.commercetools.com/api/projects/product-projection-search.md) | The older search endpoint — full-text, filters, facets, `localeProjection`/`storeProjection`; returns full projections rather than ids |
 | Scoping | Price selection (currency/country/Customer-Group/Channel), `storeProjection`, and B2B assortment scope resolve a buyer's prices and catalog in the same query ([Product Search for B2B](https://docs.commercetools.com/learning-model-b2b-commerce/discover-and-order-products-in-b2b/product-search-for-b2b-catalogs.md)) |
 
 **Stop at rung 0** when the requirement is basic product discovery: full-text search, typo tolerance, prefix/type-ahead, facets, sort, and price/Store scoping for a PLP or search results page. An external engine here adds a standing indexing pipeline, an eventual-consistency lag, a per-record/query cost, and an availability dependency — for behavior the platform already has. Say so plainly and stop.

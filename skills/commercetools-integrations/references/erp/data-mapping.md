@@ -19,7 +19,7 @@ The mapping is where ERP integrations quietly go wrong: nothing errors, the data
 
 Product *content* modeling (families, attribute types, locales, media, categories) is the PIM sub-area's: [pim/data-mapping.md](../pim/data-mapping.md). This file covers the ERP-specific decisions.
 
-The commercetools docs include a worked SAP mapping (MATMAS → Product/Variant, classification IDOCs → Product Type/Attributes, COND_A → Prices, stock IDOCs → Inventory, invoice IDOCs → Order Custom Fields) — use it as an illustration of the shape, and take the actual field and segment names from the ERP's current documentation: [SAP ERP integration example](https://docs.commercetools.com/tutorials/erp-integration.md#sap-erp-integration-example).
+The commercetools docs include a worked SAP mapping (MATMAS → Product/Variant, classification IDOCs → Product Type/Attributes, COND_A → Prices, stock IDOCs → Inventory, invoice IDOCs → Order Custom Fields) — use it as an illustration of the shape, and take the actual field and segment names from the ERP's current documentation: [SAP ERP integration example](https://docs.commercetools.com/guides/erp-integration.md).
 
 ## Identity and keys — decide first, change never
 

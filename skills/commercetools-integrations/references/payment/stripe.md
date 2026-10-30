@@ -82,7 +82,7 @@ The Stripe connector validates the session against its own deployed processor. I
 **Custom connectors (built from the payment-integration template) use `metadata.processorUrl`, not `applicationKey`.** The template's session-auth hook validates that the session's `metadata.processorUrl` matches the processor's own deployed URL. There is no Checkout Application involved. Use:
 
 ```json
-{ "metadata": { "processorUrl": "https://service-….europe-west1.gcp.3.sandbox.commercetools.app" } }
+{ "metadata": { "processorUrl": "https://service-….{region}.3.sandbox.commercetools.app" } }
 ```
 
 Trying `applicationKey` here gets you a 401 that looks like a session problem but is actually a metadata mismatch. **The split is not certified-vs-custom** — `processorUrl` works against any deployed connector; `applicationKey` just has preconditions a custom connector doesn't meet:

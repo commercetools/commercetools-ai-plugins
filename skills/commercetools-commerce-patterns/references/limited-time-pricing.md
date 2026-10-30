@@ -65,7 +65,7 @@ As described in the commercetools [documentation](https://docs.commercetools.com
 The first step of starting the import process is creating an import container using the following API call:
 
 ```json
-curl --location 'https://import.us-central1.gcp.commercetools.com/{your-project-key}/import-containers' \
+curl --location 'https://import.{region}.commercetools.com/{your-project-key}/import-containers' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer' \
 --data '{
@@ -89,7 +89,7 @@ Once the import container is created, use the following API call to upload the r
 **Embedded Prices:**
 
 ```json
-curl --location 'https://import.us-central1.gcp.commercetools.com/{your-project-key}/prices/import-containers/order-import-container-embedded-prices' \
+curl --location 'https://import.{region}.commercetools.com/{your-project-key}/prices/import-containers/order-import-container-embedded-prices' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer' \
 --data '{
@@ -128,7 +128,7 @@ curl --location 'https://import.us-central1.gcp.commercetools.com/{your-project-
 Using the `operationId` returned in the above response, you may use the following API call to determine the status of your import operation:
 
 ```json
-curl --location 'https://import.us-central1.gcp.commercetools.com/{your-project-key}/import-operations/{import-operation-id}' \
+curl --location 'https://import.{region}.commercetools.com/{your-project-key}/import-operations/{import-operation-id}' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer' \
 --data ''
@@ -137,7 +137,7 @@ curl --location 'https://import.us-central1.gcp.commercetools.com/{your-project-
 **Standalone Prices:**
 
 ```json
-curl --location 'https://import.us-central1.gcp.commercetools.com/{your-project-key}/standalone-prices/import-containers/order-import-container-embedded-prices' \
+curl --location 'https://import.{region}.commercetools.com/{your-project-key}/standalone-prices/import-containers/order-import-container-embedded-prices' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer' \
 --data '{
@@ -166,7 +166,7 @@ curl --location 'https://import.us-central1.gcp.commercetools.com/{your-project-
 Using the `operationId` returned in the above response, you may use the following API call to determine the status of your import operation:
 
 ```json
-curl --location 'https://import.us-central1.gcp.commercetools.com/{your-project-key}/import-operations/{import-operation-id}' \
+curl --location 'https://import.{region}.commercetools.com/{your-project-key}/import-operations/{import-operation-id}' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer' \
 --data ''

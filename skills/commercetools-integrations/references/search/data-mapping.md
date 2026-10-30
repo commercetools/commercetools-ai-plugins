@@ -12,7 +12,7 @@ metadata:
 
 # From commercetools projection to search document
 
-This is where search integrations succeed or rot. The plumbing (full load, subscription, upsert) is mechanical; the **mapping** decides whether the index stays correct, queryable, and affordable. It applies whether you configure a public connector (you set the mapping as config) or build one (you write it) — the decisions are identical. Ground every choice in the [Product catalog overview](https://docs.commercetools.com/api/product-catalog-overview.md) and the [Integrate external search tutorial](https://docs.commercetools.com/tutorials/search-integration.md); this reference is the decision layer on top.
+This is where search integrations succeed or rot. The plumbing (full load, subscription, upsert) is mechanical; the **mapping** decides whether the index stays correct, queryable, and affordable. It applies whether you configure a public connector (you set the mapping as config) or build one (you write it) — the decisions are identical. Ground every choice in the [Product catalog overview](https://docs.commercetools.com/api/product-catalog-overview.md) and the [Integrate external search tutorial](https://docs.commercetools.com/guides/search-integration.md); this reference is the decision layer on top.
 
 The core tension: commercetools' model is **normalized and reference-based** (Products reference Categories, Prices, Channels by id/key); a search engine wants a **flat, denormalized, self-contained record** optimized for one query. Mapping is a *transform and a filter*, not a copy — index only what the storefront searches, filters, sorts, or displays.
 
@@ -61,7 +61,7 @@ A Product references [Categories](https://docs.commercetools.com/api/projects/ca
 If different Stores expose different assortments via [Product Selections](https://docs.commercetools.com/api/projects/product-selections.md) or [Product Tailoring](https://docs.commercetools.com/api/projects/product-tailoring.md), decide how the index reflects it:
 
 - **A `stores` / `productSelections` filter field** on each record — one index, the storefront filters by the current Store. Simple; fine when tailored content per Store is minimal.
-- **One index per Store** — driven by the Store's Product Selection; use the [Populate a Store-specific external search tutorial](https://docs.commercetools.com/tutorials/store-specific-external-search.md) and read `/in-store/key={storeKey}/product-projections` (with `storeProjection`, which also resolves Store locales and prices). This is what the [Product export template](https://docs.commercetools.com/connect/templates/product-export.md) implements — **one Deployment per Store**.
+- **One index per Store** — driven by the Store's Product Selection; use the [Populate a Store-specific external search tutorial](https://docs.commercetools.com/guides/search-integration.md) and read `/in-store/key={storeKey}/product-projections` (with `storeProjection`, which also resolves Store locales and prices). This is what the [Product export template](https://docs.commercetools.com/connect/templates/product-export.md) implements — **one Deployment per Store**.
 
 The per-Store-Deployment model doesn't scale to many Stores; for a large fleet, build one app that resolves the Store from the message and writes the matching index instead of one Deployment each. Store/Selection changes (`StoreProductSelectionsChanged`, `ProductSelectionProductAdded/Removed`, `ProductSelectionVariantSelectionChanged`) drive add/remove on the incremental path.
 

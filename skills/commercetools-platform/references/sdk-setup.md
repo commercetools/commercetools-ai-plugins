@@ -98,8 +98,8 @@ export async function getSomething(id: string) {
 ```bash
 # .env  (add to .gitignore — never commit)
 CTP_PROJECT_KEY=your-project-key
-CTP_AUTH_URL=https://auth.us-central1.gcp.commercetools.com
-CTP_API_URL=https://api.us-central1.gcp.commercetools.com
+CTP_AUTH_URL=https://auth.{region}.commercetools.com
+CTP_API_URL=https://api.{region}.commercetools.com
 CTP_CLIENT_ID=your-client-id
 CTP_CLIENT_SECRET=your-client-secret
 # B2C example

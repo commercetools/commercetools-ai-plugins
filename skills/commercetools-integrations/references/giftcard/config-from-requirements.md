@@ -36,26 +36,26 @@ standardConfiguration:
   - key: CTP_AUTH_URL
     description: commercetools Auth URL
     required: true
-    default: https://auth.europe-west1.gcp.commercetools.com
+    default: https://auth.{region}.commercetools.com
   - key: CTP_API_URL
     description: commercetools API URL
     required: true
-    default: https://api.europe-west1.gcp.commercetools.com
+    default: https://api.{region}.commercetools.com
   - key: CTP_SESSION_URL
     description: Session API URL
     required: true
-    default: https://session.europe-west1.gcp.commercetools.com
+    default: https://session.{region}.commercetools.com
   - key: CTP_CLIENT_ID
     description: commercetools client ID (scopes below)
     required: true
   - key: CTP_JWKS_URL
     description: JWKs URL for JWT validation
     required: true
-    default: https://mc-api.europe-west1.gcp.commercetools.com/.well-known/jwks.json
+    default: https://mc-api.{region}.commercetools.com/.well-known/jwks.json
   - key: CTP_JWT_ISSUER
     description: JWT issuer for JWT validation
     required: true
-    default: https://mc-api.europe-west1.gcp.commercetools.com
+    default: https://mc-api.{region}.commercetools.com
 securedConfiguration:
   - key: CTP_CLIENT_SECRET
     description: commercetools client secret

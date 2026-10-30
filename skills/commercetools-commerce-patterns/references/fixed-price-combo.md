@@ -15,7 +15,7 @@ Two products will be created with different published prices. The discounts will
 Create a lineItem custom type containing two attributes. The two attributes will be set during the add item calls to the cart API and will also be used in the cart discount predicate. These attributes also can aid in item cleanup.
 
 ```javascript
-curl --location 'https://api.us-central1.gcp.commercetools.com/{{project-key}}/types' \
+curl --location 'https://api.{region}.commercetools.com/{{project-key}}/types' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer {access_token}' \
 --data '{
@@ -74,7 +74,7 @@ The setup for the discount code is straightforward — associate it with the car
 Items are added to the cart using the custom type defined above. The first combo item is added with the isCombo set to false and the comboId with no value.
 
 ```javascript
-curl --location 'https://api.us-central1.gcp.commercetools.com/{{project-key}}/carts/{{}cart-id}' \
+curl --location 'https://api.{region}.commercetools.com/{{project-key}}/carts/{{}cart-id}' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer {access_token}' \
 --data '{
@@ -108,7 +108,7 @@ curl --location 'https://api.us-central1.gcp.commercetools.com/{{project-key}}/c
 When the second combo item is added to the cart, the item is added with the isCombo flag set to true and the comboId set to some value (GUID). The request also includes update commands on the first lineItem to set the isCombo attribute to true and the comboID to the new value.
 
 ```javascript
-curl --location 'https://api.us-central1.gcp.commercetools.com/{{project-key}}/carts/{{cart-id}}' \
+curl --location 'https://api.{region}.commercetools.com/{{project-key}}/carts/{{cart-id}}' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer {access_token}' \
 --data '{

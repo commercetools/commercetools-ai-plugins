@@ -106,7 +106,7 @@ Use one where the carrier has no outbound webhook: poll tracking status for open
 - Quoting is per group, so one Cart update can mean several carrier calls — the latency budget gets tighter, not looser. This is often the case that forces path A or an asynchronous quote.
 - Deliveries must carry `shippingKey` — optional in the `addDelivery` schema, so the platform won't reject you for omitting it; without it the Delivery isn't bound to a shipping entry, which is a silent data bug rather than an error.
 
-`shippingMode` is fixed once the Cart is created. Decide it in requirements (Step 1), not while coding. Concepts: [Shipping and Delivery Overview](https://docs.commercetools.com/api/shipping-delivery-overview.md); a worked multi-address example: [Multiple Shipping Addresses and Methods](https://docs.commercetools.com/tutorials/multiple-shipping-addresses-methods.md).
+`shippingMode` is fixed once the Cart is created. Decide it in requirements (Step 1), not while coding. Concepts: [Shipping and Delivery Overview](https://docs.commercetools.com/api/shipping-delivery-overview.md); a worked multi-address example: [Multiple Shipping Addresses and Methods](https://docs.commercetools.com/guides/multiple-shipping-addresses-methods.md).
 
 ## Pitfall catalog
 

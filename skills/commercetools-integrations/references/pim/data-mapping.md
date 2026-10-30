@@ -15,9 +15,9 @@ metadata:
 
 # From PIM model to commercetools product model
 
-This is where PIM integrations succeed or rot. The plumbing (webhook, job, Import API) is mechanical; the **mapping** decides whether the catalog stays correct and maintainable. It applies whether you configure a public connector (you set the mapping as config) or build one (you write it) — the decisions are identical. Ground every modeling choice in the [Product catalog overview](https://docs.commercetools.com/api/product-catalog-overview.md) and the [Integrate product data tutorial](https://docs.commercetools.com/tutorials/product-data-integrations.md#data-mapping); this reference is the decision layer on top.
+This is where PIM integrations succeed or rot. The plumbing (webhook, job, Import API) is mechanical; the **mapping** decides whether the catalog stays correct and maintainable. It applies whether you configure a public connector (you set the mapping as config) or build one (you write it) — the decisions are identical. Ground every modeling choice in the [Product catalog overview](https://docs.commercetools.com/api/product-catalog-overview.md) and the [Integrate product data tutorial](https://docs.commercetools.com/guides/product-data-integrations.md#data-mapping); this reference is the decision layer on top.
 
-The core tension ([docs](https://docs.commercetools.com/tutorials/product-data-integrations.md#data-mapping)): a PIM's model is optimized for **enrichment** (deep, exhaustive, editorial), commercetools' is optimized for **commerce utility** (search, display, pricing, fulfillment). They differ on purpose. Mapping is a *transform and a filter*, not a copy.
+The core tension ([docs](https://docs.commercetools.com/guides/product-data-integrations.md#data-mapping)): a PIM's model is optimized for **enrichment** (deep, exhaustive, editorial), commercetools' is optimized for **commerce utility** (search, display, pricing, fulfillment). They differ on purpose. Mapping is a *transform and a filter*, not a copy.
 
 ## Principle 1 — Map only commerce-relevant data
 
@@ -25,7 +25,7 @@ Not every PIM attribute belongs in commercetools. Transfer only what search, dis
 
 ## Principle 2 — Do NOT map Product Types 1:1 with PIM families
 
-The most common and most expensive mistake. Linking a commercetools [Product Type](https://docs.commercetools.com/api/projects/productTypes.md) directly to each PIM family/type/category means every structural change in the PIM forces a Product Type migration in commercetools — and Product Type changes are heavy (they constrain existing Products). Instead ([docs](https://docs.commercetools.com/tutorials/product-data-integrations.md#data-mapping)):
+The most common and most expensive mistake. Linking a commercetools [Product Type](https://docs.commercetools.com/api/projects/productTypes.md) directly to each PIM family/type/category means every structural change in the PIM forces a Product Type migration in commercetools — and Product Type changes are heavy (they constrain existing Products). Instead ([docs](https://docs.commercetools.com/guides/product-data-integrations.md#data-mapping)):
 
 - Design a **small set of flexible Product Types** driven by how products are *sold and searched*, not by the PIM's taxonomy.
 - Give each Product Type a stable set of attributes; absorb PIM structural variety through attribute *values*, not new Product Types.
@@ -33,7 +33,7 @@ The most common and most expensive mistake. Linking a commercetools [Product Typ
 
 ## Principle 3 — Prioritize search-critical attributes; consolidate the rest
 
-Split PIM attributes into two buckets ([docs](https://docs.commercetools.com/tutorials/product-data-integrations.md#data-mapping)):
+Split PIM attributes into two buckets ([docs](https://docs.commercetools.com/guides/product-data-integrations.md#data-mapping)):
 
 - **Search/filter/display-critical** (brand, color, size, material, key specs) → map each to its own typed Product Type attribute. Type it precisely — `enum`/`lenum` for controlled vocabularies (so faceting works), `number` + a unit for measures, `boolean` for flags, `ltext`/`text` for copy. Precise types are what make [query predicates](https://docs.commercetools.com/api/predicates/query.md) and search facets work.
 - **Supplementary** (long-tail specs shown but never filtered) → consolidate into a single JSON/`text` attribute rather than exploding into dozens of rarely-used fields. This keeps the Product Type lean and the catalog queryable.
@@ -51,15 +51,15 @@ Map the PIM category hierarchy to the commercetools [Category](https://docs.comm
 ## Principle 6 — Media, price, and inventory each have their own path
 
 - **Media / assets.** Map PIM image/asset URLs onto Product Variant images (or Assets for richer metadata). If the PIM only holds asset *references* into a DAM, sync the resolved public URLs. Large binary sets are better handled in the bulk/job path than on the hot webhook path.
-- **Price and inventory — keep them SEPARATE from content** ([docs](https://docs.commercetools.com/tutorials/product-data-integrations.md#manage-price-and-inventory-separately)). They change far more often and are more time-critical than descriptions/images. Implement them as their own event-based integrations even when they originate in the same system, so a slow nightly catalog sync never blocks a price or stock update. Prices map to embedded Prices or [Standalone Prices](https://docs.commercetools.com/api/projects/standalone-prices.md); inventory to [InventoryEntry](https://docs.commercetools.com/api/projects/inventory.md) by SKU (variant `availability` updates asynchronously after the InventoryEntry lands).
+- **Price and inventory — keep them SEPARATE from content** ([docs](https://docs.commercetools.com/guides/product-data-integrations.md#manage-price-and-inventory-separately)). They change far more often and are more time-critical than descriptions/images. Implement them as their own event-based integrations even when they originate in the same system, so a slow nightly catalog sync never blocks a price or stock update. Prices map to embedded Prices or [Standalone Prices](https://docs.commercetools.com/api/projects/standalone-prices.md); inventory to [InventoryEntry](https://docs.commercetools.com/api/projects/inventory.md) by SKU (variant `availability` updates asynchronously after the InventoryEntry lands).
 
 ## Principle 7 — Every resource gets a stable key (idempotency backbone)
 
-This is what makes the whole sync safe to re-run ([docs](https://docs.commercetools.com/tutorials/product-data-integrations.md#import-product-data-from-the-pim)). Give **every** resource — Product, Product Variant (plus `sku`), Price, Category, Product Type — a unique `key` derived from a **stable PIM identifier** (the PIM's product id / variant id, not a name or a position). Then every write is an *upsert by key*: create if absent, update if present. This makes re-delivery of a webhook, an overlapping job, and a full re-import all no-ops rather than duplicate-creators. A resource without a stable key cannot be safely re-synced — fix the key before writing any sync code.
+This is what makes the whole sync safe to re-run ([docs](https://docs.commercetools.com/guides/product-data-integrations.md#import-product-data-from-the-pim)). Give **every** resource — Product, Product Variant (plus `sku`), Price, Category, Product Type — a unique `key` derived from a **stable PIM identifier** (the PIM's product id / variant id, not a name or a position). Then every write is an *upsert by key*: create if absent, update if present. This makes re-delivery of a webhook, an overlapping job, and a full re-import all no-ops rather than duplicate-creators. A resource without a stable key cannot be safely re-synced — fix the key before writing any sync code.
 
 ## Principle 8 — Source of truth and read-only enforcement
 
-Decide, per attribute, which system owns it (Step 1). For attributes the PIM owns, prevent Merchant Center edits from silently diverging: group externally-owned attributes into a restricted [AttributeGroup](https://docs.commercetools.com/api/projects/attribute-groups.md) so they render read-only in the Merchant Center ([docs](https://docs.commercetools.com/tutorials/product-data-integrations.md#multiple-sources-of-product-data)). For multi-source setups (PIM for content, ERP for price/stock), one process creates the Product and each source updates only its own attributes — never a blind full overwrite that clobbers another system's fields.
+Decide, per attribute, which system owns it (Step 1). For attributes the PIM owns, prevent Merchant Center edits from silently diverging: group externally-owned attributes into a restricted [AttributeGroup](https://docs.commercetools.com/api/projects/attribute-groups.md) so they render read-only in the Merchant Center ([docs](https://docs.commercetools.com/guides/product-data-integrations.md#multiple-sources-of-product-data)). For multi-source setups (PIM for content, ERP for price/stock), one process creates the Product and each source updates only its own attributes — never a blind full overwrite that clobbers another system's fields.
 
 ## Principle 9 — Scopes/channels and reference/related data (the concepts that catch people)
 

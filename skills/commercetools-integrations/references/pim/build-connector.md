@@ -21,7 +21,7 @@ If forking, change only the delta (a new resource type, a transform, a direction
 
 ## Decision 1 — Which ingestion API?
 
-commercetools offers two ways to write product data ([docs: choose your approach](https://docs.commercetools.com/tutorials/product-data-integrations.md#choose-your-integration-approach), [external product data patterns](https://docs.commercetools.com/learning-integrate-with-commercetools/integration-patterns/integrate-with-external-product-and-inventory-data.md)):
+commercetools offers two ways to write product data ([docs: choose your approach](https://docs.commercetools.com/guides/product-data-integrations.md#choose-your-integration-approach), [external product data patterns](https://docs.commercetools.com/learning-integrate-with-commercetools/integration-essentials/plan-your-integration-landscape.md)):
 
 | | **Import API** | **HTTP (Products) API** |
 |---|---|---|
@@ -53,7 +53,7 @@ A common misread — the connector mostly **receives** a webhook, it doesn't cal
 ## Full vs incremental
 
 - **Full** sends the whole catalog — right for the initial load and periodic complete refreshes; slower and leaves the catalog partially updated mid-run. Best on the Import API.
-- **Incremental** sends only what changed since the last run — faster and time-critical-friendly, but the PIM must support change tracking; if it doesn't, the connector needs its own change-detection (e.g. a stored hash/updatedAt per product) rather than reprocessing everything. ([docs](https://docs.commercetools.com/tutorials/product-data-integrations.md#full-versus-incremental-uploads))
+- **Incremental** sends only what changed since the last run — faster and time-critical-friendly, but the PIM must support change tracking; if it doesn't, the connector needs its own change-detection (e.g. a stored hash/updatedAt per product) rather than reprocessing everything. ([docs](https://docs.commercetools.com/guides/product-data-integrations.md#full-versus-incremental-uploads))
 
 A robust connector does **both**: incremental for freshness, a scheduled full reconciliation to catch missed events and drift.
 

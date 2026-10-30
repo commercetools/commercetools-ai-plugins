@@ -17,7 +17,7 @@ Unlike the tax sub-area (a *synchronous* calculator plus an *asynchronous* recor
 
 - **mail-sender** (an `event` app driven by a **Subscription** on Customer/Order Messages) — commercetools delivers a Message to the app's queue; the handler picks the email type from the Message type, re-fetches the resource, builds the personalization data, and calls the ESP to send. Email is **always asynchronous**: sending must never block or fail a checkout, so there is **no API Extension** here.
 
-This one-app shape is what the official [transactional email integration template](https://docs.commercetools.com/connect/templates/transactional-emails.md) ships (its app is literally named `mail-sender`, `applicationType: event`, `endpoint: /mailSender`) and what the [email integration tutorial](https://docs.commercetools.com/tutorials/connect-email-integration.md) documents. Because it's a pure `event` app, **everything in [event-applications.md](../../../commercetools-connect/references/event-applications.md) applies directly** — this sub-area layers the email-specific decisions (which Messages, delivery semantics for un-idempotent sends, templating, localization, PII) on top.
+This one-app shape is what the official [transactional email integration template](https://docs.commercetools.com/connect/templates/transactional-emails.md) ships (its app is literally named `mail-sender`, `applicationType: event`, `endpoint: /mailSender`) and what the [email integration tutorial](https://docs.commercetools.com/guides/connect-email-integration.md) documents. Because it's a pure `event` app, **everything in [event-applications.md](../../../commercetools-connect/references/event-applications.md) applies directly** — this sub-area layers the email-specific decisions (which Messages, delivery semantics for un-idempotent sends, templating, localization, PII) on top.
 
 > **The mistake to internalize first: delivery semantics.** An ESP send is **not idempotent** — call it twice and the customer gets two emails. Event delivery is **at-least-once**, so the same Message *will* sometimes arrive twice. How you acknowledge decides everything: ack *before* sending (at-most-once — never double-sends, but a transient ESP failure silently drops the email) vs. ack *after* a confirmed send and dedupe on redelivery (at-least-once — retries failures, but you must dedupe or customers get duplicates). The official template acks first (fire-and-forget). Pick deliberately per email type — see [email-contract.md](./email-contract.md).
 
@@ -43,7 +43,7 @@ node "<this skill's directory>/scripts/docs-search.mjs" \
 Pass the commercetools project key and region (as in `api.{region}.commercetools.com`) only if already in your context; otherwise omit both. Never search files or ask the user for them.
 <!-- ct:docs-search:end -->
 
-(Run it from the `commercetools-integrations` skill root.) Use its output as primary grounding. Use this script rather than the commercetools Knowledge MCP tools while working in this skill; `https://docs.commercetools.com/tutorials/connect-email-integration` is good further reading.
+(Run it from the `commercetools-integrations` skill root.) Use its output as primary grounding. Use this script rather than the commercetools Knowledge MCP tools while working in this skill; `https://docs.commercetools.com/guides/connect-email-integration` is good further reading.
 
 ### Step 1 — List the publicly available connectors (required — do this first, before ESP or requirements)
 

@@ -117,11 +117,11 @@ Derived config (key names/defaults from [stripe.md](./stripe.md)). **The `value:
 - key: CTP_PROJECT_KEY
   value: acme
 - key: CTP_API_URL
-  value: https://api.europe-west1.gcp.commercetools.com      # region
+  value: https://api.{region}.commercetools.com      # region
 - key: CTP_AUTH_URL
-  value: https://auth.europe-west1.gcp.commercetools.com     # region
+  value: https://auth.{region}.commercetools.com     # region
 - key: CTP_SESSION_URL
-  value: https://session.europe-west1.gcp.commercetools.com  # region
+  value: https://session.{region}.commercetools.com  # region
 - key: STRIPE_CAPTURE_METHOD
   value: manual                  # authorize now, capture on shipment → also: create Order on auth, capture later
 - key: STRIPE_SAVED_PAYMENT_METHODS_CONFIG

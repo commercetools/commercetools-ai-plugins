@@ -81,7 +81,7 @@ The initial $0 shipping method is associated using the **setShippingMethod** API
 ### Cart Creation
 
 ```javascript
-curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key}/carts' \
+curl --location 'https://api.{region}.commercetools.com/{your-project-key}/carts' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer' \
 --data '{
@@ -106,7 +106,7 @@ curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key
 ### Setting the shipping address on the cart
 
 ```javascript
-curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key}/carts/{cart-id}' \
+curl --location 'https://api.{region}.commercetools.com/{your-project-key}/carts/{cart-id}' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer' \
 --data '{
@@ -135,7 +135,7 @@ curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key
 ### Associating the $0 shipping method to the cart (since the exact shipping cost is unknown)
 
 ```javascript
-curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key}/carts/{cart-id}' \
+curl --location 'https://api.{region}.commercetools.com/{your-project-key}/carts/{cart-id}' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer' \
 --data '{
@@ -157,7 +157,7 @@ curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key
 The freeze must use the `SoftFreeze` strategy, because the subsequent dynamic-rate update (`setCustomShippingMethod`) is a shipping method update. Under the `HardFreeze` strategy, shipping method updates are blocked, so this method would silently break.
 
 ```javascript
-curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key}/carts/{cart-id}' \
+curl --location 'https://api.{region}.commercetools.com/{your-project-key}/carts/{cart-id}' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer' \
 --data '{
@@ -173,7 +173,7 @@ curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key
 ### Associating the new shipping cost to the cart using the SetCustomShippingMethod API call
 
 ```javascript
-curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key}/carts/{cart-id}' \
+curl --location 'https://api.{region}.commercetools.com/{your-project-key}/carts/{cart-id}' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer' \
 --data '{
@@ -200,7 +200,7 @@ curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key
 ### Converting the frozen cart to an order
 
 ```javascript
-curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key}/orders' \
+curl --location 'https://api.{region}.commercetools.com/{your-project-key}/orders' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer' \
 --data '{
@@ -271,7 +271,7 @@ Another approach is to create an order out of the cart after associating it with
 ### Cart creation
 
 ```javascript
-curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key}/carts' \
+curl --location 'https://api.{region}.commercetools.com/{your-project-key}/carts' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer' \
 --data '{
@@ -296,7 +296,7 @@ curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key
 ### Setting the shipping address on the cart
 
 ```javascript
-curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key}/carts/{cart-id-2}' \
+curl --location 'https://api.{region}.commercetools.com/{your-project-key}/carts/{cart-id-2}' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer' \
 --data '{
@@ -325,7 +325,7 @@ curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key
 ### Associating the $0 shipping method to the cart (since the exact shipping cost is unknown)
 
 ```javascript
-curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key}/carts/{cart-id-2}' \
+curl --location 'https://api.{region}.commercetools.com/{your-project-key}/carts/{cart-id-2}' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer {access_token}' \
 --data '{
@@ -345,7 +345,7 @@ curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key
 ### Convert the cart to an order
 
 ```javascript
-curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key}/orders' \
+curl --location 'https://api.{region}.commercetools.com/{your-project-key}/orders' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer {access_token}' \
 --data '{
@@ -360,7 +360,7 @@ curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key
 ### Create an OrderEdit draft and set the appropriate CustomShippingMethod in it
 
 ```javascript
-curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key}/orders/edits' \
+curl --location 'https://api.{region}.commercetools.com/{your-project-key}/orders/edits' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer {access_token}' \
 --data '{

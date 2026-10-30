@@ -40,11 +40,11 @@ node "<this skill's directory>/scripts/docs-search.mjs" \
 Pass the commercetools project key and region (as in `api.{region}.commercetools.com`) only if already in your context; otherwise omit both. Never search files or ask the user for them.
 <!-- ct:docs-search:end -->
 
-(Run it from the `commercetools-integrations` skill root, where `scripts/docs-search.mjs` lives.) The two most load-bearing docs for this sub-area are the [Integrate product data tutorial](https://docs.commercetools.com/tutorials/product-data-integrations.md) and the [Import API overview](https://docs.commercetools.com/api/import-export/overview.md) — read them. Use this script rather than the commercetools Knowledge MCP tools while working in this skill: it queries the same index, with this skill's product filters applied.
+(Run it from the `commercetools-integrations` skill root, where `scripts/docs-search.mjs` lives.) The two most load-bearing docs for this sub-area are the [Integrate product data tutorial](https://docs.commercetools.com/guides/product-data-integrations.md) and the [Import API overview](https://docs.commercetools.com/api/import-export/overview.md) — read them. Use this script rather than the commercetools Knowledge MCP tools while working in this skill: it queries the same index, with this skill's product filters applied.
 
 ### Step 1 — Extract requirements (before any config or code)
 
-The architecture is downstream of a handful of answers ([docs: Plan your product data integration](https://docs.commercetools.com/tutorials/product-data-integrations.md#plan-your-product-data-integration)). Ask the user — don't assume:
+The architecture is downstream of a handful of answers ([docs: Plan your product data integration](https://docs.commercetools.com/guides/product-data-integrations.md#plan-your-product-data-integration)). Ask the user — don't assume:
 
 1. **Which PIM system, and is a connector deployed?** Name and version. If a public connector is in play, get its marketplace listing and version.
 2. **Source of truth per attribute.** Which system owns which field? A PIM typically owns enriched content (names, descriptions, images, specs); an ERP may own SKU/price/inventory. Multiple sources add sequencing and conflict rules.

@@ -12,13 +12,13 @@ This document explores the recommended method of **selling bundles at a fixed pr
 
 ### Solution Overview: Product Modeling
 
-The online commercetools [documentation](https://docs.commercetools.com/tutorials/product-bundle-api) recommends defining a `ProductType` to represent bundles, where the bundle `ProductType` includes `Attributes` that reference the child `Products` contained within the bundle.
+The online commercetools [documentation](https://docs.commercetools.com/guides/product-bundles) recommends defining a `ProductType` to represent bundles, where the bundle `ProductType` includes `Attributes` that reference the child `Products` contained within the bundle.
 
 This approach works well for many use cases, such as offering a special bundle price for a "shirt and trousers bundle," where customers can choose specific variants (e.g., size and color) at the time of purchase. In such cases, the bundle references the product as a whole, allowing flexibility in variant selection.
 
 However, some use cases may require directly associating `ProductVariants` (SKUs) with the bundle. For example, an iPhone and iPhone case bundle may involve predefined variants (e.g., a specific iPhone model with a matching case), where the pricing or compatibility depends on the exact variants included. This requires managing a list of SKUs for precise control rather than referencing the product in its entirety.
 
-If your use case involves single-variant `Products` or `ProductVariants` with minimal differences in pricing or configuration, follow the [standard commercetools process](https://docs.commercetools.com/tutorials/product-bundle-api).
+If your use case involves single-variant `Products` or `ProductVariants` with minimal differences in pricing or configuration, follow the [standard commercetools process](https://docs.commercetools.com/guides/product-bundles).
 
 For scenarios requiring direct associations between `ProductVariants` and a bundle `ProductType`, the process involves creating a `ProductType` per bundle and defining `Attributes` that reference the included `ProductVariants`.
 
@@ -298,7 +298,7 @@ The inventory for the bundle SKU (SAS-01) is managed separately from the invento
 Set the inventory of the bundle SKU SAS-01:
 
 ```json
-curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key}/inventory' \
+curl --location 'https://api.{region}.commercetools.com/{your-project-key}/inventory' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer' \
 --data '{
@@ -317,7 +317,7 @@ The price for the bundle SKU (SAS-01) is managed independently from the prices o
 You can choose to use either embedded or standalone pricing. In this example, standalone pricing is used:
 
 ```json
-curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key}/standalone-prices' \
+curl --location 'https://api.{region}.commercetools.com/{your-project-key}/standalone-prices' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer' \
 --data '{
@@ -347,7 +347,7 @@ curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key
 To manage inventory deductions and auto add/remove of the bundle-content items, define a `CustomField` on the `lineItem` called `parentLineItemId`:
 
 ```json
-curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key}/types' \
+curl --location 'https://api.{region}.commercetools.com/{your-project-key}/types' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer' \
 --data '{
@@ -383,7 +383,7 @@ When a bundle item such as SAS-01 is added to the `Cart` with the inventory mode
 **Step 1:** Add the SAS-01 `lineItem` to the `Cart`:
 
 ```json
-curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key}/carts' \
+curl --location 'https://api.{region}.commercetools.com/{your-project-key}/carts' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer' \
 --data '{
@@ -410,7 +410,7 @@ The response will include the cart with the bundle `lineItem` ID (e.g., `b6e9bba
 - Set the `CustomField` `parentLineItemId` on the child line items to match the bundle product's lineItem ID.
 
 ```json
-curl --location 'https://api.us-central1.gcp.commercetools.com/{your-project-key}/carts/{cart-id}' \
+curl --location 'https://api.{region}.commercetools.com/{your-project-key}/carts/{cart-id}' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer' \
 --data '{

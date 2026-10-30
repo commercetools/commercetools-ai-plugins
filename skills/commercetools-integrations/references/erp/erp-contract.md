@@ -15,7 +15,7 @@ metadata:
 
 # The ERP connector contract, flow by flow
 
-Read this before writing code. Each flow below is a separate application with its own trigger, write API, and idempotency key — the docs' best practice is explicitly to keep Products, Prices, Inventory, Customers, and Orders as **separate integrations** ([Integration best practices](https://docs.commercetools.com/tutorials/erp-integration.md#integration-best-practices)). Field-level mapping is [data-mapping.md](./data-mapping.md); the type-agnostic application mechanics are the [commercetools-connect](../../../commercetools-connect/SKILL.md) skill's ([event](../../../commercetools-connect/references/event-applications.md), [service](../../../commercetools-connect/references/service-applications.md), [job](../../../commercetools-connect/references/job-applications.md)).
+Read this before writing code. Each flow below is a separate application with its own trigger, write API, and idempotency key — the docs' best practice is explicitly to keep Products, Prices, Inventory, Customers, and Orders as **separate integrations** ([Integration best practices](https://docs.commercetools.com/guides/erp-integration.md)). Field-level mapping is [data-mapping.md](./data-mapping.md); the type-agnostic application mechanics are the [commercetools-connect](../../../commercetools-connect/SKILL.md) skill's ([event](../../../commercetools-connect/references/event-applications.md), [service](../../../commercetools-connect/references/service-applications.md), [job](../../../commercetools-connect/references/job-applications.md)).
 
 ## The flow table — fill this in for the project
 
@@ -30,11 +30,11 @@ Read this before writing code. Each flow below is a separate application with it
 | B2B account inbound | ERP → CT | `job` or `service` | schedule or webhook | HTTP API (Business Units, Associates) | Business Unit `key` |
 | Invoice / financial doc inbound | ERP → CT | `service` or `job` | webhook or schedule | HTTP API (Order Custom Fields) | invoice number |
 
-The documented default directions per domain are in [Typical ERP data flows](https://docs.commercetools.com/tutorials/erp-integration.md#typical-erp-data-flows) — confirm each with the user rather than adopting them silently.
+The documented default directions per domain are in [Typical ERP data flows](https://docs.commercetools.com/guides/erp-integration.md) — confirm each with the user rather than adopting them silently.
 
 ## Flow 1 — Order export (CT → ERP)
 
-The canonical ERP flow, and the one Connect makes cheapest: an `OrderCreated` Message reaches an `event` application with no queue, topic, or function to provision yourself ([Replicate orders with Connect](https://docs.commercetools.com/tutorials/erp-integration.md#replicate-orders-with-connect)).
+The canonical ERP flow, and the one Connect makes cheapest: an `OrderCreated` Message reaches an `event` application with no queue, topic, or function to provision yourself ([Replicate orders with Connect](https://docs.commercetools.com/guides/erp-integration.md)).
 
 Contract:
 
@@ -53,7 +53,7 @@ Two shapes; pick by who initiates.
 - **Pull (`job`)** — the connector polls the ERP/middleware or picks up a file drop on a schedule. Use for nightly and hourly batches. The job request times out after **30 minutes**, so a full catalog load must chunk and checkpoint (store the cursor in a CustomObject) so the next run resumes rather than restarts.
 - **Push (`service`)** — the middleware calls your authenticated endpoint per change or per batch. Use for near-real-time deltas. The service request times out after 5 minutes: accept, validate, respond, and do long work asynchronously rather than holding the connection.
 
-**Import API vs HTTP API** — the decision that most affects throughput ([Choose the right API](https://docs.commercetools.com/tutorials/product-data-integrations.md#choose-the-right-api)):
+**Import API vs HTTP API** — the decision that most affects throughput ([Choose the right API](https://docs.commercetools.com/guides/product-data-integrations.md#choose-the-right-api)):
 
 | Use | When | Notes |
 |---|---|---|
@@ -66,7 +66,7 @@ Contract:
 
 - **Keys everywhere.** Set a deterministic `key` on every resource from the ERP's own identifier. Keys are what make imports and upserts idempotent and re-runnable — without them, a re-run duplicates.
 - **Never await an import.** Submitting is not completing. Record the container/operation ids and check status on the next run or in a separate reconcile job; do not block a request or an event handler on completion.
-- **Respect attribute ownership.** Write only the attributes the ERP owns. Restrict them in a restricted AttributeGroup so Merchant Center edits can't fight the sync ([Integrate product data](https://docs.commercetools.com/tutorials/product-data-integrations.md#multiple-sources-of-product-data)).
+- **Respect attribute ownership.** Write only the attributes the ERP owns. Restrict them in a restricted AttributeGroup so Merchant Center edits can't fight the sync ([Integrate product data](https://docs.commercetools.com/guides/product-data-integrations.md#multiple-sources-of-product-data)).
 - **Products and prices are separate flows.** The docs are explicit: import product data without price or stock, and handle those separately. Embedded vs Standalone Prices is a modeling decision with hard consequences — Standalone supports up to 50 000 prices per variant and the modular variant model *requires* it ([Pricing overview](https://docs.commercetools.com/api/pricing-and-discounts-overview.md)).
 - **Publishing is a decision.** Decide whether an inbound change publishes immediately or stages for review, and say so; a sync that silently publishes half-mapped products is worse than one that stages.
 - **Back-pressure is expected at ERP volumes.** Ramp gradually, retry `429`/`5xx` with exponential backoff and jitter, and cap concurrency. A batch loop with no backoff turns one slow minute into a failed nightly run.
@@ -76,7 +76,7 @@ Contract:
 Its own flow, at its own cadence, and the one where being wrong is visible to customers.
 
 - **One `InventoryEntry` per SKU + supply Channel.** Map ERP plants/warehouses/locations to supply Channels explicitly, and create the Channels in `postDeploy` — an unmapped location silently lands in the general (channel-less) pool. Set the quantity absolutely from the ERP where you can; relative deltas drift the moment one message is lost or replayed.
-- **Sell the buffer, not the truth.** The documented pattern is a **threshold**: let commercetools deplete stock without calling the ERP per order, and only make a real-time check against the master system once the threshold is reached ([Integration patterns → Inventory](https://docs.commercetools.com/learning-integrate-with-commercetools/integration-patterns/integration-planning-and-patterns.md#inventory-data)). Agree the buffer and the threshold with the user — they are business decisions with a revenue and an oversell cost.
+- **Sell the buffer, not the truth.** The documented pattern is a **threshold**: let commercetools deplete stock without calling the ERP per order, and only make a real-time check against the master system once the threshold is reached ([Integration patterns → Inventory](https://docs.commercetools.com/learning-integrate-with-commercetools/integration-essentials/plan-your-integration-landscape.md)). Agree the buffer and the threshold with the user — they are business decisions with a revenue and an oversell cost.
 - **Pick `InventoryMode` deliberately.** `None`, `TrackOnly`, `ReserveOnOrder`, `ReserveOnCart` differ in *when* stock is checked and reserved; only `ReserveOnCart` blocks adding more than is available ([Manage inventory with the Cart](https://docs.commercetools.com/learning-model-your-product-catalog/inventory-modeling/cart-inventory.md)). The connector doesn't own this setting, but the sync design depends on it.
 - **Consistency is not instant.** Order-driven changes to `availableQuantity`/`quantityOnStock` are eventually consistent (up to ~10 s); direct API updates are strongly consistent. `ProductVariantAvailability` and its reflection in Product Search lag further. Never compare a fresh ERP number against a just-ordered commercetools number and call the delta a bug.
 - **Watch the Product payload.** `ProductVariantAvailability` aggregates every `InventoryEntry` for a SKU into the Product JSON, so a location-per-warehouse explosion inflates product responses. Map only the locations that are actually sellable.
@@ -84,15 +84,15 @@ Its own flow, at its own cadence, and the one where being wrong is visible to cu
 
 ## Flow 4 — Customers and B2B accounts
 
-- **B2C usually flows out.** On `CustomerCreated` (and address/profile Messages), create or update the ERP account, then write the ERP account id to the Customer's `externalId` — the field exists for exactly this ([Plan integrations → Customer](https://docs.commercetools.com/tutorials/implementation-guide/plan-integrations.md)). Upsert by `externalId`, never blind-create, or you mint duplicate accounts on redelivery.
+- **B2C usually flows out.** On `CustomerCreated` (and address/profile Messages), create or update the ERP account, then write the ERP account id to the Customer's `externalId` — the field exists for exactly this ([Plan integrations → Customer](https://docs.commercetools.com/guides/implementation-guide/plan-integrations.md)). Upsert by `externalId`, never blind-create, or you mint duplicate accounts on redelivery.
 - **B2B usually flows in.** ERP accounts become Business Units with Associates; keep the ERP hierarchy in the Business Unit parent/child structure and link by `key`. Mapping detail: [data-mapping.md](./data-mapping.md); modeling: [business-unit-hierarchy.md](../../../commercetools-commerce-patterns/references/business-unit-hierarchy.md).
 - **Filter self-changes.** Your own write produces a Message that would trigger another export. Suppress it (compare against the last synced payload/hash, or check a `lastSyncedAt` Custom Field) or you build an infinite loop that looks like the ERP "flapping".
-- **The synchronous-registration question.** The ERP tutorial documents relaying a middleware's successful customer creation back to the frontend synchronously with an **API Extension** ([Inbound data flow](https://docs.commercetools.com/tutorials/erp-integration.md#inbound-data-flow-erp-to-composable-commerce)). The Integration patterns module, meanwhile, recommends putting synchronous logic in your application/BFF and treats a blocking Extension as the option of last resort — it adds latency to every request, has a 2 s default budget (raisable per Extension via `setTimeoutInMs`, documented maximum 10 s), and should respond in well under that ([Integration options](https://docs.commercetools.com/learning-integrate-with-commercetools/integration-patterns/integration-options.md)). Both are current docs. Present the trade-off: if registration must fail when the ERP refuses the account, an Extension is the mechanism; if it can be asynchronous, use a Subscription and reconcile. Never use an Extension for a side effect.
+- **The synchronous-registration question.** The ERP tutorial documents relaying a middleware's successful customer creation back to the frontend synchronously with an **API Extension** ([Inbound data flow](https://docs.commercetools.com/guides/erp-integration.md)). The Integration patterns module, meanwhile, recommends putting synchronous logic in your application/BFF and treats a blocking Extension as the option of last resort — it adds latency to every request, has a 2 s default budget (raisable per Extension via `setTimeoutInMs`, documented maximum 10 s), and should respond in well under that ([Integration options](https://docs.commercetools.com/learning-integrate-with-commercetools/integration-essentials/choose-a-connection-point.md)). Both are current docs. Present the trade-off: if registration must fail when the ERP refuses the account, an Extension is the mechanism; if it can be asynchronous, use a Subscription and reconcile. Never use an Extension for a side effect.
 - **PII has a lifecycle.** Deletion and anonymization must propagate, or not, by explicit decision — record it.
 
 ## Flow 5 — Financial documents back (ERP → CT)
 
-- **Invoices land on the Order as Custom Fields**, with the rendered PDF stored at a URL-accessible location (CDN or file storage) and referenced from the Custom Field, so it is reachable from the buyer portal and Merchant Center ([Outbound data flow](https://docs.commercetools.com/tutorials/erp-integration.md#outbound-data-flow-composable-commerce-to-erp)). Register the Custom Types in `postDeploy`.
+- **Invoices land on the Order as Custom Fields**, with the rendered PDF stored at a URL-accessible location (CDN or file storage) and referenced from the Custom Field, so it is reachable from the buyer portal and Merchant Center ([Outbound data flow](https://docs.commercetools.com/guides/erp-integration.md)). Register the Custom Types in `postDeploy`.
 - **Idempotent by document number.** Re-sent invoices must update, not append a duplicate. If several documents can attach to one Order, model a list (or CustomObjects keyed by order + document number) rather than overwriting a single field.
 - **Credit limit and payment terms** flow the same way onto the Business Unit or Customer, and are read at checkout — decide whether a stale credit limit blocks or allows the order, and where that check runs (BFF, not an Extension, unless the block must be unconditional).
 

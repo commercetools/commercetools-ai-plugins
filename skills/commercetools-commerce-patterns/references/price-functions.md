@@ -21,7 +21,7 @@ A set of rate tiers representing a function that calculates a reduced shipping r
 To set the shipping rate score, call `setShippingRateInput`, passing the score (cart total) as an integer. When set, commercetools will apply the function and set the shipping rate on the cart.
 
 ```javascript
-curl --location 'https://api.us-central1.gcp.commercetools.com/<project-key/carts/<cart-id>' \
+curl --location 'https://api.{region}.commercetools.com/<project-key/carts/<cart-id>' \
 --header 'Content-Type: application/json' \--header 'Authorization: Bearer {access_token}' \
 --data '{"version": 42,"actions": [
 	{"action" : "setShippingRateInput","shippingRateInput" : 

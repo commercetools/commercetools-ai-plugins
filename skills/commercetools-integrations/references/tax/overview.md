@@ -18,7 +18,7 @@ A tax integration is **two jobs**, and the connector is **two applications** tha
 - **tax-calculator** (a `service` registered as a **cart API Extension**) — the **calculate** half. On cart changes, commercetools calls it *synchronously*; it asks the tax engine for the tax on the current cart and returns cart update actions that put the tax onto the cart. This is a **quote** — nothing is filed.
 - **order-syncer** (an `event` driven by an **OrderCreated Subscription**) — the **record** half. After an order is placed, it *asynchronously* records the finalized order as a transaction in the tax engine (for reporting/filing), and — for a full integration — commits/voids/refunds as the order's lifecycle changes.
 
-This two-app split is not incidental: it's the architecture the official [tax integration template](https://docs.commercetools.com/connect/templates/tax-integration.md) ships, the one the certified Avalara connector implements, and the one the [tax integration tutorial](https://docs.commercetools.com/tutorials/tax-integration.md) documents. Calculation must be synchronous (it blocks the cart so the shopper sees correct tax); recording must be asynchronous (filing must not block or fail checkout).
+This two-app split is not incidental: it's the architecture the official [tax integration template](https://docs.commercetools.com/connect/templates/tax-integration.md) ships, the one the certified Avalara connector implements, and the one the [tax integration tutorial](https://docs.commercetools.com/guides/tax-integration.md) documents. Calculation must be synchronous (it blocks the cart so the shopper sees correct tax); recording must be asynchronous (filing must not block or fail checkout).
 
 > **Calculation vs. recording is the mistake to internalize first.** "Why don't my transactions show up in the tax provider's dashboard?" is almost always because only the *calculator* is wired: the calculate API stores nothing; only the *record* API (the order-syncer) persists a transaction. They are different endpoints on the provider and different Connect apps here.
 
@@ -44,7 +44,7 @@ node "<this skill's directory>/scripts/docs-search.mjs" \
 Pass the commercetools project key and region (as in `api.{region}.commercetools.com`) only if already in your context; otherwise omit both. Never search files or ask the user for them.
 <!-- ct:docs-search:end -->
 
-(Run it from the `commercetools-integrations` skill root.) Use its output as primary grounding. Use this script rather than the commercetools Knowledge MCP tools while working in this skill; `https://docs.commercetools.com/tutorials/tax-integration` is good further reading.
+(Run it from the `commercetools-integrations` skill root.) Use its output as primary grounding. Use this script rather than the commercetools Knowledge MCP tools while working in this skill; `https://docs.commercetools.com/guides/tax-integration` is good further reading.
 
 ### Step 1 — Extract requirements (before any config or code)
 

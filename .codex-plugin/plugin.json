@@ -1,8 +1,8 @@
 {
   "name": "commercetools",
   "displayName": "commercetools",
-  "version": "0.67.0",
-  "description": "Build commercetools solutions faster",
+  "version": "0.68.0",
+  "description": "Build enterprise commerce faster with commercetools for ChatGPT.",
   "author": {
     "name": "commercetools",
     "email": "support@commercetools.com",
@@ -29,7 +29,12 @@
     "privacyPolicyURL": "https://github.com/commercetools/commercetools-ai-plugins/blob/main/PRIVACY.md",
     "termsOfServiceURL": "https://github.com/commercetools/commercetools-ai-plugins/blob/main/LICENSE",
     "shortDescription": "Build on commercetools",
-    "longDescription": "Developer tooling for building applications on commercetools, the composable commerce platform. The plugin connects your coding agent to the commercetools Knowledge MCP server, which searches the commercetools documentation, returns the GraphQL and OpenAPI schemas, and validates GraphQL queries and REST requests. The Knowledge MCP needs no API key and has no access to your commercetools Project data. The skills give the agent commercetools guidance for SDK setup and API usage, B2C and B2B storefronts, Checkout and payment connectors, Connect applications and integrations, pricing, discount, tax and catalog modeling, catalog migration, and spec-driven development.",
+    "longDescription": "Build enterprise commerce faster with commercetools for ChatGPT. Explore commercetools APIs, configure your project, build integrations and complete B2C or B2B storefronts. ChatGPT works from the official commercetools documentation, skills, and toolkit, taking you from first setup to production with confidence.",
+    "defaultPrompt": [
+      "Build me a Next.js storefront on commercetools",
+      "Add Stripe payments to my checkout",
+      "Show me how to model B2B pricing"
+    ],
     "capabilities": [
       "Read"
     ]

@@ -109,10 +109,9 @@ prices are imports cleanly and shows no price at all.
   started on a guess to save a day. And promise to **re-read the file** when the
   user is back, and to name any row still empty before doing anything else. All
   three belong in your closing message, in your own words; for example: "I have
-  not started the config or the adapter. Every answer here is irreversible or
-  fails silently, so starting on a guess would mean redoing it after the load.
-  When you tell me the file is filled in, I will re-read it and name any row
-  still empty before I do anything else."
+  not started the config or the adapter: every answer here is irreversible or
+  fails silently. When you tell me the file is filled in, I will re-read it and
+  name any row still empty first."
 
 **On resume, re-read the file before doing anything else.** Count the rows
 whose answer cell is empty. If any, name them by row number and stop: no config, no
@@ -190,7 +189,7 @@ yesterday is not consent to a write today.
 
 ## 0a. Can this pipeline serve the catalog at all?
 
-Two questions, and they interact.
+Three questions, and they interact.
 
 Both models are supported; the question is which this catalog *needs*. Ask it
 early — the answer fixes the import shape at map time, so changing it later
@@ -198,11 +197,12 @@ means re-running `plan`:
 
 | Ask | Why |
 | :--- | :--- |
-| Which catalog model is the project on, or intended to be — `Classic` or `Modular`? | It decides which Import API resources are legal, and it is not inferable from data. A greenfield project can be switched either way with one `setProductCatalogModel` action, so it is a genuine project decision. |
+| Which catalog model is the project on, or intended to be — `Classic` or `Modular`? | It decides which Import API resources are legal, and it is not inferable from data: a project decision. |
 | Roughly how many variants does the largest product have? | Classic caps at **100 per product**, Modular at 10,000. It is the one constraint that can make a catalog unloadable under Classic, and it costs one question to find out. 0b answers it from data if they do not know. |
+| Does the target project already hold products? | Greenfield means none. `Modular` costs one action on an empty project, but a support-run copy job and a wait on one with products, and the wait belongs in the plan before an adapter exists. |
 
-The catalog-model answer writes `target.catalogModel`; the variant count writes
-nothing and decides the outcome below.
+The catalog-model answer writes `target.catalogModel`; the other two write
+nothing and decide the outcome below.
 
 Resolve the two together, and say the outcome plainly:
 
@@ -212,12 +212,11 @@ Resolve the two together, and say the outcome plainly:
 | `Classic` | > 100 | **The project has to move to Modular**, or the catalog cannot be loaded. Say that before an adapter is written, not after. |
 | `Modular` | any | Proceed. Over 100 is what Modular is for; at or under it Classic would also fit, so ask whether Modular is wanted for its own sake — it forces standalone pricing and has the `defaultVariant` caveat below. |
 
-An existing project already holding embedded variants is a different exercise:
-switching it is the staged
-[Modular Catalog migration](https://docs.commercetools.com/guides/migration-guides/modular-catalog-migration.md)
-— dual-write, the `InMigration` state, a Variant copy job and a cleanup job —
-not one update action, and not this pipeline's job. Settle it before the
-catalog load rather than during it.
+A project that already holds products and needs `Modular` is not switched by one
+action: it is the staged
+[Modular Catalog migration](https://docs.commercetools.com/guides/migration-guides/modular-catalog-migration.md),
+whose copy job only commercetools support runs, and the engagement waits for it
+([switching-to-modular.md](switching-to-modular.md)).
 
 Two things to state whenever `Modular` is chosen, because neither is
 visible until late:

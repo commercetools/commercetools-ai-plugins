@@ -98,12 +98,10 @@ the API.
       [references/source-discovery.md](references/source-discovery.md) — because
       the data answers some of the questions.
    3. **Write `migration/INTERVIEW.md` and stop.** One block per topic, a table with a row per question: 0a,
-      the catalog-model question, first, because both its answers can end the
+      the catalog-model question, first, because its answers can end the
       engagement (over 100 variants per product cannot be loaded under
-      `Classic` at all) and are cheaper to learn before an adapter exists; then
-      0c, each conditional that applies, and 0d. Each row carries the question, the
-      fact that prompted it, a recommendation, and an empty answer cell that only a
-      person fills in. Tell the user to edit the file and say when it is done,
+      `Classic`) and are cheaper to learn before an adapter exists; then
+      0c, each conditional that applies, and 0d. Tell the user to edit the file and say when it is done,
       and that you will re-read it then and name any empty row. The config and
       adapter wait because each answer is irreversible or fails silently.
    4. **Continue only when every answer cell is filled in.** Otherwise name the
@@ -124,9 +122,8 @@ the API.
    [references/decision-log.md](references/decision-log.md).
 
    **Keep writing it at every step from here**, not at the end: a log
-   reconstructed afterwards records what someone remembers deciding, reliably
-   the subset that turned out well, while the entries that matter are the
-   irreversible ones taken under uncertainty.
+   reconstructed afterwards keeps what turned out well and loses the
+   irreversible decisions taken under uncertainty.
 
 1. **Write the adapter — one product first.** Read the source, emit NDJSON
    against the contract. This is the only code an engagement normally writes,
@@ -194,12 +191,17 @@ the API.
    npm run pipeline -- preflight --config ../migration/migration.config.json
    ```
 
-   **`--apply` writes to the customer's project, and so does any manual change
-   made to get past preflight. Log every one**: project key, timestamp, exactly
-   what changed, who authorised it. `--apply` reports `project-updated` to stdout
-   and nowhere else, so an unlogged change is one nobody can account for. Manual
-   changes count doubly — adding a country to make country-scoped prices load
-   affects shipping and tax, which is why `preflight` refuses to do it.
+   **`--apply` and `--switch-catalog-model` write to the customer's project, and so does
+   any manual change made to get past preflight. Log every one**: project key,
+   timestamp, exactly what changed, who authorised it. They report `project-updated` and
+   `catalog-model-switched` to stdout and nowhere else, so an unlogged change is one
+   nobody can account for. Manual changes count doubly — adding a country to make
+   country-scoped prices load affects shipping and tax, which is why `preflight` refuses
+   to do it.
+
+   **A `catalog-model-*` finding stops you:** read
+   [switching-to-modular.md](references/switching-to-modular.md) first. An empty project
+   is switched on the user's yes; one with products waits for a support-run copy job.
 
 5. **Load, dry run first.** `load` sends nothing without `--execute`, and writes
    the exact request bodies to `out/load-requests.json` for review:
@@ -216,7 +218,7 @@ the API.
    has not yet seen what it sends. A yes covers one `--execute`. A later one,
    such as a resubmission, needs a new yes, and that counts only if a fresh dry
    run matches what the user saw; if anything differs, show it and ask again.
-   `preflight --apply` needs its own yes.
+   `preflight --apply` and `--switch-catalog-model` each need their own yes.
 
    `load --wait`, `verify` and `teardown --execute` take minutes. They print a line
    every 30 seconds and append it to `out/progress.log`: run them so you can read
@@ -261,12 +263,10 @@ the API.
 7. **Fix defects in the adapter, never in the feed by hand.** The feed is
    regenerated on every run.
 
-
 ## Critical
 
 The failure modes that are silent or unrecoverable, each stated in full in the
-reference beside it — this list exists so none is *missed*. Verified against
-public documentation in September 2026; re-check any limit before relying on it.
+reference beside it — this list exists so none is *missed*.
 
 **Irreversible, so decide before the first load**
 
@@ -419,9 +419,9 @@ Passwords do not migrate either — commercetools cannot import a foreign hash.
 
 Before running the pipeline:
 
-- [ ] The catalog-model question was asked **before** any adapter work, and the
-      largest product's variant count is known. A catalog over 100 variants per
-      product cannot be loaded by this pipeline at all.
+- [ ] The catalog-model question, and whether the project holds products, were
+      asked **before** any adapter work, and the largest product's variant count
+      is known (over 100 needs `Modular`).
 - [ ] The config was written from answers, not copied and guessed at. Nothing
       in it still reads `REPLACE-ME`.
 - [ ] The source has been inspected, not assumed — the adapter is written

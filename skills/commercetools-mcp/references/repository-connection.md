@@ -14,15 +14,18 @@ Connect one Project first. Offer more once that one works.
 
 ## Rules
 
-- **Create the server in the Merchant Center UI.** Creating it through the API needs API client
-  credentials, which is what this setup avoids.
+- **Create the server with the user's own Merchant Center sign-in, not an API client.** The script in
+  step 2 uses the session the user's sign-in stores, so no secret is created or pasted. The
+  Merchant Center form is the fallback when the script can't run.
 - **Write the connection with the script (step 3), not by hand.** It checks the URL against the
   project, merges into `.mcp.json` without touching other servers, and prints the next step. Don't
   use an agent's own `mcp add` command either.
 - **Relay the printed next step; don't run it.** Sign-in needs the user's browser, and the tools
   only load when this conversation is reopened in a new process, which you can't do. Reopening keeps
-  the conversation, so the setup continues where it stopped. Don't offer `!`-prefixed in-session
-  commands instead.
+  the conversation, so the setup continues where it stopped. For that step, don't offer
+  `!`-prefixed in-session commands instead. The one exception is the Merchant Center sign-in of
+  step 2 (`scripts/sign-in.mjs`): it needs no reopened conversation, so you run it yourself in the
+  background and relay its URL.
 - **Tools follow the environment.** Development gets **All**: letting the agent set up and
   configure the project is the point, and read-only would defeat it. Production gets **All read**,
   always. Other environments are the user's call.
@@ -71,7 +74,39 @@ Connect one Project first. Offer more once that one works.
 
    > Which environment is `{projectKey}`: development, staging, production, or something else?
 
-   Then send the user to the form:
+   Create the server with the script, run from this skill's root. Use `--environment development`
+   for a development project and `--environment production` for production or any other
+   environment, which gives read-only tools:
+
+   ```bash
+   node scripts/create-managed-mcp-server.mjs --region "<region>" --project "<projectKey>" --environment "<development|production>"
+   ```
+
+   Without `--confirmed` it changes nothing and prints the plan. Show the plan to the user and wait
+   for an explicit yes, because the next run creates a server in their Project. Then run the same
+   command with `--confirmed`. It prints the **MCP server URL**: use it in step 3 and skip the form.
+
+   - **It exits 4 with `needs.ctx` `signIn`**: there is no Merchant Center session, it expired, or
+     it cannot call the API. Show the user `needs.command` (`scripts/sign-in.mjs`) and say that it
+     opens a Merchant Center sign-in and runs `mc-scripts` through `npx`, which can download it.
+     Wait for an explicit yes. Then run it in the background and read its stderr. Show the user the sign-in URL it prints: they open it in a browser and finish
+     there. This is the same `mc-scripts login --mc-api-url` the custom-application scripts use.
+     It leaves a Merchant Center session token in `~/.commercetools/mc-credentials.json`, valid
+     for about an hour, which the create script reads to call the Merchant Center API as the user.
+     The script passes the project and the one scope that managing MCP servers needs
+     (`manage_mcp_servers`), and no API client is involved. A session made by another login, for
+     another project or without that scope is replaced rather than reused. The sign-in script
+     ends the login it started when it finishes. A matching session finishes immediately and
+     prints no URL. When it prints `"ok": true`, run the create script again. If the create script
+     still reports a missing scope, `needs.command` carries `--force`.
+   - **The sign-in exits 3**: the user didn't finish in time. Run it again for a new URL.
+   - **A finished-login notice** from the session, such as a background task completing, only
+     means the sign-in ended. It is not approval to create the server: the plan still needs the
+     user's explicit yes.
+   - **It exits 1**: usually the user's Merchant Center role can't manage MCP servers in that
+     Project. Report the error and use the form below.
+
+   Fallback: send the user to the form:
 
    > Create the MCP server: `https://mc.{region}.commercetools.com/{projectKey}/settings/mcp-servers/new`
    >
@@ -125,6 +160,17 @@ Use `--agent claude-code`, also in desktop-hosted sessions: the script detects t
 - **Desktop app**: sessions there can't sign in, but load the server without approval. The printed
   command only signs in from a terminal; the user then comes back to this conversation. Don't tell
   them to exit or close anything.
+- **The sign-in page shows `invalid_client` or "Not found"**: Claude kept a stored sign-in for
+  `ct-{projectKey}` from a server that has since been deleted or recreated, and the auth server no
+  longer knows it. Check that the server exists and is enabled, then have the user clear the stored
+  sign-in in their own terminal and repeat the sign-in. The `--settings` flag is needed because the
+  server comes from `.mcp.json` and is not yet approved:
+
+  ```bash
+  claude --settings '{"enabledMcpjsonServers":["ct-{projectKey}"]}' mcp logout ct-{projectKey}
+  ```
+
+  The sign-in command needs an interactive terminal: it fails when run through the `!` prefix.
 
 ### Visual Studio Code with Copilot
 
@@ -169,6 +215,8 @@ Ask the user where their agent keeps MCP configuration and how it signs in.
 
 - [ ] Existing connections checked first; an available one verified with `read_project`
 - [ ] One Project connected before offering more
+- [ ] Server created with `scripts/create-managed-mcp-server.mjs` after the user approved its plan; the form only as fallback
+- [ ] Sign-in run in the background with its URL relayed to the user; the session file named; the `manage_mcp_servers` scope and no API client
 - [ ] **OAuth / Identity**, not **API client credentials**
 - [ ] **All** for development, **All read** for production, stated for every project
 - [ ] Environment asked for every project after the first; a production marker treated as production

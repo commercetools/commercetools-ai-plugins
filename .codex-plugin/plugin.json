@@ -1,7 +1,7 @@
 {
   "name": "commercetools",
   "displayName": "commercetools",
-  "version": "0.69.0",
+  "version": "0.71.0",
   "description": "Build enterprise commerce faster with commercetools for ChatGPT.",
   "author": {
     "name": "commercetools",
@@ -31,9 +31,9 @@
     "shortDescription": "Build on commercetools",
     "longDescription": "Build enterprise commerce faster with commercetools for ChatGPT. Explore commercetools APIs, configure your project, build integrations and complete B2C or B2B storefronts. ChatGPT works from the official commercetools documentation, skills, and toolkit, taking you from first setup to production with confidence.",
     "defaultPrompt": [
-      "Build me a Next.js storefront on commercetools",
-      "Add Stripe payments to my checkout",
-      "Show me how to model B2B pricing"
+      "Show me how to model B2B pricing in commercetools",
+      "What are the commercetools best practices for using Cart Discounts and Discount Codes together?",
+      "Which commercetools Checkout integration option fits a typical storefront?"
     ],
     "capabilities": [
       "Read"

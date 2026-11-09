@@ -282,7 +282,7 @@ Six things go wrong here, and none of them errors:
   on the product, leaves a cart holding the product unable to be taxed under
   `Platform` mode, and nothing but `validate` says so. A 0% category does not.
   Whether the goods are out of scope or taxed at zero is for whoever owns tax;
-  see [`taxCategory`](catalog-feed-contract.md#taxcategory--how-products-are-taxed-per-country).
+  see [`taxCategory`](feed-prerequisites.md#taxcategory--how-products-are-taxed-per-country).
 
 If the source has no tax classes at all, emit no `taxCategory` records and say
 so in the adapter report. `validate` then warns once that no product can be
@@ -407,7 +407,7 @@ variants, two prices and a category, all the way through `audit`. It exercises
 every stage and every invariant in seconds, and it surfaces identity and
 type-system problems while they are still cheap. A slice leaves some declared
 tax categories and channels unreferenced; set `feed.subset: true` for it (see
-[running-the-pipeline.md](running-the-pipeline.md)) so `validate` says so once
+[offline-stages.md](offline-stages.md)) so `validate` says so once
 instead of warning per prerequisite.
 
 ## What good output looks like

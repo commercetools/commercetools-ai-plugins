@@ -71,7 +71,7 @@ The channel is the pricing unit; the store is only the binding. Two
 distribution channels on one store, each with a price for the variant, match at
 the same fallback step and the storefront has to pick with
 `setLineItemDistributionChannel`. See
-[catalog-feed-contract.md](catalog-feed-contract.md) for the store record.
+[feed-assortments.md](feed-assortments.md) for the store record.
 
 Two of those are references to resources **the Import API cannot create**: it
 has no channel or customer-group type. So a price scoped to either must declare
@@ -83,7 +83,7 @@ price becomes an operation that sits `unresolved` for 48 hours and then expires
 `validate` refuses an undeclared reference. `preflight` reports one the project
 is missing as a warning, since `load` will create it, and one that exists
 without the roles the plan needs as an error, since that is the case `load`
-refuses to fix. See [catalog-feed-contract.md](catalog-feed-contract.md).
+refuses to fix. See [feed-prerequisites.md](feed-prerequisites.md).
 
 Adding an embedded price is rejected when:
 
@@ -186,7 +186,7 @@ Report these as information loss rather than approximating them:
   Discounts or an external price, which is a modelling decision, not a
   translation, so report it. Source quantity breaks that *are* volume pricing
   go in the feed's `tiers` — see
-  [Price tiers](catalog-feed-contract.md#price-tiers--quantity-breaks) — and a
+  [Price tiers](feed-prices-assets.md#price-tiers--quantity-breaks) — and a
   tier is ignored while a Product Discount applies to its price. See also
   [Types of prices](https://docs.commercetools.com/learning-price-and-discount-your-products/price-calculation/types-of-prices.md#tiered-versus-volume-pricing).
 - **A tier the source stores as a rule.** Some sources hold the break as a
@@ -211,7 +211,7 @@ Report these as information loss rather than approximating them:
   its own does not tell you what its number means. Getting it backwards changes
   every price on the site by the tax rate and nothing in the data contradicts
   you. Under `Platform` tax mode it lands as `includedInPrice` on each rate of a
-  [`taxCategory`](catalog-feed-contract.md#taxcategory--how-products-are-taxed-per-country)
+  [`taxCategory`](feed-prerequisites.md#taxcategory--how-products-are-taxed-per-country)
   record, which has no default for exactly this reason — find the store-level
   setting in the source and state it per rate. Which tax mode applies at all is
   a modelling decision, asked in step 0.

@@ -42,17 +42,17 @@ hundred copied rows that will disagree with the next run.
 
 "Next to `migration.config.json`" was ambiguous, because the only config that
 ships is inside the pipeline, which is the *tool* — and the tool is now its own
-repository, cloned rather than authored. Putting an engagement's record there
-files it inside somebody else's checkout. So be explicit: **the engagement is a
-sibling of the pipeline, never inside it.**
+repository, released and fetched rather than authored. Putting an engagement's
+record there files it inside a directory that an upgrade replaces. So be explicit:
+**the engagement is a sibling of the pipeline, never inside it.**
 
 ```
 <engagement-root>/
-  .gitignore                    must ignore the pipeline checkout — see below
-  ct-catalog-migration-pipeline/  the tool, cloned and gitignored. Never write
-                                  engagement files here, and never edit it — local
-                                  changes are lost on the next pull and are
-                                  invisible to everyone else.
+  .gitignore                    ignores feed/ and out/ — see below
+  ct-catalog-migration-pipeline/  the tool, a fetched release, committed with the
+                                  engagement. Never write engagement files here:
+                                  an upgrade replaces the directory. A change to
+                                  it is recorded in DECISIONS.md.
   source-export/                what the customer handed over
   migration/                    the engagement
     migration.config.json         written from the step-0 interview
@@ -71,7 +71,7 @@ sibling of the pipeline, never inside it.**
 ```
 
 The adapter needs **its own `package.json`** containing at least
-`{"type":"module"}`. It sits outside the pipeline checkout, so it does not
+`{"type":"module"}`. It sits outside the pipeline directory, so it does not
 inherit the pipeline's module type, and an ESM adapter without it fails on the first
 `import` with `Cannot use import statement outside a module`. Thirty seconds
 to fix and the very first thing an adapter author hits:
@@ -86,25 +86,23 @@ is gitignored by the pipeline already. The adapter report sits in `feed/` and is
 overwritten on the next run, so anything in it that is a decision (a cap, a
 count of skipped rows) belongs in `DECISIONS.md`, where it survives.
 
-**The pipeline checkout has to be ignored, and before it is cloned.** The
-engagement is usually a git repository, and a clone inside one becomes an
-embedded repository that `git add -A` records as a gitlink — pinned in your
-index, unexplained by any `.gitmodules`, and empty for anyone who clones the
-engagement later. So the engagement's own `.gitignore` starts as:
+**Anchor the two generated directories.** The pipeline copy is ordinary files, fetched
+without git history, and is committed with the engagement
+([why](getting-the-pipeline.md#getting-the-pipeline)). The engagement's own
+`.gitignore` starts as:
 
 ```text
-/ct-catalog-migration-pipeline/
-feed/
-out/
+/migration/feed/
+/migration/out/
 ```
 
-The last two are regenerated on every run. The first is somebody else's
-repository, and its version belongs in `DECISIONS.md` as a line a human can
-read rather than as a gitlink nobody can resolve. `references/running-the-pipeline.md`
-has the recovery if it was already staged — `.gitignore` alone does not undo
-that.
+Both are regenerated on every run. Anchor them: a bare `out/` also matches the
+audit fixtures the pipeline commits at `ct-catalog-migration-pipeline/fixtures/*/out/plan.json`,
+which `npm test` reads, so a copy committed without them fails its own tests when
+someone else checks the engagement out. The version of the copy belongs in
+`DECISIONS.md` as a line a human can read.
 
-Run the commands from the pipeline checkout and point `--config` at the
+Run the commands from the pipeline directory and point `--config` at the
 engagement:
 
 ```bash
@@ -120,16 +118,16 @@ tool's own `out/`, where the next reader will not look for them.
 ## Format
 
 Numbered, so entries can reference each other and be superseded rather than
-edited. The file opens with the pipeline checkout (`git rev-parse --short HEAD`,
-in the form [the stages](running-the-pipeline.md#the-stages) gives for a dirty
-tree), because the log is opened at the end of step 0, before any stage runs:
-that is what puts the version on record in time.
+edited. The file opens with the pipeline release (the tag, in the form
+[getting-the-pipeline.md](getting-the-pipeline.md#recording-the-release) gives for
+a changed copy), because the log is opened at the end of step 0, before any stage
+runs: that is what puts the version on record in time.
 
 ```markdown
 # Migration decision log — acme-eu
 
 Append-only. Newest last. Never regenerate; supersede instead.
-Pipeline: ct-catalog-migration-pipeline @ 4f2a9c1
+Pipeline: ct-catalog-migration-pipeline v0.2.0 (GitHub Release)
 
 ## D001 — Catalog model: Classic
 2026-09-22 · step 0a · decided by Priya (commerce lead)

@@ -451,7 +451,7 @@ decision from 0a and 0c, plus any question the file lists as not asked or
 answered "unknown" — an
 open question with an owner is a plan, an unasked one is a surprise. Format
 and placement: [decision-log.md](decision-log.md). Open it before the adapter, with
-the pipeline checkout (`git rev-parse --short HEAD`) as its first line, so the
+the pipeline release tag as its first line, so the
 version is on record before any stage runs.
 
 **Keep writing it at every step from here**, not at the end: a log

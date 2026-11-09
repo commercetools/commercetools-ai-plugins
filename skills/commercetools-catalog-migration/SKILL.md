@@ -34,9 +34,9 @@ any source  →  adapter  →  canonical catalog feed  →  pipeline  →  comme
 ```
 
 The pipeline — [`commercetools/ct-catalog-migration-pipeline`](https://github.com/commercetools/ct-catalog-migration-pipeline),
-cloned beside the engagement — **never parses a source system**. It defines a
-feed contract and starts there. Everything source-specific lives in the adapter,
-upstream of the contract.
+fetched as a release after the user's yes ([how](references/getting-the-pipeline.md)) —
+**never parses a source system**. It defines a feed contract and starts there.
+Everything source-specific lives in the adapter, upstream of the contract.
 
 This is not decoration. A universal parser for any source platform does not
 exist — no two installations agree on their type system — so source knowledge
@@ -73,7 +73,7 @@ the API.
    The limits and constraints in [Critical](#critical) were verified in
    September 2026. Re-check any of them here before relying on one.
 
-2. **Lay out the engagement beside the pipeline checkout, never inside it.**
+2. **Lay out the engagement beside the pipeline copy, never inside it.**
    `migration/` holds the config, the interview, the decision log and the
    adapter; `source-export/` holds what the customer handed over. Create
    `migration/` before step 0 writes `INTERVIEW.md` into it. The layout, and what
@@ -117,7 +117,7 @@ the API.
    asked at all. Write one entry per decision from 0a and 0c, plus any
    question that could not be answered — an open question with an owner is a
    plan, an unasked one is a surprise. Open it before the adapter, with the
-   pipeline checkout (`git rev-parse --short HEAD`) as its first line, so the
+   pipeline release tag as its first line, so the
    version is on record before any stage runs. Format and placement:
    [references/decision-log.md](references/decision-log.md).
 
@@ -135,9 +135,9 @@ the API.
 
    **Take the thin vertical slice before writing the rest**: one product, two
    or three variants, through `validate`, `derive`, `plan` and `audit`. Before
-   the first of them runs, record which pipeline checkout it is
-   (`git rev-parse --short HEAD`, one line in `DECISIONS.md`), whether you
-   cloned it or found it there: [the stages](references/running-the-pipeline.md#the-stages).
+   the first of them runs, record which pipeline release it is (the tag, one
+   line in `DECISIONS.md`), whether you fetched it or found it there:
+   [getting-the-pipeline.md](references/getting-the-pipeline.md).
    Writing every SKU in one pass usually gets away with it, which is why this
    step keeps getting skipped — and is not a reason to skip it. The axis
    model, the money conversion and the attribute constraints are wrong in the
@@ -253,7 +253,7 @@ the API.
    To undo a run on a trial project, `teardown` removes what the plan created,
    scoped to `keys.prefix`: a dry run by default, and `--execute` needs
    `--confirm-project <key>` — see
-   [running-the-pipeline.md](references/running-the-pipeline.md#teardown).
+   [teardown.md](references/teardown.md#teardown).
    **Ask before every `--execute`, as for the load.** A request to "remove
    everything you loaded" names an outcome, not which keys or how many: show the
    dry run, name the project and the counts, and wait for the yes. A tax category
@@ -276,11 +276,11 @@ reference beside it — this list exists so none is *missed*.
   attribute and rewriting its data. → [product-model.md](references/product-model.md)
 - **A product selection's `mode` is fixed at creation** — there is no
   `changeMode` action, and re-importing the other mode reports `imported` and
-  changes nothing. → [catalog-feed-contract.md](references/catalog-feed-contract.md)
+  changes nothing. → [feed-assortments.md](references/feed-assortments.md)
 - **A Product's ProductType cannot be changed after creation.** A project
   loaded before ProductType keys were prefixed trips
   `product-type-keys-unprefixed` and cannot be moved onto the new keys by
-  re-running. → [running-the-pipeline.md](references/running-the-pipeline.md)
+  re-running. → [preflight.md](references/preflight.md)
 - **`productCatalogModel` is fixed at map time.** `Classic` embeds variants
   (1–100) and allows embedded prices. `Modular` makes them standalone
   `VariantImport` resources (to 10,000), allows **only** standalone prices, and
@@ -303,29 +303,29 @@ reference beside it — this list exists so none is *missed*.
 - **Omitted fields are deleted on import.** `ProductVariantImport` and
   `StandalonePriceImport` drop whatever you leave out, so an update must resend
   everything worth keeping. `ProductVariantPatch` is the only partial update.
-  → [running-the-pipeline.md](references/running-the-pipeline.md)
+  → [running-the-pipeline.md](references/running-the-pipeline.md#what-shapes-the-load)
 - **An unresolved KeyReference expires after 48 hours**, taking its price with
   it: a green load and a partly priced catalog. An inventory entry naming a
   missing supply channel goes the same way, taking the stock — and a product
   naming a missing tax category goes **whole**, variants and prices with it.
-  → [running-the-pipeline.md](references/running-the-pipeline.md)
+  → [load.md](references/load.md)
 - **Stock for a SKU that does not exist imports successfully.** The Import API
   does not check `InventoryImport.sku` against anything, so a typo becomes
   stock nothing sells and no stage of the platform ever reports it. `validate`
   and the audit gate check it because nothing else will.
-  → [catalog-feed-contract.md](references/catalog-feed-contract.md)
+  → [feed-prerequisites.md](references/feed-prerequisites.md)
 - **A product without a tax category loads, verifies, and cannot be taxed.**
   Under the default `Platform` tax mode a cart takes its rate from the
   product's tax category; with none, checkout cannot compute tax and nothing
   earlier says so. `validate` warns rather than refuses, because `External`
   tax mode needs no category — which mode applies is a step-0 question, and
   the answer goes in the config as `target.taxMode`.
-  → [catalog-feed-contract.md](references/catalog-feed-contract.md)
+  → [feed-prerequisites.md](references/feed-prerequisites.md)
 - **`publish: false` unpublishes.** It is an instruction, not "leave
   publication alone", and the pipeline plans it on every product. Correct on a
   first load; on a re-load into a live project it takes every product it
   touches offline, with every operation still reporting `imported`.
-  → [running-the-pipeline.md](references/running-the-pipeline.md)
+  → [offline-stages.md](references/offline-stages.md#plan)
 
 **Project-wide, not per resource**
 
@@ -349,7 +349,7 @@ reference beside it — this list exists so none is *missed*.
   `setLineItemDistributionChannel`. → [pricing-and-money.md](references/pricing-and-money.md)
 - **A store with no product selections offers everything**; one whose
   selections are all inactive, with an `Individual` among them, offers
-  **nothing**. → [catalog-feed-contract.md](references/catalog-feed-contract.md)
+  **nothing**. → [feed-assortments.md](references/feed-assortments.md)
 - **Channels, customer groups and tax categories cannot be imported — `load`
   creates them** through the platform API before any import, with keys used
   **verbatim**: the one exception to the prefix rule, and what a prefix-scoped
@@ -389,7 +389,7 @@ reference beside it — this list exists so none is *missed*.
 | ProductTypes: declared vs inferred, constraints, levels, searchability | [references/product-model.md](references/product-model.md) |
 | Money, price scopes, validity windows, embedded vs standalone | [references/pricing-and-money.md](references/pricing-and-money.md) |
 | Categories: tree, slug allocation, order hints | [references/categories-and-slugs.md](references/categories-and-slugs.md) |
-| Running the pipeline: each stage, each gate, and what is still absent | [references/running-the-pipeline.md](references/running-the-pipeline.md) |
+| Running the pipeline: the stage order, options and config; it routes to one file per stage | [references/running-the-pipeline.md](references/running-the-pipeline.md) |
 
 ## Scope
 
@@ -471,9 +471,9 @@ Before running the pipeline:
 
 Before loading:
 
-- [ ] `DECISIONS.md` names the pipeline checkout that ran the stages
-      (`git rev-parse --short HEAD`, in its uncommitted-changes form if the tree
-      differs), including when the checkout was already there.
+- [ ] `DECISIONS.md` names the pipeline release that ran the stages (the tag,
+      with what differs if the copy was changed), including when the copy was
+      already there.
 - [ ] `validate`, `derive`, `plan` and `audit` all pass — in that order, in one
       sitting. If `plan` fails it writes nothing and the previous `plan.json`
       survives; `audit` refuses a plan whose feed digest no longer matches

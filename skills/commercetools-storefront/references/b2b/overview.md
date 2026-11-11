@@ -22,11 +22,11 @@ Production-tested patterns for the b2b-site — a B2B ecommerce storefront built
 
 ## Key Takeaways (B2B-specific)
 
-**Every B2B operation uses the as-associate API chain.** Cart reads, cart writes, orders, quotes, approval flows — all go through `apiRoot.asAssociate().withAssociateIdValue({ associateId }).inBusinessUnitKeyWithBusinessUnitKeyValue({ businessUnitKey }).*`. The `associateId` is always `session.customerId`; the `businessUnitKey` is always `session.businessUnitKey`. commercetools enforces associate permissions server-side — no app-level permission checks in the server endpoints.
+**Business-unit-scoped buyer operations use the as-associate API chain.** Cart reads, cart writes, orders, quotes, approval flows — all go through `apiRoot.asAssociate().withAssociateIdValue({ associateId }).inBusinessUnitKeyWithBusinessUnitKeyValue({ businessUnitKey }).*`. The `associateId` is always `session.customerId`; the `businessUnitKey` is always `session.businessUnitKey`. commercetools enforces associate permissions server-side — no app-level permission checks in the server endpoints.
 
 **Session carries five B2B-specific fields.** `businessUnitKey`, `storeKey`, `distributionChannelId`, `supplyChannelId`, and `productSelectionId` are resolved once (at login or BU selection) from the store record and written atomically into the session. Every product search and cart operation reads these from the session.
 
-**Prices and availability are session-scoped, not global.** `ProductApi.buildProjectionParams()` injects `priceChannel` (distributionChannelId), `storeProjection` (storeKey), and `priceCustomerGroupAssignments` (accountGroupIds) into every search. Without a store context (unauthenticated users), commercetools returns "Price on request."
+**Prices and availability are session-scoped, not global.** `ProductApi.buildPriceArgs()` injects `channelId` (distributionChannelId), `storeProjection` (storeKey), and `customerGroupAssignmentIds` (accountGroupIds) into every search. Without a store context (unauthenticated users), commercetools returns "Price on request."
 
 **Locale uses `COUNTRY_CONFIG` with three-field atomicity.** Same `COUNTRY_CONFIG` flat structure as B2C (key = BCP-47 locale like `de-DE`; same value used for commercetools API calls and URL routing). When changing locale or currency, `locale`, `currency`, and `country` must all be updated together and `cartId` must be reset — commercetools cart currency is immutable.
 
@@ -69,7 +69,7 @@ These shared-foundation references live in this skill's `core/`. Find your stack
 | Approval rules, approval flows, predicate builder, tier model | [approval-workflows.md](./approval-workflows.md) |
 | Dashboard shell, stat widgets, pages, sidebar nav items | [dashboard.md](./dashboard.md) |
 | Recurring orders — pause, resume, cancel, duplicate | [recurring-orders.md](./optional/recurring-orders.md) |
-| Purchase lists (commercetools ShoppingList via as-associate, BU-scoped) | [purchase-lists.md](./shopping-lists.md) |
+| Purchase lists (commercetools ShoppingList via as-associate, BU-scoped) | [shopping-lists.md](./shopping-lists.md) |
 
 ### Enhancement — Modify Existing Features
 
@@ -97,7 +97,7 @@ These shared-foundation references live in this skill's `core/`. Find your stack
 ### CRITICAL
 
 
-- **as-associate chain** — ALL B2B writes (cart, order, quote, approval, BU) go through `apiRoot.asAssociate().*`. Never use project-level `apiRoot.*` for user-facing mutations.
+- **as-associate chain** — BU-scoped buyer writes (cart, order, quote, approval, BU) go through `apiRoot.asAssociate().*`. Never use project-level `apiRoot.*` for user-facing BU-scoped mutations. The one project-level call is BU discovery at sign-in (see [customer-auth.md](./customer-auth.md)).
 - **Session B2B fields** — `businessUnitKey` + `storeKey` + `distributionChannelId` + `supplyChannelId` + `productSelectionId` are always written together from `getStoreChannelData(storeKey)`.
 - **Three-field locale atomicity** — `locale`, `currency`, `country` must all be updated together. Reset `cartId` on locale/currency change.
 - **Session fields for product pricing** — always pass `session` to `searchProducts()` and `getProductBySku()`. Without `distributionChannelId` and `storeKey`, commercetools returns unscoped "Price on request" prices.

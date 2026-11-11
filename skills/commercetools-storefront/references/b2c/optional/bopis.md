@@ -36,19 +36,7 @@ Store channels expose per-store inventory on the PDP. A ChannelSelector lets cus
 | Showing all channels in the selector | `channels.filter(c => c.roles?.includes('InventorySupply'))` |
 | Hardcoded string key in the client state hook | Use `KEY_CHANNELS` from `<server>/cache-keys` |
 
-## Reference
-
-| Task | Reference |
-|---|---|
-| Channels API (`<server>/ct/channels`), server endpoints, supply channel on cart, per-channel inventory, cache keys, `useChannels` hook, `ChannelSelector` UI, pickup badge in CartItem | [bopis.md](./bopis.md) |
-
-
-
-# BOPIS (Buy Online, Pick Up In Store)
-
-**Impact: MEDIUM — Supply channel reference format must be `{ typeId: 'channel', id: channelId }`.
-
-BOPIS adds store channels to the cart and shows per-store stock on the PDP.
+---
 
 ## Table of Contents
 - [Pattern 1: Channels API](#pattern-1-channels-api)

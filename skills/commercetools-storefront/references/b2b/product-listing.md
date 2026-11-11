@@ -22,7 +22,7 @@ This reference covers `ProductApi` session injection, how `distributionChannelId
 
 ## Table of Contents
 - [Pattern 1: Session-Scoped Product Search](#pattern-1-session-scoped-product-search)
-- [Pattern 2: Price Injection via buildProjectionParams](#pattern-2-price-injection-via-buildprojectionparams)
+- [Pattern 2: Price Injection via buildPriceArgs](#pattern-2-price-injection-via-buildpriceargs)
 - [Pattern 3: Store-Scoped Category Filtering](#pattern-3-store-scoped-category-filtering)
 - [Pattern 4: Availability via supplyChannelId](#pattern-4-availability-via-supplychannelid)
 - [Pattern 5: Facet Retry on commercetools Error](#pattern-5-facet-retry-on-commercetools-error)
@@ -58,51 +58,64 @@ export async function searchProducts(
 
 ---
 
-## Pattern 2: Price Injection via buildProjectionParams
+## Pattern 2: Price Injection via buildPriceArgs
 
-**INCORRECT:** Building `productProjectionParameters` manually without channel/store scoping:
+Fetch Product data through the GraphQL `productsSearch` query. The `productProjectionParameters` option of the Product Search request is [deprecated](https://docs.commercetools.com/api/deprecations-and-removals.md#productsearchprojectionparams).
 
-```typescript
-// WRONG — prices not scoped to the customer's distribution channel
-productProjectionParameters: {
-  priceCurrency: currency,
-  priceCountry: country,
-}
+**INCORRECT:** Selecting the price with only currency and country — prices not scoped to the customer's distribution channel or customer group:
+
+```graphql
+price(currency: $currency, country: $country) { value { centAmount } }
 ```
 
-**CORRECT — `ProductApi.buildProjectionParams()` injects all B2B scoping parameters:**
+**CORRECT — `ProductApi.buildPriceArgs()` injects all B2B scoping variables:**
 
 ```typescript
 // <server>/ct/product-api (key excerpt)
-private buildProjectionParams(
+private buildPriceArgs(
   locale: Locale,
   distributionChannelId?: string,
   storeKey?: string,
   accountGroupIds?: string[]
-): ProductSearchProjectionParams {
+) {
   return {
-    priceCurrency: locale.currency,
-    priceCountry: locale.country,
-    expand: PRODUCT_PROJECTION_EXPANDS,
+    currency: locale.currency,
+    country: locale.country,
     // Channel-scoped pricing — customer's negotiated prices for this distribution channel
-    ...(distributionChannelId ? { priceChannel: distributionChannelId } : {}),
+    ...(distributionChannelId ? { channelId: distributionChannelId } : {}),
     // Store projection — restricts to products in this store's product selection
     ...(storeKey ? { storeProjection: storeKey } : {}),
     // Customer group pricing — B2B contract prices for this customer group
-    ...(accountGroupIds?.length ? { priceCustomerGroupAssignments: accountGroupIds } : {}),
+    ...(accountGroupIds?.length ? { customerGroupAssignmentIds: accountGroupIds } : {}),
   };
 }
 ```
 
-**What each parameter does:**
+```graphql
+query ($currency: Currency!, $country: Country, $channelId: String, $customerGroupAssignmentIds: [String!], $storeProjection: String) {
+  productsSearch(query: { ... }) {
+    results {
+      product(storeProjection: $storeProjection) {
+        masterData { current { masterVariant {
+          price(currency: $currency, country: $country, channelId: $channelId, customerGroupAssignmentIds: $customerGroupAssignmentIds) {
+            value { currencyCode centAmount fractionDigits }
+          }
+        } } }
+      }
+    }
+  }
+}
+```
 
-| Parameter | Session field | commercetools effect |
+**What each variable does:**
+
+| Variable | Session field | commercetools effect |
 |---|---|---|
-| `priceChannel` | `distributionChannelId` | Returns only prices assigned to this distribution channel |
+| `channelId` | `distributionChannelId` | Returns only prices assigned to this distribution channel |
 | `storeProjection` | `storeKey` | Filters to products in the store's product selection |
-| `priceCustomerGroupAssignments` | `accountGroupIds` | Applies B2B contract pricing for the customer's group |
-| `priceCurrency` | `currency` | Returns prices in this currency |
-| `priceCountry` | `country` | Applies country-specific price scoping |
+| `customerGroupAssignmentIds` | `accountGroupIds` | Applies B2B contract pricing for the customer's group |
+| `currency` | `currency` | Returns prices in this currency |
+| `country` | `country` | Applies country-specific price scoping |
 
 > When the user is not logged in (no store context), all these fields are absent and commercetools returns global prices or "Price on request". This is intentional — B2B pricing requires authentication.
 
@@ -238,7 +251,7 @@ try {
 ## Checklist
 
 - [ ] `searchProducts(query, session)` called with full session — never with empty session
-- [ ] `buildProjectionParams` includes `priceChannel`, `storeProjection`, `priceCustomerGroupAssignments`
+- [ ] `buildPriceArgs` includes `channelId`, `storeProjection`, `customerGroupAssignmentIds`
 - [ ] `supplyChannelId` passed to `mapProduct` (from `session.supplyChannelId`)
 - [ ] Category listing calls `queryCategories` with store context to filter empty categories
 - [ ] Product search API retries without facets on commercetools error (products always load)

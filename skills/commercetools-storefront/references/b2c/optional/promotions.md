@@ -16,11 +16,11 @@ metadata:
 
 # B2C Promotions & Discounts
 
-Three commercetools discount types each surface differently. Product Discounts change `variant.price.discounted` and require search expansion to show the name. Cart Discounts silently reduce totals. Discount Codes trigger Cart Discounts and are managed by the existing `DiscountCodeForm` component — don't re-implement it.
+Three commercetools discount types each surface differently. Product Discounts change `variant.price.discounted` and require selecting the discount name to show it. Cart Discounts silently reduce totals. Discount Codes trigger Cart Discounts and are managed by the existing `DiscountCodeForm` component — don't re-implement it.
 
 ## Key Takeaways
 
-**Expand discount refs in search, or `discountName` is always undefined.** Add `masterVariant.price.discounted.discount` and `variants[*].price.discounted.discount` to `productProjectionParameters.expand`. The mapper then reads `ctPrice.discounted.discount.obj.name` to surface the name.
+**Select the discount name in the search query, or `discountName` is always undefined.** In the GraphQL `productsSearch` query, select `discounted { discount { name(locale: $locale) } }` on the `price` field (`productProjectionParameters.expand` is deprecated). The mapper then reads `price.discounted.discount.name` to surface the name.
 
 **`DiscountCodeForm` already exists — import it, don't rewrite it.** It handles apply + remove + `KEY_CART` client state-manager/cache invalidation via the cart-discount server endpoint (apply and remove). Just drop `<DiscountCodeForm />` where needed.
 
@@ -69,44 +69,39 @@ All three are created in commercetools Merchant Center under **Discounts**.
 
 ## Pattern 2: Product Discount Display
 
-**INCORRECT:** not expanding the discount reference — `discountName` is `undefined`.
+**INCORRECT:** not selecting the discount — `discountName` is `undefined`.
 
-```typescript
-// BAD — discount ref not expanded
-const productProjectionParameters = {
-  body: {
-    // No expand — variant.price.discounted.discount is just { id: '...' }
-  },
-};
-// In component: product.price.discounted?.discountName → undefined
+```graphql
+# BAD — discount not selected
+price(currency: $currency, country: $country) {
+  value { centAmount }
+  discounted { value { centAmount } }
+}
+# In component: product.price.discounted?.discountName → undefined
 ```
 
-**CORRECT — expand both `masterVariant` and `variants` discount references:**
+**CORRECT — select the discount name in the `productsSearch` query** (GraphQL resolves the reference, so nothing needs expanding):
 
-```typescript
-// /<server>/ct/products
-const productProjectionParameters = {
-  body: {
-    query: { ... },
-    productProjectionParameters: {
-      expand: [
-        'masterVariant.price.discounted.discount',
-        'variants[*].price.discounted.discount',
-      ],
-    },
-  },
-};
+```graphql
+# /<server>/ct/products
+price(currency: $currency, country: $country) {
+  value { currencyCode centAmount fractionDigits }
+  discounted {
+    value { currencyCode centAmount fractionDigits }
+    discount { name(locale: $locale) }
+  }
+}
 ```
 
 ```typescript
 // /<server>/mappers/product
-function mapPrice(ctPrice: CtPrice): Price {
+function mapPrice(price: PriceFragment): Price {
   return {
-    value:     mapMoney(ctPrice.value),
-    discounted: ctPrice.discounted
+    value:     mapMoney(price.value),
+    discounted: price.discounted
       ? {
-          value:        mapMoney(ctPrice.discounted.value),
-          discountName: (ctPrice.discounted.discount?.obj as any)?.name?.[locale],
+          value:        mapMoney(price.discounted.value),
+          discountName: price.discounted.discount.name ?? undefined,
         }
       : undefined,
   };

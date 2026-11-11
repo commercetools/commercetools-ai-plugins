@@ -47,9 +47,9 @@ Three consequences follow:
   second, accidental one — keyed verbatim from the feed's `productType` code —
   and are now prefixed like everything else.
 - **A teardown scoped to `keys.prefix` will not remove them**, with one opt-in:
-  `--include-created-tax-categories` removes a tax category that `load` created
-  ([teardown](running-the-pipeline.md#teardown)). A channel or customer group the
-  load created has to be removed by hand.
+  `--include-created-prerequisites` removes the channels, customer groups, stores
+  and tax categories that `load` created, and never one the project held before
+  ([teardown](teardown.md#teardown)).
 - **Creating them needs scopes the import does not.** `manage_products` covers
   channels; customer groups need `view_customer_groups` and
   `manage_customer_groups`, which `manage_products` does not grant.

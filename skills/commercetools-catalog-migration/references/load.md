@@ -117,10 +117,9 @@ unknown* — an unreachable project should not cost you the request bodies.
 
 Two asymmetries worth knowing: these are the only resources keyed **verbatim**
 rather than `<prefix>-<key>`, and therefore the only ones a prefix-scoped
-teardown leaves behind. If `load` created a channel, removing it is manual. A tax
-category it created can be removed by [teardown](teardown.md#teardown) with
-`--include-created-tax-categories`, unless a product or shipping method still
-references it.
+teardown leaves behind. What `load` created of them can be removed by
+[teardown](teardown.md#teardown) with `--include-created-prerequisites`, unless
+something still uses it; one the project held before is never removed.
 
 ### How large a catalog this handles
 
@@ -216,8 +215,19 @@ reports where it is on every tick ([progress](running-the-pipeline.md#progress-w
 | `validationFailed` | error | the gate should have caught it |
 | `partiallyImported` | error | the resource is half-written |
 
+A refused request prints the `errors` of the API's response after its generic
+message (`InvalidField: defaultShippingAddress must be a valid index …`), and when
+the summary shows failing operations the load reads a sample of them, the first 20
+per state, and prints the reasons grouped with a count and one example record
+(`operation-errors`). Neither needs a record sent by hand to find the field. The
+sample explains the count and does not replace it: a failed read adds nothing and
+hides no count.
+
 A failed request records the keys it carried instead of aborting the stage, and
-keys are deterministic — so resubmitting is running `load --execute` again.
+keys are deterministic — so resubmitting is running `load --execute` again, or
+`--only <stage>` to resend one stage ([load-recovery.md](load-recovery.md#resending-one-stage)).
+The first record of a customer or order stage goes alone, and a refusal stops the
+load: [load-recovery.md](load-recovery.md#the-first-record-of-a-customer-or-order-stage-goes-alone).
 That is a new write, so dry-run it first. A new yes from the user covers it only
 if that dry run matches the one they saw; if anything differs, show the
 difference and ask.

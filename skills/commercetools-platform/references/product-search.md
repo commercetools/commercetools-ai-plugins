@@ -20,7 +20,7 @@ metadata:
 
 **Official docs:** https://docs.commercetools.com/api/projects/product-search
 
-**Impact: HIGH — The legacy `productProjections` search endpoint is deprecated and lacks facets and proper variant matching. Always use the Product Search API.**
+**Impact: HIGH — The Product Projection Search endpoint (`productProjections().search()`) is deprecated and lacks facets and proper variant matching. Always use the Product Search API, and fetch price and locale data through the GraphQL `productsSearch` query, not the deprecated `productProjectionParameters` option.**
 
 ## Table of Contents
 - [Pattern 1: Never Use Legacy Search](#pattern-1-never-use-legacy-search)
@@ -58,7 +58,7 @@ The Product Search API uses a `POST` body for the query, not URL query args.
 
 ```typescript
 // BAD — loses all type safety
-const name = (result as any).productProjection?.name?.['en-US'];
+const id = (result as any).id;
 const discount = (ctPrice.discounted?.discount?.obj as any)?.name;
 ```
 
@@ -67,18 +67,17 @@ const discount = (ctPrice.discounted?.discount?.obj as any)?.name;
 ```typescript
 import type {
   ProductSearchResult,
-  ProductProjection,
   ProductVariant,
   Price as CtPrice,
   ProductDiscount,
   LocalizedString,
 } from '@commercetools/platform-sdk';
 
-// Result typing
+// Result typing — Product Search returns IDs; fetch the Product data separately (Patterns 4–7)
 const result: ProductSearchResult = body.results[0];
-const projection: ProductProjection | undefined = result.productProjection;
+const productId: string = result.id;
 
-// Expanded discount reference — obj is typed as ProductDiscount | undefined
+// Expanded discount reference (Product Projections API with `expand`) — obj is typed as ProductDiscount | undefined
 const discountObj = ctPrice.discounted?.discount?.obj as ProductDiscount | undefined;
 const discountName = getLocalizedString(discountObj?.name as LocalizedString | undefined, locale);
 ```
@@ -152,7 +151,7 @@ const searchRequest: ProductSearchRequest = {
 };
 
 const { body } = await apiRoot.products().search().post({ body: searchRequest }).execute();
-// body.results[].productProjection — mapped by lib/mappers/product.ts
+// body.results[].id — Product IDs; fetch the Product data with the GraphQL productsSearch query (Patterns 4–7)
 // body.facets — array of ProductSearchFacetResult - ask commercetools-developer-tips about ProductSearchFacetResult
 // body.total, body.offset, body.limit — for pagination
 ```
@@ -161,24 +160,39 @@ const { body } = await apiRoot.products().search().post({ body: searchRequest })
 
 ## Pattern 4: Category Filter
 
-Filter to products in a category **and all its subcategories** using `categoriesSubTree`:
+Filter to products in a category **and all its subcategories** using `categoriesSubTree`. Use the GraphQL `productsSearch` query so the matching Products come back in the same request, with price selection and locale projection applied:
+
+```graphql
+query CategoryProducts($categoryId: String!, $currency: Currency!, $country: Country!, $locale: Locale!) {
+  productsSearch(
+    query: { exact: { field: "categoriesSubTree", value: $categoryId } }
+    limit: 24
+    offset: 0
+  ) {
+    total
+    results {
+      id
+      product(localesProjection: [$locale]) {
+        masterData {
+          current {
+            name(locale: $locale)
+            masterVariant {
+              sku
+              price(currency: $currency, country: $country) {
+                value { currencyCode centAmount fractionDigits }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
 
 ```typescript
-const { body } = await apiRoot.products().search().post({
-  body: {
-    query: {
-      exact: {
-        field: 'categoriesSubTree',
-        value: categoryId,   // commercetools category ID
-      },
-    },
-    productProjectionParameters: {
-      priceCurrency: 'USD',
-      priceCountry:  'US',
-    },
-    limit: 24,
-    offset: 0,
-  },
+const { body } = await apiRoot.graphql().post({
+  body: { query: CATEGORY_PRODUCTS, variables: { categoryId, currency: 'USD', country: 'US', locale: 'en-US' } },
 }).execute();
 ```
 
@@ -190,83 +204,86 @@ Use `categoriesSubTree` instead of `categories` — `categories` matches only th
 
 Fetch a single product by exact SKU match:
 
-```typescript
-import type { ProductSearchRequest, ProductProjection } from '@commercetools/platform-sdk';
-
-const { body } = await apiRoot.products().search().post({
-  body: {
-    query: {
-      exact: {
-        field: 'variants.sku',
-        value: sku,
-      },
-    } as ProductSearchRequest['query'],
-    productProjectionParameters: {
-      priceCurrency: currency,
-      priceCountry:  country,
-      localeProjection: [locale],
-    },
-    limit: 1,
-  },
-}).execute();
-
-const projection: ProductProjection | undefined = body.results[0]?.productProjection;
-// projection is undefined when the SKU doesn't exist — call notFound() in the page
+```graphql
+query ProductBySku($sku: String!, $currency: Currency!, $country: Country!, $locale: Locale!) {
+  productsSearch(
+    query: { exact: { field: "variants.sku", value: $sku } }
+    limit: 1
+  ) {
+    results {
+      id
+      product(localesProjection: [$locale]) {
+        masterData {
+          current {
+            name(locale: $locale)
+            masterVariant {
+              sku
+              price(currency: $currency, country: $country) {
+                value { currencyCode centAmount fractionDigits }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
 ```
+
+`results` is empty when the SKU doesn't exist — call `notFound()` in the page.
 
 ---
 
 ## Pattern 6: Price Selection
 
-Pass `priceCurrency` + `priceCountry` in `productProjectionParameters`. commercetools selects the matching price tier automatically — each variant arrives with `.price` already resolved to the correct currency/country combination.
+**INCORRECT:** passing `productProjectionParameters` in the search request body. It is [deprecated](https://docs.commercetools.com/api/deprecations-and-removals.md#productsearchprojectionparams) (announced 11 December 2025) and will be removed.
 
-```typescript
-productProjectionParameters: {
-  priceCurrency: 'EUR',
-  priceCountry:  'DE',
+**CORRECT:** pass `currency` and `country` to the `price` field of the Product Data you fetch through `productsSearch`. commercetools applies [price selection](https://docs.commercetools.com/api/pricing-and-discounts-overview.md#price-selection) and returns the price for that currency/country combination.
+
+```graphql
+price(currency: "EUR", country: "DE") {
+  value { currencyCode centAmount fractionDigits }
 }
-// variant.price is now the EUR price for Germany — no client-side filtering needed
+# price is now the EUR price for Germany — no client-side filtering needed
 ```
+
+To project Prices by Store, pass `storeProjection` to the `product` field. See [Locale and Store projection](https://docs.commercetools.com/api/graphql.md#locale-and-store-projection).
+
+If you cannot use GraphQL, use the Product Search result IDs to query the [Product Projections API](https://docs.commercetools.com/api/projects/productProjections.md) with `priceCurrency` and `priceCountry`.
 
 ---
 
 ## Pattern 7: Discount Expansion
 
-**INCORRECT:** not expanding discount references — the discount name is `undefined`.
+GraphQL resolves references, so there is nothing to expand. Select the discount name through `discounted.discount`:
 
-**CORRECT:** expand `masterVariant` and `variants` discount refs, and use SDK types in the mapper:
-
-```typescript
-// In the search call
-productProjectionParameters: {
-  priceCurrency: currency,
-  priceCountry:  country,
-  expand: [
-    'masterVariant.price.discounted.discount',
-    'variants[*].price.discounted.discount',
-  ],
-},
+```graphql
+price(currency: $currency, country: $country) {
+  value { currencyCode centAmount fractionDigits }
+  discounted {
+    value { currencyCode centAmount fractionDigits }
+    discount { name(locale: $locale) }
+  }
+}
 ```
 
-```typescript
-// In the price mapper — use ProductDiscount, not any
-import type { Price as CtPrice, ProductDiscount, LocalizedString } from '@commercetools/platform-sdk';
+Map the result to your own price type from the generated GraphQL types, not `any`:
 
-function mapPrice(ctPrice: CtPrice): Price {
-  const discountObj = ctPrice.discounted?.discount?.obj as ProductDiscount | undefined;
+```typescript
+function mapPrice(price: PriceFragment): Price {
   return {
-    value: mapMoney(ctPrice.value),
-    discounted: ctPrice.discounted
+    value: mapMoney(price.value),
+    discounted: price.discounted
       ? {
-          value:        mapMoney(ctPrice.discounted.value),
-          discountName: getLocalizedString(discountObj?.name as LocalizedString | undefined, locale),
+          value:        mapMoney(price.discounted.value),
+          discountName: price.discounted.discount.name ?? undefined,
         }
       : undefined,
   };
 }
 ```
 
-Without expansion, `discount` is just `{ id: '...' }` — the `obj` field (the expanded resource) is absent.
+If you use the Product Projections API instead, add `expand=masterVariant.price.discounted.discount` and `expand=variants[*].price.discounted.discount` to the query, otherwise `discount` is just `{ id: '...' }` and the `obj` field is absent.
 
 ---
 
@@ -275,7 +292,7 @@ Without expansion, `discount` is just `{ id: '...' }` — the `obj` field (the e
 - [ ] Using `apiRoot.products().search().post()` — never `productProjections().search().get()`
 - [ ] No `any` or `unknown` casts — types imported from `@commercetools/platform-sdk`
 - [ ] Category pages filter with `categoriesSubTree`, not `categories`
-- [ ] `priceCurrency` + `priceCountry` set in `productProjectionParameters` for correct price selection
+- [ ] No `productProjectionParameters` (deprecated) — `currency` + `country` passed to the `price` field of `productsSearch` for correct price selection
 - [ ] SKU lookup uses `exact: { field: 'variants.sku', value: sku }`
 - [ ] `markMatchingVariants: true` set when variant-level filtering is active
-- [ ] Discount expansion added when rendering discount names or badges; mapper uses `ProductDiscount` type
+- [ ] `discounted { discount { name } }` selected when rendering discount names or badges

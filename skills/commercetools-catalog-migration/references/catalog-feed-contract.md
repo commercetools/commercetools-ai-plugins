@@ -24,6 +24,8 @@ them.
 | [feed-prerequisites.md](feed-prerequisites.md) | writing the `channel`, `customerGroup`, `taxCategory` or `inventoryEntry` records, or a `validate` finding about a missing channel, tax category or stock |
 | [feed-assortments.md](feed-assortments.md) | `productSelection` and `store`: assortments, which products a store offers, and the load order |
 | [feed-prices-assets.md](feed-prices-assets.md) | quantity-break price tiers and `asset` records |
+| [feed-customers.md](feed-customers.md) | the opt-in `customer` record, only after the user has said yes to migrating customers |
+| [feed-orders.md](feed-orders.md) | the opt-in `order` record, only after the user has said yes to migrating the order history |
 
 On this page: [Shape](#shape), [Variant axes](#variant-axes),
 [the two load-bearing rules](#two-rules-that-are-load-bearing),

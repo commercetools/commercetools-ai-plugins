@@ -39,7 +39,9 @@ and standalone resources under `Modular`.
    since. `--apply` never implies it. The same action sent by hand works too
    ([Project API](https://docs.commercetools.com/api/projects/project.md#set-product-catalog-model));
    the flag adds the re-count and the log line.
-3. **Log it**: project key, timestamp, previous and new model, who authorised it.
+3. **Log it**: project key, timestamp, previous and new model, and who authorised it as
+   the user said it, never from the account or git user
+   ([how](decision-log.md#preflight--and-this-one-is-an-obligation)).
    `catalog-model-switched` is printed to stdout and nowhere else.
 4. If you changed `target.catalogModel` to get here, re-run `plan`. The import
    shape is decided at map time, so the config alone is not enough. If the config

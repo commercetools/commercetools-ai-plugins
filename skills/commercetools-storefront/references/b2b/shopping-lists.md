@@ -78,7 +78,7 @@ The `store` field ties the list to the active store so pricing and availability 
 
 ### Permissions
 
-The purchase list UI must respect associate permissions. Gate write actions (`Create`, `Add item`, `Remove item`, `Rename`, `Delete`) on `CreatePurchaseLists` / `UpdatePurchaseLists` via `usePermissions()`. Hide the purchase lists nav item when the associate lacks `ViewPurchaseLists`.
+The purchase list UI must respect associate permissions. Gate write actions (`Create`, `Add item`, `Remove item`, `Rename`, `Delete`) on `CreateMyShoppingLists` / `CreateOthersShoppingLists` / `UpdateMyShoppingLists` / `UpdateOthersShoppingLists` (and the `Delete…` equivalents) via `usePermissions()`. Hide the purchase lists nav item when the associate lacks `ViewMyShoppingLists` and `ViewOthersShoppingLists`.
 
 ---
 
@@ -106,7 +106,7 @@ When the user switches business unit, the purchase lists cache auto-invalidates 
 
 A single header icon covers wishlists (personal). It should follow the same behaviour as the B2C wishlist icon: item count badge, navigate to `/wishlists`, empty state for unauthenticated users.
 
-Purchase lists are a procurement tool and belong in the dashboard navigation, not the header icon. The dashboard nav item for purchase lists should be hidden when the associate lacks `ViewPurchaseLists`.
+Purchase lists are a procurement tool and belong in the dashboard navigation, not the header icon. The dashboard nav item for purchase lists should be hidden when the associate lacks `ViewMyShoppingLists` and `ViewOthersShoppingLists`.
 
 ---
 
@@ -116,10 +116,10 @@ In B2B, clicking "Save" or "Add to list" on a PDP opens a modal or popover rathe
 
 **Modal behaviour:**
 
-1. Show two sections: "My Wishlists" (personal) and "Purchase Lists" (BU-shared, only if the associate has `ViewPurchaseLists`)
+1. Show two sections: "My Wishlists" (personal) and "Purchase Lists" (BU-shared, only if the associate has `ViewMyShoppingLists` or `ViewOthersShoppingLists`)
 2. Each section lists existing lists with a checkbox — checking one adds the current product/variant to that list
 3. A "+ New wishlist" inline input at the bottom of the "My Wishlists" section lets the customer create and add in one step
-4. A "+ New purchase list" inline input (gated on `CreatePurchaseLists` permission) at the bottom of the purchase list section does the same
+4. A "+ New purchase list" inline input (gated on `CreateMyShoppingLists` / `CreateOthersShoppingLists` permission) at the bottom of the purchase list section does the same
 5. On confirm, fire all selected add-item mutations in parallel; show a single success toast when all resolve
 
 **Trigger:** A secondary button on the PDP near the Add to Cart CTA — labelled "Save to list" or represented by a bookmark/heart icon. The button is always visible (not hover-only) because B2B users are intentional about list management.
@@ -144,8 +144,8 @@ In B2B, clicking "Save" or "Add to list" on a PDP opens a modal or popover rathe
 - [ ] Server endpoints validate `customerId` AND `businessUnitKey`
 - [ ] client state-manager/cache key is `[KEY_PURCHASE_LISTS, businessUnitKey]`; fires only when `businessUnitKey` is resolved
 - [ ] All mutations invalidate `[KEY_PURCHASE_LISTS, businessUnitKey]` after completing
-- [ ] Permission gates: `ViewPurchaseLists` for nav, `CreatePurchaseLists` / `UpdatePurchaseLists` for write actions
-- [ ] Dashboard nav item hidden when associate lacks `ViewPurchaseLists`
+- [ ] Permission gates: `ViewMyShoppingLists` / `ViewOthersShoppingLists` for nav, `Create…` / `Update…` × `My` / `Others` `ShoppingLists` for write actions
+- [ ] Dashboard nav item hidden when associate lacks `ViewMyShoppingLists` and `ViewOthersShoppingLists`
 - [ ] Pages under `/dashboard/purchase-lists/`
 
 **PDP UI**

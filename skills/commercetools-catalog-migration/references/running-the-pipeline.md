@@ -20,6 +20,7 @@ file holds what they share.
 | [offline-stages.md](offline-stages.md) | `validate`, `derive`, `plan` or `audit` reports a diagnostic, or you need to know what each gates, or the freshness digest fails |
 | [preflight.md](preflight.md) | before `preflight`, or when it reports a locale, currency, catalog-model or ProductType-key finding, or before `--apply` or `--switch-catalog-model` |
 | [load.md](load.md) | before `load`: dependency order, prerequisites outside the Import API, batching, failure states, SDKs, credentials and scopes |
+| [load-recovery.md](load-recovery.md) | `load` reports `canary-stopped` or a failed request, or one stage has to be sent again: the one-record first request, `--only`, orders the project already holds |
 | [verify.md](verify.md) | after `load`: what `verify` reconciles, the stall window, and what a clean result does and does not show |
 | [teardown.md](teardown.md) | removing what a run created from a trial project |
 
@@ -52,6 +53,20 @@ npm run pipeline -- audit    --config ../migration/migration.config.json
 
 Common options: `--config <path>`, `--out <dir>`, `--json` for machine-readable
 diagnostics, `--quiet` to suppress warnings, and `--payloads` on `plan`.
+
+To run the four stages in one go, keep each stage and its flags as separate words.
+A quoted pair in the list, `"plan --payloads"`, reaches the pipeline as one command
+name wherever the shell does not split an unquoted variable (zsh, the macOS
+default, does not), so `plan` never runs and `audit` then checks a plan that is not
+the one just built. This form works in zsh and bash, and stops at the first stage
+that finds an error:
+
+```bash
+for stage in validate derive plan audit; do
+  extra=""; [ "$stage" = plan ] && extra="--payloads"
+  npm run pipeline -- "$stage" --config ../migration/migration.config.json $extra || break
+done
+```
 
 `--out` defaults to `out` **resolved relative to the config file**, the same
 rule `feed.dir` follows — so running from the pipeline directory with
@@ -198,8 +213,8 @@ and [best practices](https://docs.commercetools.com/api/import-export/best-pract
   `keys.prefix` — the [teardown](teardown.md#teardown) command does exactly that. Channels,
   customer groups and tax categories are outside that scope and outside the
   Import API entirely: created through the platform API. Teardown leaves them,
-  except a tax category `load` created, which `--include-created-tax-categories`
-  removes; the rest are removed by hand.
+  except those `load` created, which `--include-created-prerequisites` removes;
+  one the project held before is removed by hand, by its owner.
 - Standalone Prices need `manage_standalone_prices` and customer groups need
   `manage_customer_groups`; `manage_products` covers every other request here.
 - Containers, Operations and Summaries are generally available; the per-resource

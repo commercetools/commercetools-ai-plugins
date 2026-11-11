@@ -183,19 +183,23 @@ for (const product of products) {
 }
 ```
 
-**CORRECT — pass `priceCurrency` + `priceCountry` in the search query body:**
+**CORRECT — fetch the products with the GraphQL `productsSearch` query and pass `currency` + `country` to the `price` field:**
 
-```typescript
-// CORRECT — commercetools resolves prices in the same search response
-const body: ProductSearchRequest = {
-  productProjectionParameters: {
-    priceCurrency: currency,
-    priceCountry: country,
-  },
-  // ...
-};
-// Variants arrive with .price already set — no extra fetch
+```graphql
+# CORRECT — commercetools resolves prices in the same search response
+productsSearch(query: { ... }) {
+  results {
+    product {
+      masterData { current { masterVariant {
+        price(currency: $currency, country: $country) { value { centAmount currencyCode } }
+      } } }
+    }
+  }
+}
+# Variants arrive with price already selected — no extra fetch
 ```
+
+Do not use `productProjectionParameters` in the Product Search request body: it is deprecated.
 
 ### Account page — serial user + orders fetch
 

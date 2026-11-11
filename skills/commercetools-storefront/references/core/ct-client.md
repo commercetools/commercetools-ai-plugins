@@ -84,7 +84,7 @@ export interface Session {
 | `country/currency/locale` | Country selector | Never (persists) |
 
 The storage mechanism and cookie read/write binding are stack-specific. 
-> Find the adapter's `data-loading.md` for parrents of implementation.
+> Find the adapter's `data-loading.md` for patterns of implementation.
 > Example **Next.js (stateless BFF):** a `jose`-signed JWT in an HTTP-only cookie via `cookies()` (`next/headers`) + `NextResponse.cookies`, with `getSession` / `getLocale` / `createSessionToken` / `setSessionCookie` / `clearSessionCookie` — see the full `<server>/session` module in the adapter's [data-loading.md](../stack/nextjs/data-loading.md).
 
 ---

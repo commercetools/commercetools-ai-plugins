@@ -40,19 +40,7 @@ Bundles are a parent line item with child line items linked by a commercetools c
 | Counting children in cart badge | `cartItemCount()` filters `!i.parentKey` before summing |
 | Sequential action calls for cascades | Batch all actions in a single `applyCartAction` to avoid 409 version conflicts |
 
-## Reference
-
-| Task | Reference |
-|---|---|
-| commercetools setup script, CartLineItem extension, cascade cart operations, cart-mapper, items endpoint, bundle-utils, cart fetcher override, CartItem UI, BundleAddToCart component | [bundles.md](./bundles.md) |
-
-
-
-# Bundles
-
-**Impact: MEDIUM — Bundle children must be linked to their parent via a commercetools custom field (`parentKey`). Without it, removing the parent leaves orphaned child line items in the cart.**
-
-Bundles are implemented as a parent line item with child line items linked by a `parentKey` custom field. All cart operations cascade from parent to children.
+---
 
 ## Table of Contents
 - [Pattern 1: commercetools Setup](#pattern-1-commercetools-setup)

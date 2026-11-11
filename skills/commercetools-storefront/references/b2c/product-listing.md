@@ -57,14 +57,14 @@ Functions to implement:
 
 ## Pattern 3: Product Search API
 
-**See [product-search.md](../../../commercetools-platform/references/product-search.md)** for the full reference — deprecation warning, query examples, facets, and all `productProjectionParameters` patterns.
+**See [product-search.md](../../../commercetools-platform/references/product-search.md)** for the full reference — deprecation warning, query examples, facets, and the GraphQL `productsSearch` patterns for price, locale, and discount selection.
 
 `<server>/ct/search` key functions for this storefront:
 
 - `searchProducts(params)`: queries using the v2 Product Search API. Supports text query, `categoryId` filter via `categoriesSubTree`, pagination (`limit`/`offset`), and sort
 - `getProductBySku(sku, locale, currency, country)`: fetches a single product by exact SKU match
 
-> **Price selection:** Pass `priceCurrency` + `priceCountry` in `productProjectionParameters` so variants arrive with `.price` already resolved to the correct tier.
+> **Price selection:** Fetch product data with the GraphQL `productsSearch` query and pass `currency` + `country` to the `price` field so variants arrive with `.price` already resolved to the correct tier. `productProjectionParameters` is deprecated.
 
 ---
 
@@ -92,7 +92,7 @@ In the server-rendered category page/load:
 5. Call `searchProducts({ categoryId: category.id, locale, currency, country, ... })`.
 6. Render breadcrumb, heading, `ProductGrid`, and pagination.
 
-> Find Stack's `data-loading.md` for more details of aconcrete server-rendered category page implementation.
+> Find Stack's `data-loading.md` for more details of a concrete server-rendered category page implementation.
 
 ---
 

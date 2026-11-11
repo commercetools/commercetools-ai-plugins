@@ -24,7 +24,7 @@ B2C-specific auth patterns that extend the shared foundation in [reference](../c
 
 ## Anonymous Cart Merge
 
-Pass `anonymousCartId` and `anonymousCartSignInMode` to `apiRoot.login().post()` when a guest cart exists:
+Pass `anonymousCart` (a `{ typeId: 'cart', id }` reference; `anonymousCartId` is deprecated) and `anonymousCartSignInMode` to `apiRoot.login().post()` when a guest cart exists:
 
 ```typescript
 // <server>/ct/auth
@@ -34,7 +34,7 @@ export async function signIn(email: string, password: string, anonymousCartId?: 
       email,
       password,
       ...(anonymousCartId && {
-        anonymousCartId,
+        anonymousCart: { typeId: 'cart', id: anonymousCartId },
         anonymousCartSignInMode: 'MergeWithExistingCustomerCart',
       }),
     },
@@ -43,7 +43,7 @@ export async function signIn(email: string, password: string, anonymousCartId?: 
 }
 ```
 
-The login server endpoint reads `session.cartId` as `anonymousCartId`, calls `signIn`, then writes `body.cart.id` back into the session as the new `cartId`.
+The login server endpoint reads `session.cartId` as the anonymous cart ID, calls `signIn`, then writes `body.cart.id` back into the session as the new `cartId`.
 
 ---
 
@@ -66,7 +66,7 @@ A client component that wraps the account section and redirects to `/login?redir
 
 ## Checklist
 
-- [ ] `signIn` passes `anonymousCartId` + `anonymousCartSignInMode: 'MergeWithExistingCustomerCart'` when a guest cart exists
+- [ ] `signIn` passes `anonymousCart` + `anonymousCartSignInMode: 'MergeWithExistingCustomerCart'` when a guest cart exists
 - [ ] Login server endpoint writes `cart.id` from the commercetools response back into the session
 - [ ] Register calls `signIn` immediately after `apiRoot.customers().post()`
 - [ ] Account layout redirects to `/login?redirect=<path>` on `null`; returns `null` while loading

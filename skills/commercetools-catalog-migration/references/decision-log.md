@@ -216,6 +216,13 @@ Log, every time: the project key, the timestamp, exactly what changed, and who
 authorised it. `--apply` reports `project-updated` to stdout and nowhere else,
 so if it is not logged it did not happen as far as anyone later is concerned.
 
+**Record the authoriser as the user said it**: "the user, in chat", plus the name
+or role they gave. If the engagement needs a name and none was given, ask for it.
+Never fill it in from the account email in the session context, the git
+configuration, the shell user or the machine. A yes in chat is not an
+introduction, and a name nobody gave is a false entry in the one record the next
+person relies on.
+
 Manual project changes count doubly. Adding a country to make country-scoped
 prices load is a commerce decision affecting shipping and tax — `preflight`
 deliberately refuses to make it, which is exactly why the human who did make it

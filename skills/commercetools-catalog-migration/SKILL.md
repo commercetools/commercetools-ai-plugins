@@ -1,6 +1,6 @@
 ---
 name: commercetools-catalog-migration
-description: Migrates a product catalog from any source system into commercetools through a canonical NDJSON feed contract — the pipeline never parses the source, so each engagement writes only a small adapter. Covers the feed contract, writing an adapter, ProductType derivation and its irreversible attribute constraints, decimal-to-minor-unit money conversion, project-wide slug allocation, category order hints, opening stock per SKU and supply channel, tax categories, and the offline audit gate. Use when migrating or bulk-loading a product catalog into commercetools, writing an adapter for a source export, deciding SameForAll versus CombinationUnique, converting prices to centAmount, or diagnosing rejected Import API operations. Covers loading a catalog from a source system into commercetools — not the Classic-to-Modular catalog model migration of an existing project, which is the staged Modular Catalog migration guide. Not for ongoing sync after cutover, and not for customers, orders, carts, or promotions.
+description: Migrates a product catalog from any source system into commercetools through a canonical NDJSON feed contract — the pipeline never parses the source, so each engagement writes only a small adapter. Covers the feed contract, writing an adapter, ProductType derivation and its irreversible attribute constraints, decimal-to-minor-unit money conversion, project-wide slug allocation, category order hints, opening stock per SKU and supply channel, tax categories, and the offline audit gate. Use when migrating or bulk-loading a product catalog into commercetools, writing an adapter for a source export, deciding SameForAll versus CombinationUnique, converting prices to centAmount, or diagnosing rejected Import API operations. Customer accounts and order history only on the user's sign-off. Not the Classic-to-Modular migration of an existing project (the staged Modular Catalog migration guide), and not for ongoing sync after cutover, carts, or promotions.
 when_to_use:
   - "Migrating or bulk-loading a product catalog from a source system into a commercetools project"
   - "Writing an adapter that turns a source export (hybris ImpEx, PIM extract, CSV) into a catalog feed"
@@ -22,8 +22,8 @@ decisions**, not a loaded dataset: what was translated, what was approximated,
 and what was lost, with a rationale per decision. A migration claiming zero
 information loss is not being honest.
 
-If the work is a recurring sync from a PIM, ERP or OMS, this is the wrong
-approach: that is integration, contract-heavy rather than decision-heavy.
+A recurring sync from a PIM, ERP or OMS is the wrong approach here: that is
+integration, contract-heavy rather than decision-heavy.
 
 ## The source boundary is a data contract, not a code module
 
@@ -38,12 +38,11 @@ fetched as a release after the user's yes ([how](references/getting-the-pipeline
 **never parses a source system**. It defines a feed contract and starts there.
 Everything source-specific lives in the adapter, upstream of the contract.
 
-This is not decoration. A universal parser for any source platform does not
-exist — no two installations agree on their type system — so source knowledge
-inside the pipeline is what destroys retargetability. A seam made of *data*
-rather than *code* makes that coupling impossible rather than discouraged. The
-contract is `schema/catalog-feed.schema.json` in that repository; treat it as
-the API.
+A universal parser for any source platform does not exist — no two
+installations agree on their type system — so source knowledge inside the
+pipeline is what destroys retargetability. A seam made of *data* rather than
+*code* makes that coupling impossible rather than discouraged. The contract is
+`schema/catalog-feed.schema.json` in that repository; treat it as the API.
 
 ## Before you start
 
@@ -63,21 +62,19 @@ the API.
    Pass the commercetools project key and region (as in `api.{region}.commercetools.com`) only if already in your context; otherwise omit both. Never search files or ask the user for them.
    <!-- ct:docs-search:end -->
 
-   If the search prints "No results found", that is a failed lookup, not a sign
-   the documentation is silent. Retry once with one or two of the terms alone
-   (`Import API`, `Standalone Prices`), and if that is empty too, look the same
-   topics up through the Knowledge MCP before going on. The references in this
-   skill were checked at one point in time, and this search is how you learn
-   what has changed since, so do not continue on the references alone.
+   "No results found" is a failed lookup, not silent documentation. Retry once
+   with one or two of the terms alone (`Import API`, `Standalone Prices`); if
+   still empty, look the topics up through the Knowledge MCP. The references
+   were checked once; this search shows what changed since, so do not rely on
+   them alone.
 
-   The limits and constraints in [Critical](#critical) were verified in
-   September 2026. Re-check any of them here before relying on one.
+   The [Critical](#critical) limits were verified in September 2026; re-check
+   one here before relying on it.
 
 2. **Lay out the engagement beside the pipeline copy, never inside it.**
-   `migration/` holds the config, the interview, the decision log and the
-   adapter; `source-export/` holds what the customer handed over. Create
-   `migration/` before step 0 writes `INTERVIEW.md` into it. The layout, and what
-   to commit, is in
+   `migration/` holds the config, interview, decision log and adapter;
+   `source-export/` holds what the customer handed over. Create `migration/`
+   before step 0 writes `INTERVIEW.md` into it. The layout, and what to commit:
    [references/decision-log.md](references/decision-log.md#where-it-lives--and-the-layout-it-belongs-to).
 
 ## Workflow
@@ -101,7 +98,8 @@ the API.
       the catalog-model question, first, because its answers can end the
       engagement (over 100 variants per product cannot be loaded under
       `Classic`) and are cheaper to learn before an adapter exists; then
-      0c, each conditional that applies, and 0d. Tell the user to edit the file and say when it is done,
+      0c, each conditional that applies, 0d, and a scope row per non-catalog
+      entity 0b found: customers and orders stay out without a written yes. Tell the user to edit the file and say when it is done,
       and that you will re-read it then and name any empty row. The config and
       adapter wait because each answer is irreversible or fails silently.
    4. **Continue only when every answer cell is filled in.** Otherwise name the
@@ -122,8 +120,8 @@ the API.
    [references/decision-log.md](references/decision-log.md).
 
    **Keep writing it at every step from here**, not at the end: a log
-   reconstructed afterwards keeps what turned out well and loses the
-   irreversible decisions taken under uncertainty.
+   reconstructed afterwards loses the irreversible decisions taken under
+   uncertainty.
 
 1. **Write the adapter — one product first.** Read the source, emit NDJSON
    against the contract. This is the only code an engagement normally writes,
@@ -133,13 +131,13 @@ the API.
    with the record types in
    [references/catalog-feed-contract.md](references/catalog-feed-contract.md).
 
-   **Take the thin vertical slice before writing the rest**: one product, two
-   or three variants, through `validate`, `derive`, `plan` and `audit`. Before
+   **Take the thin vertical slice first**: one product, two or three
+   variants, through `validate`, `derive`, `plan` and `audit`. Before
    the first of them runs, record which pipeline release it is (the tag, one
    line in `DECISIONS.md`), whether you fetched it or found it there:
    [getting-the-pipeline.md](references/getting-the-pipeline.md).
    Writing every SKU in one pass usually gets away with it, which is why this
-   step keeps getting skipped — and is not a reason to skip it. The axis
+   step gets skipped, and no reason to skip it. The axis
    model, the money conversion and the attribute constraints are wrong in the
    same way across five records as across five thousand, and they are
    irreversible once loaded.
@@ -148,9 +146,9 @@ the API.
    derived from a display name, a hierarchy level collapsed, an inherited price
    resolved, a locale tag normalised, a sentinel skipped or interpreted, a field
    dropped, and *every silent cap* — anything sampled, truncated or skipped.
-   These are the decisions most often lost, because they are made while writing
-   code and feel like implementation details. They are not: they are what the
-   migration did to the customer's data.
+   These decisions are lost most often: made while writing code, they feel
+   like implementation details, yet they are what the migration did to the
+   customer's data.
 
 2. **Run the offline stages in order.** Each gates the next, so a defect is
    reported at the earliest stage that can see it:
@@ -163,8 +161,8 @@ the API.
    npm run pipeline -- audit    --config ../migration/migration.config.json
    ```
 
-   None of these need credentials, by design: a broken feed or an unloadable
-   plan reports the real problem on a laptop with no `.env`.
+   None needs credentials, by design: a broken feed or unloadable plan
+   reports the real problem on a laptop with no `.env`.
 
    **Log the findings you accept rather than fix.** A diagnostic that changes the
    adapter leaves no decision behind — the feed is regenerated and the finding
@@ -178,10 +176,10 @@ the API.
    `plan` writes: `derive` writes the product model only, and the tax rates and
    the other decisions recorded while mapping the feed are added by `plan`.
 
-   Log the *review outcome*, not its contents — one entry naming what was
-   accepted and against which plan. `MODEL-REVIEW.md` is regenerated on every
-   run and can hold thousands of entries; copying them into an append-only log
-   guarantees the two disagree by the next run.
+   Log the *review outcome*, not its contents: one entry naming what was
+   accepted against which plan. `MODEL-REVIEW.md` is regenerated every run
+   and can hold thousands of entries; copied into an append-only log, the two
+   disagree by the next run.
 
 4. **Check the target project** once credentials exist. `preflight` answers
    whether the project will accept the plan, in a handful of GETs, before
@@ -193,11 +191,11 @@ the API.
 
    **`--apply` and `--switch-catalog-model` write to the customer's project, and so does
    any manual change made to get past preflight. Log every one**: project key,
-   timestamp, exactly what changed, who authorised it. They report `project-updated` and
-   `catalog-model-switched` to stdout and nowhere else, so an unlogged change is one
-   nobody can account for. Manual changes count doubly — adding a country to make
-   country-scoped prices load affects shipping and tax, which is why `preflight` refuses
-   to do it.
+   timestamp, exactly what changed, who authorised it as the user said it, never from the
+   account. They report `project-updated` and `catalog-model-switched` to stdout and
+   nowhere else, so an unlogged change is unaccounted for. Manual changes count doubly:
+   a country added for country-scoped prices affects shipping and tax, so `preflight`
+   refuses it.
 
    **A `catalog-model-*` finding stops you:** read
    [switching-to-modular.md](references/switching-to-modular.md) first. An empty project
@@ -226,8 +224,7 @@ the API.
    ([progress](references/running-the-pipeline.md#progress-while-a-stage-runs)).
 
    Log one entry per `--execute`: project key, timestamp, what was sent, the
-   outcome. `out/load-result.json` holds the detail but is regenerated and
-   gitignored.
+   outcome. `out/load-result.json` is regenerated and gitignored.
 
 6. **Verify, and do not treat the load's own report as the answer.** An
    accepted Import Request is not an imported resource — the API validates
@@ -239,12 +236,11 @@ the API.
    npm run pipeline -- verify --config ../migration/migration.config.json
    ```
 
-   It needs `view_products` and, under standalone pricing,
-   `view_standalone_prices` — reading is a different scope set from writing.
+   It needs `view_products`, plus `view_standalone_prices` under standalone
+   pricing and `view_customers` with customers: reading is not writing.
 
-   If it leads with `operations-in-flight`, wait and re-run `verify`, not
-   `load`: the Import API retries pending operations itself, and only
-   `rejected` ones need resubmitting.
+   On `operations-in-flight`, wait and re-run `verify`, not `load`: the Import
+   API retries pending operations itself; only `rejected` ones need resubmitting.
 
    Log the result as the closing entry for the run, **including a clean one**.
    "Reconciled, no differences" is the sentence someone needs months later when
@@ -256,12 +252,11 @@ the API.
    [teardown.md](references/teardown.md#teardown).
    **Ask before every `--execute`, as for the load.** A request to "remove
    everything you loaded" names an outcome, not which keys or how many: show the
-   dry run, name the project and the counts, and wait for the yes. A tax category
-   `load` created goes with `--include-created-tax-categories`, never a
+   dry run, name the project and the counts, and wait for the yes. Prerequisites
+   `load` created go with `--include-created-prerequisites`, never a
    hand-written delete.
 
-7. **Fix defects in the adapter, never in the feed by hand.** The feed is
-   regenerated on every run.
+7. **Fix defects in the adapter, never by hand in the regenerated feed.**
 
 ## Critical
 
@@ -396,14 +391,16 @@ reference beside it — this list exists so none is *missed*.
 In scope: ProductTypes, Categories, Products, Variants, and prices — the
 irreducible core of a loadable, browsable catalog.
 
-Out of scope, and deliberately so. **Ongoing sync after cutover** and delta
-feeds as a running service are integration, not migration. **Customers, orders,
-carts and payments** are a different migration with different invariants.
+Out of scope, deliberately. **Ongoing sync after cutover** and delta
+feeds as a running service are integration, not migration. **Carts and payments**
+are a different migration with different invariants; **customers** and **orders**
+need the user's written yes ([customers](references/feed-customers.md), [orders](references/feed-orders.md)).
 **Promotions and discounts** are usually a re-modelling exercise rather than a
 translation, and **attribute modelling in the abstract**, the choice of tax mode
 and pricing strategy are product data modelling, upstream of this — though the
 tax categories a `Platform` mode needs are loaded, as prerequisites. **Cutover sequencing**,
-freeze windows and rollback are out of scope too.
+freeze windows and rollback are out of scope too. Resources the pipeline
+loads: [entity-coverage.md](references/entity-coverage.md).
 
 **Opening stock is in scope; inventory as a running concern is not.** An
 `inventoryEntry` record loads the figure a project opens on, and whatever owns
@@ -413,7 +410,7 @@ normal outcome.
 
 Never migrate credentials, payment tokens or PSP references. They are not
 portable, and re-keying them silently breaks reconciliation with the provider.
-Passwords do not migrate either — commercetools cannot import a foreign hash.
+Passwords do not migrate: no foreign hash imports, so customers load under ExternalAuth.
 
 ## Checklist
 
@@ -437,6 +434,8 @@ Before running the pipeline:
       tax categories are the only exception: `load` creates the missing ones
       with their keys **verbatim**, and teardown leaves them unless told to remove
       the tax categories `load` created.
+- [ ] Every non-catalog entity in the source was asked about; customers and orders
+      load only on a written yes (`entities.*: true`), else `false` and logged.
 - [ ] Whether opening stock is in scope was **asked**, not assumed either way.
       A catalog loaded without it is normal; a catalog loaded with stock nobody
       agreed to is a figure the business did not sign off. If it is in scope,

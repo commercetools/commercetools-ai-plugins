@@ -192,9 +192,9 @@ The following limits are subject to change — confirm current values in the pub
 ## Discount Type Quick Reference
 
 **Product Discounts:**
-- Can only be used with platform pricing (not ExternalAmount/External)
+- Apply to platform prices (Embedded and Standalone Prices); a Line Item with an external price (`ExternalPrice` / `ExternalTotal` price mode) doesn't take its price from a platform Price, so use Cart Discounts or external discounts there
 - Applied at product variant level, before items are added to the cart
-- Do NOT stack — only the highest-ranked (lowest sortOrder value) applies per variant
+- Do NOT stack — only the highest-ranked (highest sortOrder value) applies per variant
 - Max 500 active at once
 
 **Cart Discounts:**

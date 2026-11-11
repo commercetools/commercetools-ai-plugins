@@ -28,7 +28,7 @@ Yes. Projects may:
 
 ### Can a user hold multiple roles?
 
-Yes. An associate can be assigned multiple roles within a Business Unit. There is currently no hard platform limit on the number of roles per associate, unless the project reaches edge-case scale (thousands of roles for a single user).
+Yes. An associate can be assigned multiple roles within a Business Unit. An associate can hold up to **5** role assignments (`AssociateRoleAssignment`) per Business Unit, and a Business Unit can have up to 2000 associates ([limits](https://docs.commercetools.com/api/limits.md)).
 
 ---
 

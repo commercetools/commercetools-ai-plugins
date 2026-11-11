@@ -36,7 +36,10 @@ discovery found:
 2. **Discover the source (0b)**, which the data needs before the rest can be
    asked well.
 3. **Write [`migration/INTERVIEW.md`](#the-interview-file)** with every
-   question from 0a, 0c, each applicable conditional and 0d, then stop. 0a's
+   question from 0a, 0c, each applicable conditional and 0d, and one row per
+   non-catalog entity 0b found
+   ([scope](entity-coverage.md#in-step-0-which-entities-are-in-scope)),
+   then stop. 0a's
    answers can end the engagement, so they come first in the file, and nothing
    after it — above all the adapter — starts until they are answered.
 4. **When every question is answered**, write the config and open the
@@ -44,9 +47,9 @@ discovery found:
 
 ## The interview file
 
-Questions go in a file rather than in chat for two reasons. A question tool
-holds only a few questions per call, so the rest are easy to drop and then
-default without anyone noticing. And the answers are
+Questions go in a file, not in chat, for two reasons. A question tool
+holds only a few questions per call, so the rest get dropped and defaulted
+unnoticed. And the answers are
 rarely one person's: the storefront owner, whoever owns tax and whoever owns
 the URLs each need time, and a file can be forwarded, edited by each of them
 and kept as the record.
@@ -147,14 +150,14 @@ The file stays open for the whole engagement, not only step 0. `plan`, `audit`,
 `preflight`, `load` or `verify` can each surface something only a person can
 settle: a store whose country the project does not accept, a warning that is
 right or wrong depending on how the business sells, a mismatch with no
-technical cause. Do not settle it yourself and do not ask it in chat. Add it
-to the file as a row of the section it belongs to, in the same shape: the next
+technical cause. Do not settle it yourself or ask it in chat. Add it
+as a row of the section it belongs to, in the same shape: the next
 number in that section (`3.3` after `3.2`), and an entry in its **Writes**
 field. Open a new section, numbered after the last, only when no existing one
 fits, and say why in its **Why it matters** field.
 
-Search the file first. A question that is already in it, answered or not, is
-not asked again: point the user to its row. If what you found overturns an
+Search the file first. A question already in it, answered or not, is not
+asked again: point the user to its row. If what you found overturns an
 answered row, add a new row that names the one it supersedes, as the decision
 log supersedes rather than rewrites.
 
@@ -166,8 +169,7 @@ Under the section's table, add one line per late row, naming the row:
 Already loaded: nothing.
 ```
 
-- **during** names the stage and the diagnostic, so the owner can see what
-  prompted it.
+- **during** names the stage and diagnostic that prompted it.
 - **Affects** names the earliest stage whose output the answer can change.
   When the answers arrive, **start again from that stage**, not from where you
   stopped: everything after it was derived from the old assumption. Once the
@@ -177,10 +179,10 @@ Already loaded: nothing.
   already in the project, because that changes what a different answer costs.
 
 Then stop work that depends on the answer, say which question is open, and
-carry on with anything that does not. Never renumber, never insert a row
-between existing ones, and never edit an answered cell. Tell the user which
-sections gained rows, by row number: they may have filled those sections in
-already and will not look at them again.
+carry on with the rest. Never renumber, insert a row between
+existing ones, or edit an answered cell. Tell the user which
+sections gained rows, by number: they may have filled those in already and
+will not look again.
 
 The file settles *what* to do, not whether to write to the project. The
 question before `load --execute` is still asked live, naming the project and
@@ -237,7 +239,7 @@ reshapes a catalog to suit a tool.
 
 ## 0b. Discover the source
 
-Profile the export *before* the remaining questions, because the data answers
+Profile the export *before* the remaining questions: the data answers
 some of them. Work through [source-discovery.md](source-discovery.md) — **all
 of it, whichever path you take below.**
 
@@ -247,7 +249,7 @@ to extrapolate to, and under `onMissingDefinitions: require` the inference it
 exercises never runs. Read all of it and take the thin vertical slice from
 [writing-an-adapter.md](writing-an-adapter.md) instead.
 
-Otherwise, for an export you only get a sample of: profile it, write a
+Otherwise, for a sample: profile it, write a
 **throwaway probe adapter** over the sample, emit a probe feed, and run
 `validate` and `derive` on that. Type, `enum`/`lenum` and
 attribute-constraint recommendations then come from the code that will run in
@@ -255,13 +257,14 @@ production rather than from an agent's reading, `mixed-value-types` fires
 where inference would be wrong rather than merely uncertain, and every
 irreversible choice arrives already flagged in `MODEL-REVIEW.md`.
 
-Discovery ends in a **mapping proposal** — a named artefact, because it is what
-a human signs off. Its section-by-section template is
+Discovery ends in a **mapping proposal**, the named artefact a human signs
+off. Its section-by-section template is
 [in source-discovery.md](source-discovery.md#the-mapping-proposal);
 write it from there, not from this paragraph. It settles two things that would
 otherwise be guessed: the largest product's variant count for 0a, which a
-customer may genuinely not know, and whether the source declares its own
-attribute types — the `onMissingDefinitions` answer below.
+customer may not know, and whether the source declares its own
+attribute types — the `onMissingDefinitions` answer below. It also lists the
+non-catalog entities found, with counts: each becomes a scope row.
 
 Say which path you took, and if it was a sample, present the proposal as
 **hypotheses, not conclusions** — a sample under-reports exactly what hurts:
@@ -294,7 +297,7 @@ commercetools can or cannot price is checked before it is put to the user.
 `productTypes.onMissingDefinitions` is **not** in that table: whether the
 source declares its own attribute types is a fact 0b established, not a
 preference. Set `require` when the adapter can emit `attributeDefinition`
-records, `infer` only when the source genuinely cannot describe its own type
+records, `infer` only when the source cannot describe its own type
 system — and then expect every inferred type to need review, because each
 one becomes an attribute type and constraint. No update action changes an
 attribute's type, and the
@@ -435,7 +438,7 @@ refuses, so a copy taken by mistake cannot run.
 
 Much of this is **intent, or a hypothesis from a sample — not fact**, and the
 later stages confirm all of it: `validate` recomputes the largest product's
-variant count from the whole feed and reports which model it actually
+variant count from the whole feed and reports which model it
 requires, `derive` re-runs inference over every record rather than 0b's
 sample, `preflight` reads the project's real `productCatalogModel`. Where
 intent and evidence disagree the evidence wins, and the disagreement is the

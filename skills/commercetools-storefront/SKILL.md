@@ -163,7 +163,7 @@ Pick the adapter for your frontend stack. Each stack folder under `references/st
 | Navigation patterns, header, mobile menu | [b2c/navigation.md](./references/b2c/navigation.md) |
 | Shared UI component library | [b2c/ui-components.md](./references/b2c/ui-components.md) |
 | PDP variant selector configuration (blocklist, swatch, sort) | [b2c/variant-config.md](./references/b2c/variant-config.md) |
-| Wishlist functionality | [b2c/wishlist.md](./references/b2c/wishlists.md) |
+| Wishlist functionality | [b2c/wishlists.md](./references/b2c/wishlists.md) |
 
 
 ### B2C Optional Features (`references/b2c/optional/`)
@@ -193,7 +193,7 @@ Pick the adapter for your frontend stack. Each stack folder under `references/st
 | Quote buyer actions — accept & place order, decline, renegotiate, state guards | [b2b/quote-actions.md](./references/b2b/quote-actions.md) |
 | Approval rules, approval flows, predicate builder, tier model | [b2b/approval-workflows.md](./references/b2b/approval-workflows.md) |
 | Dashboard shell, stat widgets, pages, sidebar nav items | [b2b/dashboard.md](./references/b2b/dashboard.md) |
-| Purchase lists (commercetools ShoppingList via as-associate, BU-scoped) | [b2b/purchase-lists.md](./references/b2b/shopping-lists.md) |
+| Purchase lists (commercetools ShoppingList via as-associate, BU-scoped) | [b2b/shopping-lists.md](./references/b2b/shopping-lists.md) |
 | Add a new B2B BFF endpoint + client state hook | [b2b/add-api.md](./references/b2b/add-api.md) |
 | B2B data loading — server-rendered vs client-fetched, mappers, BFF shape | [b2b/data-loading.md](./references/b2b/data-loading.md) |
 | B2B variant selector configuration | [b2b/variant-config.md](./references/b2b/variant-config.md) |
@@ -215,7 +215,7 @@ Pick the adapter for your frontend stack. Each stack folder under `references/st
 - **BFF architecture** — `<server>/ct/*` is server-only. Zero commercetools SDK imports in any client component. (Requires a server tier — see the architecture assumption.)
 - **Session & client secrets** — the commercetools client secret and any session-signing secret are server-only env vars, never hardcoded and never exposed to the client bundle (no public env prefix).
 - **commercetools login endpoint** — `apiRoot.login().post()`, never `apiRoot.customers().login()`.
-- **B2B: as-associate chain** — ALL B2B writes (cart, order, quote, approval, BU) go through `apiRoot.asAssociate().*`. Never use project-level `apiRoot.*` for user-facing B2B mutations.
+- **B2B: as-associate chain** — BU-scoped buyer writes go through `apiRoot.asAssociate().*`, never project-level `apiRoot.*` (except sign-in BU discovery).
 - **B2B: session B2B fields** — `businessUnitKey` + `storeKey` + `distributionChannelId` + `supplyChannelId` + `productSelectionId` are always written together from `getStoreChannelData(storeKey)`.
 - **B2B: three-field locale atomicity** — `locale`, `currency`, `country` must all be updated together. Reset `cartId` on locale/currency change.
 

@@ -22,7 +22,7 @@ Production-tested patterns for building a B2C storefront on commercetools with s
 
 ## Key Takeaways (B2C-specific)
 
-**Anonymous cart merge is mandatory.** Pass `anonymousCartId` and `anonymousCartSignInMode: 'MergeWithExistingCustomerCart'` on login so the pre-login cart is preserved.
+**Anonymous cart merge is mandatory.** Pass `anonymousCart: { typeId: 'cart', id }` and `anonymousCartSignInMode: 'MergeWithExistingCustomerCart'` on login so the pre-login cart is preserved.
 
 **Locales use BCP-47 format everywhere.** `en-US`, `de-DE` — the same format commercetools uses. The framework routes locale-prefixed paths (`/en-US/`, `/de-DE/`, etc.). The `your-shop-country-locale` cookie stores the BCP-47 locale and drives which locale the entry redirect chooses on first visit.
 
@@ -83,7 +83,7 @@ Find adapter's `overview.md` file for stack's specific priority.
 
 ### HIGH
 
-- **Anonymous cart merge** — Pass `anonymousCartId` to commercetools login so the cart is preserved on sign-in.
+- **Anonymous cart merge** — Pass `anonymousCart` to commercetools login so the cart is preserved on sign-in.
 - **Client state invalidation** — refresh/invalidate `KEY_CART` and `KEY_ACCOUNT` after login/logout/order placement.
 
 ### MEDIUM

@@ -35,7 +35,7 @@ Example `CartDraft` request:
     "key": "example-cart-key",
     "currency": "USD",
     "country": "US",
-    "ShippingMode": "Multiple",
+    "shippingMode": "Multiple",
     "lineItems": [
       // ...
     ]

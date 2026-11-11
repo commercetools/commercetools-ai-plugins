@@ -71,7 +71,7 @@ The setup for the discount code is straightforward — associate it with the car
 
 ### Cart Interactions
 
-Items are added to the cart using the custom type defined above. The first combo item is added with the isCombo set to false and the comboId with no value.
+Items are added to the cart using the custom type defined above. The first combo item is added with isPartOfCombo=false and no comboId.
 
 ```javascript
 curl --location 'https://api.{region}.commercetools.com/{{project-key}}/carts/{{}cart-id}' \
@@ -105,7 +105,7 @@ curl --location 'https://api.{region}.commercetools.com/{{project-key}}/carts/{{
 }'
 ```
 
-When the second combo item is added to the cart, the item is added with the isCombo flag set to true and the comboId set to some value (GUID). The request also includes update commands on the first lineItem to set the isCombo attribute to true and the comboID to the new value.
+When the second combo item is added to the cart, the item is added with isPartOfCombo set to true and the comboId set to some value (GUID). The request also includes update commands on the first lineItem to set the isPartOfCombo attribute to true and the comboID to the new value.
 
 ```javascript
 curl --location 'https://api.{region}.commercetools.com/{{project-key}}/carts/{{cart-id}}' \
@@ -153,7 +153,7 @@ curl --location 'https://api.{region}.commercetools.com/{{project-key}}/carts/{{
 
 The comboId would be unique for each pair of combo items. When line items are added with unique custom attribute values they are added as new line items — as opposed to incrementing the quantity of an existing line item. The comboId could also aid in cleanup of items as customers add and remove items from the cart.
 
-When the discount code is added to the cart the discount is applied only to the items with the matching skus, isCombo=true and a comboId value.
+When the discount code is added to the cart the discount is applied only to the items with the matching skus, isPartOfCombo=true and a comboId value.
 
 ### Representative Cart Examples
 

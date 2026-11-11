@@ -76,7 +76,7 @@ When this skill is invoked, always follow these steps:
 
 **sortOrder direction: higher value fires first.** For both Product Discounts and Cart Discounts, the discount with the highest `sortOrder` value (closest to 1) is applied first. `0.9` fires before `0.5`. For Product Discounts only one applies (no stacking); for Cart Discounts they stack by default unless `stackingMode: StopAfterThisDiscount` is set.
 
-**Product Discounts cannot be used with external pricing.** If a project uses an external price source, Product Discounts are not applied. Use Cart Discounts for any promotional discounts when external pricing is active.
+**Product Discounts apply to Embedded and Standalone Prices only.** A Line Item with an external price (`priceMode` `ExternalPrice`/`ExternalTotal`) gets no Product Discount. Use Cart Discounts, or external discounts (`value` `external`).
 
 **Discount Groups bundle multiple cart discounts under one entity.** A Discount Group has its own `sortOrder` and a `"Best deal"` prioritization mode — only the cart discount from the group that gives the customer the greatest saving is applied. Use Discount Groups to manage large-scale campaigns (e.g., Black Friday) where deactivating dozens of individual discounts at once would otherwise be error-prone.
 
@@ -178,7 +178,7 @@ When this skill is invoked, always follow these steps:
 
 - **Direct Discounts block Discount Codes.** Never add a Direct Discount to a cart if the checkout flow expects users to enter discount codes.
 - **sortOrder: higher value fires first** — for both Product Discounts and Cart Discounts. `0.9` is applied before `0.5`. This is a common misconception that causes incorrect promotion behavior.
-- **Product Discounts do not work with external pricing.** If the project uses an external price source, switch all promotional discounts to Cart Discounts.
+- **Product Discounts don't apply to externally priced Line Items.** Use Cart Discounts or external discounts.
 - **triggerPattern SKU predicates are ANDed across entries.** A single `CountOnLineItemUnits` entry can only match one SKU — add separate entries per bundle component.
 - **Score must be set before shipping rate lookup.** `setShippingRateInput` must be called before checkout and before shipping rate totals are calculated. Calling it after order creation has no effect.
 - **Shipping predicate failures are silent.** If a predicate syntax error exists, CT may silently return no methods or all methods. Always test predicate behavior explicitly with `GET /shipping-methods?cartId=<id>`.

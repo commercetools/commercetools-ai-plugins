@@ -72,7 +72,7 @@ See [Test an event application locally](https://docs.commercetools.com/connect/t
 - **Re-fetch the Order by id** from the message's `resource.id` — don't trust the (possibly stale/omitted) payload. This is the required pattern for at-least-once delivery.
 - **Record the transaction** via the engine's *record/commit* API (Avalara `createTransaction` with `commit: true`; TaxJar `POST /v2/transactions/orders`). This is what appears in the engine's dashboard — the calculator's quote never does.
 - **Be idempotent.** Use a **stable `transaction_id` = the order id**, so a redelivered message hits the engine's duplicate guard (TaxJar returns `422`; treat as already-recorded). Redelivery is guaranteed, not hypothetical.
-- **Ack correctly.** Reply **`200`** for handled *and* irrelevant-but-acked messages — the Connect event contract expects a `200` ([docs](https://docs.commercetools.com/connect/test-applications-locally.md)); a positive ack tells the platform "don't redeliver." Return non-2xx only for transient failures you *want* redelivered (Subscriptions retry unacked messages, at-least-once). Ack the platform's test/probe messages too.
+- **Ack correctly.** Reply **`200`** for handled *and* irrelevant-but-acked messages — Connect treats `102`, `200`, `201`, `202` and `204` as a positive ack ([docs](https://docs.commercetools.com/connect/test-applications-locally.md)); a positive ack tells the platform "don't redeliver." Return non-2xx only for transient failures you *want* redelivered (Subscriptions retry unacked messages, at-least-once). Ack the platform's test/probe messages too.
 
 ### Full lifecycle (if in scope)
 

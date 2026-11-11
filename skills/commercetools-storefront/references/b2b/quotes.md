@@ -40,7 +40,7 @@ QuoteRequest  →  StagedQuote  →  Quote (round 1)
 | Resource | Who creates it | Key fields |
 |---|---|---|
 | `QuoteRequest` | Buyer (from active cart) | `comment`, `purchaseOrderNumber`, `lineItems`, `totalPrice` |
-| `StagedQuote` | commercetools automatically | `sellerComment` (mutable — always latest seller edit) |
+| `StagedQuote` | Seller (after accepting the `QuoteRequest`) | `sellerComment` (mutable — always latest seller edit) |
 | `Quote` | Seller (in Merchant Center) | `sellerComment` (snapshot per round), `buyerComment`, `validTo`, `quoteState` |
 
 One negotiation thread = one `StagedQuote` + one or more `Quote` rounds sharing the same `stagedQuote.id`. The `QuoteRequest` is the thread's origin.

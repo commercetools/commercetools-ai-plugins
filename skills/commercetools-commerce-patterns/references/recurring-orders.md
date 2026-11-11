@@ -119,7 +119,7 @@ To create a recurring order that starts in the future:
 
 - Must use `POST /recurring-orders` (not `/orders`)
 - Include `startsAt` field with the future ISO 8601 date
-- **The first order is still created immediately** even when `startsAt` is set — it is not deferred
+- `POST /recurring-orders` creates no Order itself; the Recurring Order becomes active and eligible to generate new Orders at `startsAt`
 - All line items in the cart must share the same recurrence schedule; mixed schedules return a 400 error
 - Cart must include a `customerId` — anonymous carts are not supported for recurring orders
 

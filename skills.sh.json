@@ -16,6 +16,7 @@
         "commercetools-integration-layer",
         "commercetools-integrations",
         "commercetools-mcp",
+        "commercetools-migration-orchestrator",
         "commercetools-spec-driven-development"
       ]
     }

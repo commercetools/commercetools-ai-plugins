@@ -20,7 +20,7 @@ These are part of the requests themselves, or sent by AI tools that offer no way
 
 - **Email domain:** the part after the @ of the email address configured in git (`git config user.email`), or of the address your editor signs you in with when it provides one (Cursor). Read once and stored next to the installation ID. Delete that file to have it read again.
 - **Installation ID:** a random value stored in `~/.commercetools/`, or in your temp directory when that isn't writable. It tells installations apart, not people, and contains nothing derived from you or your machine. Delete the file to start fresh.
-- **Session ID:** a value that groups the requests of one agent session: random, or a one-way hash of the AI tool's own session ID.
+- **Session ID:** a value that groups the requests of one agent session: random, or a one-way hash of the AI tool's own session ID. Kept in `~/.commercetools/` (or your temp directory when that isn't writable) for up to 30 minutes after the last use.
 - **commercetools project key and region:** only when the agent already knows them from your conversation or from files it read for the task (it is told never to look for them), or from the MCP server URL you pasted when connecting a repository. Kept for the rest of that session.
 - **Connection outcome:** whether connecting a repository to a commercetools MCP Server worked, for example `added` or `project-mismatch`. Never the server URL, the repository path, or the file.
 

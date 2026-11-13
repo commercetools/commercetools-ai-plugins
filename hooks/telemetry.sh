@@ -166,16 +166,37 @@ collect_events() {
   esac
 }
 
-install_id_file() {
-  if [ "$1" = home ]; then
-    printf '%s' "$HOME/.commercetools/ai-plugin-install-id"
-  else
-    printf '%s' "$TMP/ct-ai-plugin-install-id"
-  fi
-}
-
 read_install_id() {
   head -n 1 "$1" 2>/dev/null | tr -dc 'a-f0-9'
+}
+
+# The milliseconds timestamp of a session state, 0 when there is none.
+state_ts() {
+  TS=$(printf '%s' "$1" | sed -n 's/.*"ts"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' | head -n 1)
+  printf '%s' "${TS:-0}"
+}
+
+# Every file this hook writes is named literally, in ~/.commercetools/, so a
+# reader (and the plugin directories' validators) sees where each write goes.
+# It runs curl, and a write target set at run time could be curl's config
+# file. The skill scripts, which may run in a sandbox that denies the home
+# folder, fall back to the temp folder; the hook only reads from there.
+write_session_state() {
+  { mkdir -p ~/.commercetools && (umask 077 && case "$CLIENT_FAMILY" in
+      claude) printf '%s' "$1" > ~/.commercetools/ai-plugin-invocation-claude.json ;;
+      cursor) printf '%s' "$1" > ~/.commercetools/ai-plugin-invocation-cursor.json ;;
+      codex) printf '%s' "$1" > ~/.commercetools/ai-plugin-invocation-codex.json ;;
+      copilot) printf '%s' "$1" > ~/.commercetools/ai-plugin-invocation-copilot.json ;;
+    esac); } 2>/dev/null
+}
+
+read_session_state() {
+  case "$CLIENT_FAMILY" in
+    claude) cat ~/.commercetools/ai-plugin-invocation-claude.json ;;
+    cursor) cat ~/.commercetools/ai-plugin-invocation-cursor.json ;;
+    codex) cat ~/.commercetools/ai-plugin-invocation-codex.json ;;
+    copilot) cat ~/.commercetools/ai-plugin-invocation-copilot.json ;;
+  esac 2>/dev/null
 }
 
 # ---------------------------------------------------------------------------
@@ -200,25 +221,26 @@ main() {
     *cursor*) CLIENT_FAMILY=cursor ;;
   esac
 
-  # Installation ID: an existing one from home, then temp; otherwise a new one,
-  # stored in the first place that takes it. Only an ID read back from disk is
-  # sent: one that can't be stored would be new on every call.
-  INSTALL_ID=""
-  INSTALL_ID_SOURCE=""
-  for SOURCE in home temp; do
-    INSTALL_ID=$(read_install_id "$(install_id_file "$SOURCE")")
-    [ -n "$INSTALL_ID" ] && { INSTALL_ID_SOURCE="$SOURCE"; break; }
-  done
+  # Installation ID: an existing one from home, then from temp (where a
+  # sandboxed skill script stored it); otherwise a new one in home. Only an ID
+  # read back from disk is sent: one that can't be stored would be new on every
+  # call, so without a writable home folder the hook sends none.
+  INSTALL_ID=$(read_install_id ~/.commercetools/ai-plugin-install-id)
+  INSTALL_ID_SOURCE=home
+  if [ -z "$INSTALL_ID" ]; then
+    INSTALL_ID=$(read_install_id "$TMP/ct-ai-plugin-install-id")
+    INSTALL_ID_SOURCE=temp
+  fi
   if [ -z "$INSTALL_ID" ]; then
     NEW_ID=$(od -An -tx1 -N16 /dev/urandom 2>/dev/null | tr -dc 'a-f0-9')
-    for SOURCE in home temp; do
-      [ -n "$NEW_ID" ] || break
-      FILE=$(install_id_file "$SOURCE")
-      { mkdir -p "${FILE%/*}" && (umask 077 && printf '%s\n' "$NEW_ID" > "$FILE"); } 2>/dev/null
-      INSTALL_ID=$(read_install_id "$FILE")
-      [ -n "$INSTALL_ID" ] && { INSTALL_ID_SOURCE="$SOURCE"; break; }
-    done
+    if [ -n "$NEW_ID" ]; then
+      { mkdir -p ~/.commercetools &&
+        (umask 077 && printf '%s\n' "$NEW_ID" > ~/.commercetools/ai-plugin-install-id); } 2>/dev/null
+      INSTALL_ID=$(read_install_id ~/.commercetools/ai-plugin-install-id)
+    fi
+    INSTALL_ID_SOURCE=home
   fi
+  [ -n "$INSTALL_ID" ] || INSTALL_ID_SOURCE=""
 
   # Session: a hash of the host's session ID (Claude Code and Codex session_id,
   # Cursor conversation_id, Copilot sessionId), never the ID itself.
@@ -231,11 +253,13 @@ main() {
   done
 
   # Session state, shared with the skill scripts: the project key and region
-  # they recorded, and the last skill this hook reported.
+  # they recorded, and the last skill this hook reported. The scripts write it
+  # to home, or to temp in a sandbox; the newer of the two counts.
   CT_PROJECT=""; CT_REGION=""; CT_PROJECT_SOURCE=""; LAST_SKILL=""; SEQ=1
-  SESSION_FILE="$TMP/ct-ai-plugin-invocation-$CLIENT_FAMILY.json"
   if [ -n "$SESSION" ]; then
-    PREVIOUS=$(cat "$SESSION_FILE" 2>/dev/null)
+    PREVIOUS=$(read_session_state)
+    IN_TEMP=$(cat "$TMP/ct-ai-plugin-invocation-$CLIENT_FAMILY.json" 2>/dev/null)
+    [ "$(state_ts "$IN_TEMP")" -gt "$(state_ts "$PREVIOUS")" ] 2>/dev/null && PREVIOUS="$IN_TEMP"
     if [ "$(state_value "$PREVIOUS" id)" = "$SESSION" ]; then
       CT_PROJECT=$(state_value "$PREVIOUS" ctProjectKey)
       CT_REGION=$(state_value "$PREVIOUS" ctRegion)
@@ -257,7 +281,7 @@ main() {
     [ -n "$CT_REGION" ] && STATE="$STATE,\"ctRegion\":\"$CT_REGION\""
     [ -n "$CT_PROJECT_SOURCE" ] && STATE="$STATE,\"ctProjectSource\":\"$CT_PROJECT_SOURCE\""
     STATE="$STATE,\"lastSkill\":\"$LAST_SKILL\"}"
-    { printf '%s' "$STATE" > "$SESSION_FILE"; } 2>/dev/null
+    write_session_state "$STATE"
   fi
 
   # Email domain: from the host when it states the signed-in user's email
@@ -272,20 +296,16 @@ main() {
       EMAIL_DOMAIN=$(printf '%s' "${HOST_EMAIL##*@}" | tr '[:upper:]' '[:lower:]' | tr -dc 'a-z0-9.-')
       EMAIL_DOMAIN_SOURCE="$CLIENT_FAMILY" ;;
   esac
-  for FILE in "$HOME/.commercetools/ai-plugin-email-domain" "$TMP/ct-ai-plugin-email-domain"; do
-    STORED=$(cat "$FILE" 2>/dev/null)
-    if [ -z "$EMAIL_DOMAIN" ]; then
-      EMAIL_DOMAIN=$(state_value "$STORED" domain)
-      EMAIL_DOMAIN_SOURCE=$(state_value "$STORED" source)
-      [ -n "$EMAIL_DOMAIN" ] && break
-    elif [ "$(state_value "$STORED" domain)" = "$EMAIL_DOMAIN" ] &&
-         [ "$(state_value "$STORED" source)" = "$EMAIL_DOMAIN_SOURCE" ]; then
-      break
-    else
-      { mkdir -p "${FILE%/*}" && (umask 077 &&
-        printf '{"domain":"%s","source":"%s"}\n' "$EMAIL_DOMAIN" "$EMAIL_DOMAIN_SOURCE" > "$FILE"); } 2>/dev/null && break
-    fi
-  done
+  STORED=$(cat ~/.commercetools/ai-plugin-email-domain 2>/dev/null)
+  [ -n "$(state_value "$STORED" domain)" ] || STORED=$(cat "$TMP/ct-ai-plugin-email-domain" 2>/dev/null)
+  if [ -z "$EMAIL_DOMAIN" ]; then
+    EMAIL_DOMAIN=$(state_value "$STORED" domain)
+    EMAIL_DOMAIN_SOURCE=$(state_value "$STORED" source)
+  elif [ "$(state_value "$STORED" domain)" != "$EMAIL_DOMAIN" ] ||
+       [ "$(state_value "$STORED" source)" != "$EMAIL_DOMAIN_SOURCE" ]; then
+    { mkdir -p ~/.commercetools && (umask 077 &&
+      printf '{"domain":"%s","source":"%s"}\n' "$EMAIL_DOMAIN" "$EMAIL_DOMAIN_SOURCE" > ~/.commercetools/ai-plugin-email-domain); } 2>/dev/null
+  fi
 
   # Cursor and Codex state the model in the payload; Claude Code doesn't.
   MODEL=$(json_field model)

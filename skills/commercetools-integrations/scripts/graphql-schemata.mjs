@@ -267,24 +267,35 @@ const INVOCATION_TTL_MS = 30 * 60 * 1000;
 // the same machine: they adopted its id and its `host` marker, so three
 // unrelated sessions in three different tools reported as one authoritative
 // session. Scoping by family keeps each tool's correlation to itself.
-const invocationFile = (appName) => {
+//
+// Home first, like the install id: the hook writes only to ~/.commercetools/
+// (a hook that runs curl must name its write targets literally), so that is
+// where its host session id is. A sandbox that denies home leaves temp, which
+// the hook reads too. Reading takes the newer of the two.
+const invocationFiles = (appName) => {
   const family = clientFamily(appName) || 'unknown';
-  return path.join(os.tmpdir(), `ct-ai-plugin-invocation-${family}.json`);
+  return [
+    path.join(os.homedir(), INSTALL_DIR, `ai-plugin-invocation-${family}.json`),
+    path.join(os.tmpdir(), `ct-ai-plugin-invocation-${family}.json`),
+  ];
 };
 
 const invocationId = (appName, project = {}) => {
   try {
-    const file = invocationFile(appName);
+    const files = invocationFiles(appName);
     const now = Date.now();
 
     let state = null;
-    try {
-      const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
-      if (parsed && typeof parsed.id === 'string' && now - parsed.ts < INVOCATION_TTL_MS) {
-        state = parsed;
+    for (const file of files) {
+      try {
+        const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+        if (parsed && typeof parsed.id === 'string' && now - parsed.ts < INVOCATION_TTL_MS &&
+            (!state || parsed.ts > state.ts)) {
+          state = parsed;
+        }
+      } catch {
+        // No usable cache here — try the other location, else mint a fresh one.
       }
-    } catch {
-      // No usable cache — fall through and mint a fresh one.
     }
 
     // `src` records where the id came from, because the two cases mean
@@ -309,10 +320,14 @@ const invocationId = (appName, project = {}) => {
     // `model` unless the caller knows better, e.g. a key read from an MCP server URL.
     next.ctProjectSource = passed ? project.source || 'model' : state?.ctProjectSource;
 
-    try {
-      fs.writeFileSync(file, JSON.stringify(next));
-    } catch {
-      // Unwritable tmp: still return the id we have for this single call.
+    for (const file of files) {
+      try {
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        fs.writeFileSync(file, JSON.stringify(next), { mode: 0o600 });
+        break;
+      } catch {
+        // Unwritable here: try temp; failing both, still return the id for this call.
+      }
     }
 
     return next;

@@ -1,5 +1,5 @@
 {
-  "description": "commercetools AI plugin telemetry. Sensors that report which commercetools skills and which of their reference files are used. They never inspect, block, or alter anything, exit immediately unless the tool payload mentions a commercetools skill path, and always exit 0. Controlled by the plugin's 'Share anonymous usage data' setting, or COMMERCETOOLS_AI_PLUGIN_TELEMETRY=0. Claude Code format \u2014 the Cursor and Codex equivalents are hooks/cursor-hooks.json and hooks/codex-hooks.json.",
+  "description": "commercetools AI plugin telemetry. Sensors that report which commercetools skills and which of their reference files are used. They never inspect, block, or alter anything, exit immediately unless the tool payload mentions a commercetools skill path, and always exit 0. Controlled by the plugin's 'Share anonymous usage data' setting, or COMMERCETOOLS_AI_PLUGIN_TELEMETRY=0. Claude Code format, running hooks/telemetry.mjs directly; Cursor and Codex (hooks/cursor-hooks.json, hooks/codex-hooks.json) run it through hooks/telemetry.sh.",
   "hooks": {
     "PostToolUse": [
       {

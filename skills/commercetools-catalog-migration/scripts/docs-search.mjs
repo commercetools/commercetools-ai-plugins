@@ -119,6 +119,8 @@ const claudeSettingOff = () => {
 const telemetryDisabled = () =>
   process.env.COMMERCETOOLS_AI_PLUGIN_TELEMETRY === '0' ||
   process.env.COMMERCETOOLS_AI_PLUGIN_TELEMETRY === 'off' ||
+  // How Claude Code hands the setting to a hook.
+  process.env.CLAUDE_PLUGIN_OPTION_TELEMETRY === 'false' ||
   claudeSettingOff();
 
 /**
@@ -278,23 +280,42 @@ const invocationFiles = (appName) => {
   ];
 };
 
+/** The newer of the two session files, if it is still fresh; otherwise null. */
+const readInvocation = (appName) => {
+  const now = Date.now();
+  let state = null;
+  for (const file of invocationFiles(appName)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+      if (parsed && typeof parsed.id === 'string' && now - parsed.ts < INVOCATION_TTL_MS &&
+          (!state || parsed.ts > state.ts)) {
+        state = parsed;
+      }
+    } catch {
+      // No usable state here — try the other location.
+    }
+  }
+  return state;
+};
+
+/** Stores the session state in home, or in temp where home isn't writable. */
+const writeInvocation = (appName, state) => {
+  for (const file of invocationFiles(appName)) {
+    try {
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, JSON.stringify(state), { mode: 0o600 });
+      return true;
+    } catch {
+      // Unwritable here: try temp.
+    }
+  }
+  return false;
+};
+
 const invocationId = (appName, project = {}) => {
   try {
-    const files = invocationFiles(appName);
     const now = Date.now();
-
-    let state = null;
-    for (const file of files) {
-      try {
-        const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
-        if (parsed && typeof parsed.id === 'string' && now - parsed.ts < INVOCATION_TTL_MS &&
-            (!state || parsed.ts > state.ts)) {
-          state = parsed;
-        }
-      } catch {
-        // No usable cache here — try the other location, else mint a fresh one.
-      }
-    }
+    const state = readInvocation(appName);
 
     // `src` records where the id came from, because the two cases mean
     // different things: `host` is a real session boundary reported by an editor
@@ -318,16 +339,8 @@ const invocationId = (appName, project = {}) => {
     // `model` unless the caller knows better, e.g. a key read from an MCP server URL.
     next.ctProjectSource = passed ? project.source || 'model' : state?.ctProjectSource;
 
-    for (const file of files) {
-      try {
-        fs.mkdirSync(path.dirname(file), { recursive: true });
-        fs.writeFileSync(file, JSON.stringify(next), { mode: 0o600 });
-        break;
-      } catch {
-        // Unwritable here: try temp; failing both, still return the id for this call.
-      }
-    }
-
+    // Failing both locations, the id still counts for this call.
+    writeInvocation(appName, next);
     return next;
   } catch {
     return undefined;
@@ -436,16 +449,17 @@ const gitEmailDomain = () => {
   }
 };
 
-const emailDomain = () => {
-  const locations = (() => {
-    try {
-      return emailDomainLocations();
-    } catch {
-      return [];
-    }
-  })();
+const safeEmailDomainLocations = () => {
+  try {
+    return emailDomainLocations();
+  } catch {
+    return [];
+  }
+};
 
-  for (const file of locations) {
+/** The stored domain and its source, without running git; undefined if none. */
+const storedEmailDomain = () => {
+  for (const file of safeEmailDomainLocations()) {
     try {
       const stored = JSON.parse(fs.readFileSync(file, 'utf8'));
       const domain = domainOf(`@${stored.domain}`);
@@ -454,21 +468,31 @@ const emailDomain = () => {
       // Nothing usable here — try the next location.
     }
   }
+  return undefined;
+};
 
-  const domain = gitEmailDomain();
-  if (!domain) return undefined;
-
-  for (const file of locations) {
+/** Stores a domain in home, or in temp where home isn't writable. */
+const storeEmailDomain = ({ domain, source }) => {
+  for (const file of safeEmailDomainLocations()) {
     try {
       fs.mkdirSync(path.dirname(file), { recursive: true });
-      fs.writeFileSync(file, JSON.stringify({ domain, source: 'git' }) + '\n', { mode: 0o600 });
-      break;
+      fs.writeFileSync(file, JSON.stringify({ domain, source }) + '\n', { mode: 0o600 });
+      return true;
     } catch {
       // Unwritable here — try the next location.
     }
   }
+  return false;
+};
+
+const emailDomain = () => {
+  const stored = storedEmailDomain();
+  if (stored) return stored;
+  const domain = gitEmailDomain();
+  if (!domain) return undefined;
   // Sent even when it could not be stored: unlike the installation id it is
   // not random, so the next call reads the same value again.
+  storeEmailDomain({ domain, source: 'git' });
   return { domain, source: 'git' };
 };
 

@@ -13,7 +13,7 @@ These are part of the requests themselves, or sent by AI tools that offer no way
 
 - **What is asked:** search terms, the schema or resource names looked up, and the GraphQL queries or REST requests sent for validation.
 - **Skill and file:** the skill name and the file read inside it, for example `references/core/cart.md`.
-- **AI tool:** the AI app and model, as they report themselves, and the plugin version.
+- **AI tool:** the AI app and model, as they report themselves, and the plugin version. Usage reports from the editor hooks also name the operating system (`darwin`, `linux` or `win32`) and which hook implementation sent them.
 - **Request data:** time, network address, and how the client identifies itself (user agent, MCP client name and version). In a cloud-hosted AI app, the network address is the provider's server, not yours.
 
 ## Sent unless you opt out

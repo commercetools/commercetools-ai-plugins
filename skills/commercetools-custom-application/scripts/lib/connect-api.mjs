@@ -16,9 +16,18 @@ const CONNECT_HOSTS = {
 
 export const connectHostFor = (cloudIdentifier) => CONNECT_HOSTS[cloudIdentifier] ?? null;
 
+// Every URL the client sends the client secret or token to, written out in full so a reader
+// (and the plugin directories' validators) can see where they go.
+const CONNECT_URLS = {
+  'europe-west1.gcp': { api: 'https://connect.europe-west1.gcp.commercetools.com', auth: 'https://auth.europe-west1.gcp.commercetools.com' },
+  'us-central1.gcp': { api: 'https://connect.us-central1.gcp.commercetools.com', auth: 'https://auth.us-central1.gcp.commercetools.com' },
+  'australia-southeast1.gcp': { api: 'https://connect.australia-southeast1.gcp.commercetools.com', auth: 'https://auth.australia-southeast1.gcp.commercetools.com' },
+  'eu-central-1.aws': { api: 'https://connect.eu-central-1.aws.commercetools.com', auth: 'https://auth.eu-central-1.aws.commercetools.com' },
+  'us-east-2.aws': { api: 'https://connect.us-east-2.aws.commercetools.com', auth: 'https://auth.us-east-2.aws.commercetools.com' },
+};
+
 export function connectUrls(cloudIdentifier) {
-  const host = connectHostFor(cloudIdentifier);
-  return host ? { api: `https://connect.${host}.commercetools.com`, auth: `https://auth.${host}.commercetools.com` } : null;
+  return CONNECT_URLS[connectHostFor(cloudIdentifier)] ?? null;
 }
 
 export function createConnectClient({ region, projectKey, clientId, clientSecret, fetchImpl }) {

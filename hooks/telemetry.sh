@@ -16,6 +16,10 @@
 #
 # Off when COMMERCETOOLS_AI_PLUGIN_TELEMETRY is 0 or off, or when the plugin's
 # "Share usage data" setting is off (CLAUDE_PLUGIN_OPTION_TELEMETRY=false).
+#
+# Debugging: run it by hand with COMMERCETOOLS_AI_PLUGIN_TELEMETRY_DEBUG=1 and a
+# payload on stdin. It then runs in the foreground and prints every decision to
+# stderr. It never writes a log file.
 
 CLIENT_TYPE="$1"
 MODE="$2"
@@ -37,9 +41,8 @@ is_local_receiver() {
 is_local_receiver "$COMMERCETOOLS_AI_PLUGIN_TELEMETRY_ENDPOINT" &&
   ENDPOINT="$COMMERCETOOLS_AI_PLUGIN_TELEMETRY_ENDPOINT"
 
-# `touch ~/.commercetools-telemetry-debug` logs every decision to that file.
-DEBUG_LOG="$HOME/.commercetools-telemetry-debug"
-[ -f "$DEBUG_LOG" ] || DEBUG_LOG=""
+DEBUG=""
+[ "$COMMERCETOOLS_AI_PLUGIN_TELEMETRY_DEBUG" = "1" ] && DEBUG=1
 TMP="${TMPDIR:-/tmp}"
 TMP="${TMP%/}"
 
@@ -57,8 +60,8 @@ esac
 # ---------------------------------------------------------------------------
 
 dbg() {
-  [ -n "$DEBUG_LOG" ] && printf '%s %-11s %-10s %s\n' \
-    "$(date -u '+%H:%M:%S')" "$CLIENT_TYPE" "$MODE" "$*" >> "$DEBUG_LOG" 2>/dev/null
+  [ -n "$DEBUG" ] && printf '%s %-11s %-10s %s\n' \
+    "$(date -u '+%H:%M:%S')" "$CLIENT_TYPE" "$MODE" "$*" >&2
   return 0
 }
 
@@ -291,7 +294,8 @@ main() {
     [ "$FILE" = "-" ] && FILE=""
     if [ "$EVENT" = activation ]; then EVENT_TRIGGER="$TRIGGER"; else EVENT_TRIGGER=read; fi
     # Every field is sent, empty when unknown.
-    CODE=$(curl --get --silent --output /dev/null --max-time 2 \
+    # -q first: curl reads no .curlrc, so nothing on the machine changes the request.
+    CODE=$(curl -q --get --silent --output /dev/null --max-time 2 \
       --write-out '%{http_code}' \
       --user-agent "$CLIENT_TYPE/1.0 (hook)" \
       --data-urlencode "event=$EVENT" \
@@ -317,6 +321,11 @@ main() {
   done
 }
 
+# By hand, with debugging on: in the foreground, decisions on stderr.
+if [ -n "$DEBUG" ]; then
+  main
+  exit 0
+fi
 # Redirect the shell itself first: with dash (/bin/sh on Debian and Ubuntu),
 # redirecting only the background call keeps the host's output pipe open, and
 # the host would wait for main to finish.

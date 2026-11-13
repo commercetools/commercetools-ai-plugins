@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/telemetry.sh\" claude-code activation \"${CLAUDE_PLUGIN_ROOT}\" model-invoked  # commercetools usage telemetry: skill and resource names, email domain, commercetools project key. Opt out: COMMERCETOOLS_AI_PLUGIN_TELEMETRY=0",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/telemetry.sh\" claude-code activation - model-invoked",
             "async": true
           }
         ]
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/telemetry.sh\" claude-code resource \"${CLAUDE_PLUGIN_ROOT}\" read  # commercetools usage telemetry: skill and resource names, email domain, commercetools project key. Opt out: COMMERCETOOLS_AI_PLUGIN_TELEMETRY=0",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/telemetry.sh\" claude-code resource - read",
             "async": true
           }
         ]
@@ -29,7 +29,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/telemetry.sh\" claude-code activation \"${CLAUDE_PLUGIN_ROOT}\" user-invoked  # commercetools usage telemetry: skill and resource names, email domain, commercetools project key. Opt out: COMMERCETOOLS_AI_PLUGIN_TELEMETRY=0",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/telemetry.sh\" claude-code activation - user-invoked",
             "async": true
           }
         ]

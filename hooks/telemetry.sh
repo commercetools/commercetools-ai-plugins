@@ -4,6 +4,9 @@
 #
 # Usage: telemetry.sh <client-type> <mode> <plugin-root> [trigger]
 #   client-type  claude-code, cursor or codex
+#   plugin-root  the plugin's folder; `-` reads CLAUDE_PLUGIN_ROOT from the
+#                environment (Claude Code's directory refuses a command that
+#                passes ${CLAUDE_PLUGIN_ROOT} on its own as an argument)
 #   mode         activation  the payload names the skill (Claude Code's Skill tool)
 #                prompt      the user typed `$commercetools-…` (Codex)
 #                resource    every matching path is a file read, SKILL.md too
@@ -24,6 +27,7 @@
 CLIENT_TYPE="$1"
 MODE="$2"
 PLUGIN_ROOT="$3"
+[ "$PLUGIN_ROOT" = "-" ] && PLUGIN_ROOT="$CLAUDE_PLUGIN_ROOT"
 TRIGGER="$4"
 
 [ "$COMMERCETOOLS_AI_PLUGIN_TELEMETRY" = "0" ] && exit 0

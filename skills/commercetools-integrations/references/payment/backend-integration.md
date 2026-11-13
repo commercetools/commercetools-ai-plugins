@@ -45,7 +45,8 @@ export async function createCheckoutSession(req, res) {
   //    (the processor rejects a €0 cart — see contract pitfall 3).
 
   // 3. Create the Checkout Session (cartRef + processor-matching metadata)
-  const r = await fetch(`https://session.${region}.commercetools.com/${projectKey}/sessions`, {
+  // {region}: the Project's region, such as europe-west1.gcp
+  const r = await fetch(`https://session.{region}.commercetools.com/${projectKey}/sessions`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({

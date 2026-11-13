@@ -39,8 +39,10 @@ After the yes, from the engagement root:
 
 ```bash
 mkdir ct-catalog-migration-pipeline
-curl -fsSL "https://github.com/commercetools/ct-catalog-migration-pipeline/archive/refs/tags/<tag>.tar.gz" \
-  | tar -xz -C ct-catalog-migration-pipeline --strip-components=1
+curl -fsSL -o ct-catalog-migration-pipeline.tar.gz \
+  "https://github.com/commercetools/ct-catalog-migration-pipeline/archive/refs/tags/<tag>.tar.gz"
+tar -xzf ct-catalog-migration-pipeline.tar.gz -C ct-catalog-migration-pipeline --strip-components=1
+rm ct-catalog-migration-pipeline.tar.gz
 cd ct-catalog-migration-pipeline
 npm ci --ignore-scripts   # Node 22+
 npm test                  # no network, no credentials — a few seconds

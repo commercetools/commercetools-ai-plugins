@@ -96,7 +96,8 @@ export async function POST() {
   try {
     const token = await getManageSessionsToken();
     const res = await fetch(
-      `https://session.${REGION}.commercetools.com/${PROJECT_KEY}/sessions`,
+      // {region}: the Project's region, such as europe-west1.gcp
+      `https://session.{region}.commercetools.com/${PROJECT_KEY}/sessions`,
       {
         method: 'POST',
         headers: {

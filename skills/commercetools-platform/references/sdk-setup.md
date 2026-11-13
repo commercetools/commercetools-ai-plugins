@@ -91,7 +91,7 @@ export async function getSomething(id: string) {
 
 ## Pattern 3: Environment Variables
 
-**INCORRECT:** Example Nextjs `NEXT_PUBLIC_CTP_CLIENT_SECRET` — exposes the secret in the browser bundle.
+**INCORRECT:** In Next.js, `NEXT_PUBLIC_CTP_CLIENT_SECRET` — exposes the secret in the browser bundle.
 
 **CORRECT — all commercetools variables are server-only (no `NEXT_PUBLIC_` prefix):**
 

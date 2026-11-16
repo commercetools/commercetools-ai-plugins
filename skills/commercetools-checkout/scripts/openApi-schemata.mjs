@@ -89,7 +89,7 @@ import { fileURLToPath } from 'node:url';
 
 // Substituted at install time from .internal/config.json. The one field in the
 // payload that is verified rather than self-reported by the model.
-const PLUGIN_VERSION = '0.77.0';
+const PLUGIN_VERSION = '0.78.0';
 
 // The plugin's "Share usage data" setting in Claude Code. Hooks get it as
 // CLAUDE_PLUGIN_OPTION_TELEMETRY; commands the agent runs don't, so read it
@@ -122,6 +122,8 @@ const claudeSettingOff = () => {
 const telemetryDisabled = () =>
   process.env.COMMERCETOOLS_AI_PLUGIN_TELEMETRY === '0' ||
   process.env.COMMERCETOOLS_AI_PLUGIN_TELEMETRY === 'off' ||
+  // How Claude Code hands the setting to a hook.
+  process.env.CLAUDE_PLUGIN_OPTION_TELEMETRY === 'false' ||
   claudeSettingOff();
 
 /**
@@ -268,25 +270,55 @@ const INVOCATION_TTL_MS = 30 * 60 * 1000;
 // the same machine: they adopted its id and its `host` marker, so three
 // unrelated sessions in three different tools reported as one authoritative
 // session. Scoping by family keeps each tool's correlation to itself.
-const invocationFile = (appName) => {
+//
+// Home first, like the install id: the hook writes only to ~/.commercetools/
+// (a hook that runs curl must name its write targets literally), so that is
+// where its host session id is. A sandbox that denies home leaves temp, which
+// the hook reads too. Reading takes the newer of the two.
+const invocationFiles = (appName) => {
   const family = clientFamily(appName) || 'unknown';
-  return path.join(os.tmpdir(), `ct-ai-plugin-invocation-${family}.json`);
+  return [
+    path.join(os.homedir(), INSTALL_DIR, `ai-plugin-invocation-${family}.json`),
+    path.join(os.tmpdir(), `ct-ai-plugin-invocation-${family}.json`),
+  ];
+};
+
+/** The newer of the two session files, if it is still fresh; otherwise null. */
+const readInvocation = (appName) => {
+  const now = Date.now();
+  let state = null;
+  for (const file of invocationFiles(appName)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+      if (parsed && typeof parsed.id === 'string' && now - parsed.ts < INVOCATION_TTL_MS &&
+          (!state || parsed.ts > state.ts)) {
+        state = parsed;
+      }
+    } catch {
+      // No usable state here — try the other location.
+    }
+  }
+  return state;
+};
+
+/** Stores the session state in home, or in temp where home isn't writable. */
+const writeInvocation = (appName, state) => {
+  for (const file of invocationFiles(appName)) {
+    try {
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, JSON.stringify(state), { mode: 0o600 });
+      return true;
+    } catch {
+      // Unwritable here: try temp.
+    }
+  }
+  return false;
 };
 
 const invocationId = (appName, project = {}) => {
   try {
-    const file = invocationFile(appName);
     const now = Date.now();
-
-    let state = null;
-    try {
-      const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
-      if (parsed && typeof parsed.id === 'string' && now - parsed.ts < INVOCATION_TTL_MS) {
-        state = parsed;
-      }
-    } catch {
-      // No usable cache — fall through and mint a fresh one.
-    }
+    const state = readInvocation(appName);
 
     // `src` records where the id came from, because the two cases mean
     // different things: `host` is a real session boundary reported by an editor
@@ -310,12 +342,8 @@ const invocationId = (appName, project = {}) => {
     // `model` unless the caller knows better, e.g. a key read from an MCP server URL.
     next.ctProjectSource = passed ? project.source || 'model' : state?.ctProjectSource;
 
-    try {
-      fs.writeFileSync(file, JSON.stringify(next));
-    } catch {
-      // Unwritable tmp: still return the id we have for this single call.
-    }
-
+    // Failing both locations, the id still counts for this call.
+    writeInvocation(appName, next);
     return next;
   } catch {
     return undefined;
@@ -424,16 +452,17 @@ const gitEmailDomain = () => {
   }
 };
 
-const emailDomain = () => {
-  const locations = (() => {
-    try {
-      return emailDomainLocations();
-    } catch {
-      return [];
-    }
-  })();
+const safeEmailDomainLocations = () => {
+  try {
+    return emailDomainLocations();
+  } catch {
+    return [];
+  }
+};
 
-  for (const file of locations) {
+/** The stored domain and its source, without running git; undefined if none. */
+const storedEmailDomain = () => {
+  for (const file of safeEmailDomainLocations()) {
     try {
       const stored = JSON.parse(fs.readFileSync(file, 'utf8'));
       const domain = domainOf(`@${stored.domain}`);
@@ -442,21 +471,31 @@ const emailDomain = () => {
       // Nothing usable here — try the next location.
     }
   }
+  return undefined;
+};
 
-  const domain = gitEmailDomain();
-  if (!domain) return undefined;
-
-  for (const file of locations) {
+/** Stores a domain in home, or in temp where home isn't writable. */
+const storeEmailDomain = ({ domain, source }) => {
+  for (const file of safeEmailDomainLocations()) {
     try {
       fs.mkdirSync(path.dirname(file), { recursive: true });
-      fs.writeFileSync(file, JSON.stringify({ domain, source: 'git' }) + '\n', { mode: 0o600 });
-      break;
+      fs.writeFileSync(file, JSON.stringify({ domain, source }) + '\n', { mode: 0o600 });
+      return true;
     } catch {
       // Unwritable here — try the next location.
     }
   }
+  return false;
+};
+
+const emailDomain = () => {
+  const stored = storedEmailDomain();
+  if (stored) return stored;
+  const domain = gitEmailDomain();
+  if (!domain) return undefined;
   // Sent even when it could not be stored: unlike the installation id it is
   // not random, so the next call reads the same value again.
+  storeEmailDomain({ domain, source: 'git' });
   return { domain, source: 'git' };
 };
 

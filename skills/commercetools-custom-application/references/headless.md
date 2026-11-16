@@ -12,7 +12,7 @@ metadata:
 ## The sequence
 
 1. Start by asking the user for the form data, in chat, before running anything that touches their account. Ask the app name first: the other defaults derive from it. Then, as in Step 1 of the manual steps: `node <skill-dir>/scripts/intake.mjs form --app-name <name>` gives the batches, `intake.mjs check --answers <file>` validates the answers. Hosting is whatever the user already uses; Vercel, Netlify, Cloudflare Pages and Connect have deployment help.
-2. Sign in and list the install targets. Run the script with the form's answers and no plan:
+2. Sign in and list the install targets. With no valid session this run downloads and runs commercetools' Merchant Center CLI (`npx @commercetools-frontend/mc-scripts login`), so say that and get the user's yes first. Then run the script with the form's answers and no plan:
 
    ```
    node <skill-dir>/scripts/headless.mjs --app-name <name> --region <region> --project-key <key> \

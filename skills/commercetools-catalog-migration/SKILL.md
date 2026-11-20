@@ -1,6 +1,6 @@
 ---
 name: commercetools-catalog-migration
-description: Migrates a product catalog from any source system into commercetools through a canonical NDJSON feed contract — the pipeline never parses the source, so each engagement writes only a small adapter. Covers the feed contract, writing an adapter, ProductType derivation and its irreversible attribute constraints, decimal-to-minor-unit money conversion, project-wide slug allocation, category order hints, opening stock per SKU and supply channel, tax categories, and the offline audit gate. Use when migrating or bulk-loading a product catalog into commercetools, writing an adapter for a source export, deciding SameForAll versus CombinationUnique, converting prices to centAmount, or diagnosing rejected Import API operations. Customer accounts and order history only on the user's sign-off. Not the Classic-to-Modular migration of an existing project (the staged Modular Catalog migration guide), and not for ongoing sync after cutover, carts, or promotions.
+description: Migrates a product catalog from any source system into commercetools through a canonical NDJSON feed contract — the pipeline never parses the source, so each engagement writes only a small adapter. Covers the feed contract, writing an adapter, ProductType derivation and its irreversible attribute constraints, decimal-to-minor-unit money conversion, project-wide slug allocation, category tree order, opening stock per SKU and supply channel, tax categories, and the offline audit gate. Use when migrating or bulk-loading a product catalog into commercetools, writing an adapter for a source export, deciding SameForAll versus CombinationUnique, converting prices to centAmount, or diagnosing rejected Import API operations. Customer accounts and order history only on the user's sign-off. Not the Classic-to-Modular migration of an existing project (the staged Modular Catalog migration guide), and not for ongoing sync after cutover, carts, or promotions.
 when_to_use:
   - "Migrating or bulk-loading a product catalog from a source system into a commercetools project"
   - "Writing an adapter that turns a source export (hybris ImpEx, PIM extract, CSV) into a catalog feed"
@@ -75,7 +75,7 @@ pipeline is what destroys retargetability. A seam made of *data* rather than
    `migration/` holds the config, interview, decision log and adapter;
    `source-export/` holds what the customer handed over. Create `migration/`
    before step 0 writes `INTERVIEW.md` into it. The layout, and what to commit:
-   [references/decision-log.md](references/decision-log.md#where-it-lives--and-the-layout-it-belongs-to).
+   [decision-log.md](references/decision-log.md#where-it-lives--and-the-layout-it-belongs-to).
 
 ## Workflow
 
@@ -86,13 +86,14 @@ pipeline is what destroys retargetability. A seam made of *data* rather than
    the config is the record of a conversation, not a form.
 
    Every question, what it writes, and why none of them can be defaulted:
-   [references/step-0-interview.md](references/step-0-interview.md). Work
+   [step-0-interview.md](references/step-0-interview.md). Work
    through it in order — the order is load-bearing:
 
    1. **Size the export** (minutes): file list, line counts, largest variant
-      count. Structural only — no mapping, no types, no decisions.
+      count. Structural only. No export, only a live system? Snapshot it
+      first: [source-access.md](references/source-access.md). Platform pages: [Magento](references/sources/magento.md), [Shopify](references/sources/shopify.md).
    2. **Discover the source (0b)** —
-      [references/source-discovery.md](references/source-discovery.md) — because
+      [source-discovery.md](references/source-discovery.md) — because
       the data answers some of the questions.
    3. **Write `migration/INTERVIEW.md` and stop.** One block per topic, a table with a row per question: 0a,
       the catalog-model question, first, because its answers can end the
@@ -117,7 +118,7 @@ pipeline is what destroys retargetability. A seam made of *data* rather than
    plan, an unasked one is a surprise. Open it before the adapter, with the
    pipeline release tag as its first line, so the
    version is on record before any stage runs. Format and placement:
-   [references/decision-log.md](references/decision-log.md).
+   [decision-log.md](references/decision-log.md).
 
    **Keep writing it at every step from here**, not at the end: a log
    reconstructed afterwards loses the irreversible decisions taken under
@@ -126,18 +127,16 @@ pipeline is what destroys retargetability. A seam made of *data* rather than
 1. **Write the adapter — one product first.** Read the source, emit NDJSON
    against the contract. This is the only code an engagement normally writes,
    and it is deliberately disposable. Work through
-   [references/writing-an-adapter.md](references/writing-an-adapter.md) against a
+   [writing-an-adapter.md](references/writing-an-adapter.md) against a
    real export — one designed against an assumed source model gets rewritten —
    with the record types in
-   [references/catalog-feed-contract.md](references/catalog-feed-contract.md).
+   [catalog-feed-contract.md](references/catalog-feed-contract.md).
 
    **Take the thin vertical slice first**: one product, two or three
    variants, through `validate`, `derive`, `plan` and `audit`. Before
    the first of them runs, record which pipeline release it is (the tag, one
    line in `DECISIONS.md`), whether you fetched it or found it there:
-   [getting-the-pipeline.md](references/getting-the-pipeline.md).
-   Writing every SKU in one pass usually gets away with it, which is why this
-   step gets skipped, and no reason to skip it. The axis
+   [getting-the-pipeline.md](references/getting-the-pipeline.md). The axis
    model, the money conversion and the attribute constraints are wrong in the
    same way across five records as across five thousand, and they are
    irreversible once loaded.
@@ -356,9 +355,8 @@ reference beside it — this list exists so none is *missed*.
   `<prefix>-<sourceCode>`, ProductTypes included — though a ProductType's
   *name* comes from the unprefixed code, or the Merchant Center reads "Mig
   Apparel Basic". → [catalog-feed-contract.md](references/catalog-feed-contract.md)
-- **An order hint is a string strictly between 0 and 1 and must not end in
-  `0`** — a zero-padded scheme emits `0.10` and is rejected.
-  → [categories-and-slugs.md](references/categories-and-slugs.md)
+- **An order hint is a string in (0,1) not ending in `0`**: a zero-padded
+  `0.10` is rejected. → [categories-and-slugs.md](references/categories-and-slugs.md)
 
 **Method**
 
@@ -377,14 +375,15 @@ reference beside it — this list exists so none is *missed*.
 
 | Topic | Reference |
 | :--- | :--- |
-| Profiling a source sample and producing a mapping proposal (step 0b) | [references/source-discovery.md](references/source-discovery.md) |
-| The engagement decision log: what to record at each step, and what not to | [references/decision-log.md](references/decision-log.md) |
-| The feed contract: every record type, with the two load-bearing design rules | [references/catalog-feed-contract.md](references/catalog-feed-contract.md) |
-| Writing an adapter for an arbitrary source, and what to establish first | [references/writing-an-adapter.md](references/writing-an-adapter.md) |
-| ProductTypes: declared vs inferred, constraints, levels, searchability | [references/product-model.md](references/product-model.md) |
-| Money, price scopes, validity windows, embedded vs standalone | [references/pricing-and-money.md](references/pricing-and-money.md) |
-| Categories: tree, slug allocation, order hints | [references/categories-and-slugs.md](references/categories-and-slugs.md) |
-| Running the pipeline: the stage order, options and config; it routes to one file per stage | [references/running-the-pipeline.md](references/running-the-pipeline.md) |
+| Profiling a source sample and the mapping proposal (step 0b) | [source-discovery.md](references/source-discovery.md) |
+| The decision log: what to record, and what not to | [decision-log.md](references/decision-log.md) |
+| The feed contract: every record type and its two load-bearing rules | [catalog-feed-contract.md](references/catalog-feed-contract.md) |
+| Writing an adapter for any source, and what to establish first | [writing-an-adapter.md](references/writing-an-adapter.md) |
+| Magento, Adobe Commerce, Shopify as the source | [magento.md](references/sources/magento.md), [shopify.md](references/sources/shopify.md) |
+| ProductTypes: declared vs inferred, constraints, levels, searchability | [product-model.md](references/product-model.md) |
+| Money, price scopes, validity windows, embedded vs standalone | [pricing-and-money.md](references/pricing-and-money.md) |
+| Categories: tree, slugs, sibling order | [categories-and-slugs.md](references/categories-and-slugs.md) |
+| Running the pipeline: stage order, options, config; one file per stage | [running-the-pipeline.md](references/running-the-pipeline.md) |
 
 ## Scope
 

@@ -92,7 +92,7 @@ the shipping address's country. A product with none **loads, verifies, and
 cannot be taxed at checkout** — no stage of the platform reports it. `validate`
 counts those products and warns; it cannot make it an error, because under
 `External` or `ExternalAmount` tax mode an outside service supplies the rate
-and no category is needed ([tax modes](https://docs.commercetools.com/api/carts-orders-overview.md#tax-modes)).
+and no category is needed ([tax modes](https://docs.commercetools.com/api/carts-orders-apis-overview.md#tax-modes)).
 Which mode applies is a step-0 question, recorded as `target.taxMode`: set to
 `External` or `ExternalAmount`, it silences that warning and the two rate-gap
 warnings (`tax-category-without-rates`, `tax-rate-country-missing`); left out,
@@ -118,7 +118,7 @@ to an undeclared category outright.
 | `state` | optional, case-sensitive. A rate with a state matches only carts whose address carries the same state |
 | `amount` | required, a **fraction**: `0.2` for 20%. The schema refuses anything above 1, because a source's `20` copied across is a 2000% rate |
 | `includedInPrice` | required, **no default** — `true` means prices are gross for that country, `false` net. Backwards, every price is off by the rate |
-| `taxRoundingTarget` | optional, `Net` or `Tax`; absent means the API's default, `Net`. When `includedInPrice` is `true`, tax is carved out of a gross price and only one of the two derived amounts can be rounded; this picks the net price (`Net`) or the tax amount (`Tax`), and the other is the exact remainder. Use `Tax` where the tax authority expresses the calculation as a fraction of the gross price — the docs give [UK VAT as an example](https://docs.commercetools.com/api/carts-orders-overview.md#tax-rounding-target). With `includedInPrice: false` it has no effect, and `validate` warns (`tax-rounding-target-ignored`). `preflight` and `verify` compare it like the other rate fields |
+| `taxRoundingTarget` | optional, `Net` or `Tax`; absent means the API's default, `Net`. When `includedInPrice` is `true`, tax is carved out of a gross price and only one of the two derived amounts can be rounded; this picks the net price (`Net`) or the tax amount (`Tax`), and the other is the exact remainder. Use `Tax` where the tax authority expresses the calculation as a fraction of the gross price — the docs give [UK VAT as an example](https://docs.commercetools.com/api/carts-orders-apis-overview.md#tax-rounding-target). With `includedInPrice: false` it has no effect, and `validate` warns (`tax-rounding-target-ignored`). `preflight` and `verify` compare it like the other rate fields |
 | `name` | optional; required by the API and **printed on orders** as the tax portion's name, so a derived one (`GB 20%`) is recorded for review |
 | `subRates[]` | optional; each `{name, amount}`, the portions a combined rate is made of. `amount` stays required and must **equal their sum**: `validate` refuses a mismatch (`tax-subrates-sum-mismatch`) and the audit gate checks it again, because the API refuses the whole category. Float noise is tolerated: `0.07 + 0.03` against `0.1` passes |
 

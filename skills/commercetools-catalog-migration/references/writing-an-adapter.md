@@ -168,19 +168,10 @@ field the adapter dropped by mistake. Either way, **record that the field was
 left off**, because a later reader comparing the two models will otherwise
 wonder whether it was missed.
 
-**Normalise locale tags.** Many sources write `en_GB`; commercetools requires
-`en-GB`. Re-key every localized map, and make sure the default locale is
-populated — a localized field with no entry for the default locale renders empty.
-
-**Verify the encoding from the bytes; a declaration can be wrong.** An XML
-prolog saying `latin1`, or an export doc claiming a codepage, is a claim about
-the file, not a fact. Trusting `encoding="latin1"` on a file that is actually
-UTF-8 puts `Â°C` into the attribute label — that exact signature is what to
-look for, and `MODEL-REVIEW.md` is usually where it first becomes visible.
-`file *` costs nothing, and mis-decoded
-text survives every validation in this pipeline — it is well-formed, correctly
-typed, and wrong. Check the degree signs, the accented names and the currency
-symbols in the first artefact you generate.
+**Values that pass every check and are still wrong** need looking for in the
+source: a mis-declared encoding, `en_GB` locale tags, two options with one
+label, HTML entities in plain text, a scoped value overriding the default. How
+to find and handle each: [source-data-traps.md](source-data-traps.md).
 
 **A hand-written reader for a macro-and-column format, such as a hybris ImpEx
 export, has two quiet traps.** The skill carries no ImpEx grammar on purpose;
@@ -264,8 +255,8 @@ Six things go wrong here, and none of them errors:
   and state only. A source with separate trade and retail rows for one class
   cannot express both on one category: pick the one the storefront charges,
   and record the other as lossy.
-- **A tax class per variant.** Some sources tax each SKU on its own — Magento
-  taxes a configurable's child simples, not the parent — and commercetools
+- **A tax class per variant.** Some sources tax each SKU on its own
+  ([Magento](sources/magento.md#tax) taxes a configurable's children), and commercetools
   holds the tax category on the **product**. A product whose variants carry
   different classes (a children's jacket whose largest size is standard-rated)
   cannot be expressed. Check for it explicitly: taking the parent's class, or

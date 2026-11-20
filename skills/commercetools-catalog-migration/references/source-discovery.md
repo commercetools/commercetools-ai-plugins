@@ -22,7 +22,8 @@ installations of the same platform agree on their own type system, and a
 migration designed against an assumed source model gets rewritten. The
 questions worth answering are in
 [writing-an-adapter.md](writing-an-adapter.md); this page is about answering
-them from data.
+them from data. With no export, only a running system, take a read-only
+snapshot first and profile that: [source-access.md](source-access.md).
 
 ## Do not teach the pipeline to read sources
 

@@ -1,6 +1,6 @@
 ---
 name: step-0-interview
-description: "The step-0 interview: the catalog-model question that can end an engagement, the judgements that cannot be defaulted, the two conditional questions, and the project facts that become migration.config.json."
+description: "The step-0 interview: the catalog-model question that can end an engagement, the judgements that cannot be defaulted, where the conditional questions are, and the project facts that become migration.config.json."
 metadata:
   contentType: REFERENCE
 ---
@@ -18,9 +18,7 @@ conversation, not a form.
 - [0a. Can this pipeline serve the catalog at all?](#0a-can-this-pipeline-serve-the-catalog-at-all)
 - [0b. Discover the source](#0b-discover-the-source)
 - [0c. The remaining judgements](#0c-the-remaining-judgements)
-- [0c-conditional. If the source carries stock, ask whether it is in scope](#0c-conditional-if-the-source-carries-stock-ask-whether-it-is-in-scope)
-- [0c-conditional. If slugs collide, ask who owns the URLs](#0c-conditional-if-slugs-collide-ask-who-owns-the-urls)
-- [0c-conditional. If 0b found relative media URLs, ask about the host](#0c-conditional-if-0b-found-relative-media-urls-ask-about-the-host)
+- [0c-conditional. Questions only some sources raise](#0c-conditional-questions-only-some-sources-raise)
 - [0d. The project facts](#0d-the-project-facts)
 - [Then open the decision log](#then-open-the-decision-log)
 
@@ -324,8 +322,8 @@ for whoever owns **tax**, which is often someone else: they decide the mode,
 confirm the rates and each rate's net/gross setting, and know whether the
 project's tax categories already exist — a new one needs a name no existing
 category holds. Under `External` or `ExternalAmount` the outside service, not a product's
-tax category, sets the cart's tax
-([tax modes](https://docs.commercetools.com/api/carts-orders-overview.md#tax-modes)),
+tax category, sets the tax
+([tax modes](https://docs.commercetools.com/api/carts-orders-apis-overview.md#tax-modes)),
 so the source's classes are either dropped or kept as tax categories
 **without rates**; the feed allows that, and `validate` stops warning about
 rate gaps once `target.taxMode` is set. Put the keep-or-drop question in the
@@ -350,72 +348,17 @@ first sees the result in the dry run's `load-requests.json`, after the choice
 is made. Shown per product, it is a question about their own catalog, the
 recommendation can be a named variant, and each product has its own answer.
 
-## 0c-conditional. If the source carries stock, ask whether it is in scope
+## 0c-conditional. Questions only some sources raise
 
-Most catalog exports carry a stock column, and its presence is not consent to
-load it. Ask, and record the answer either way:
+Add these to the interview file only when 0b found their trigger. Each one,
+its reasons and how to write its rows:
+[step-0-conditionals.md](step-0-conditionals.md).
 
-- **Who owns inventory after cutover?** If an ERP or OMS writes stock within
-  the hour, the migrated figure is an opening balance and nothing more. That
-  is still worth loading — a catalog that opens showing everything
-  out-of-stock sells nothing on day one — but it changes how hard anyone
-  should work to make it exact.
-- **Is the export's stock current?** A figure taken from a nightly extract two
-  weeks before cutover is worse than no figure, because a wrong number reads
-  as authoritative while an absent one reads as unknown.
-- **Per warehouse, or one number?** A store that lists supply channels sees
-  stock only on those channels, plus project-wide stock; a store that lists
-  none, or no store at all, sees everything. Getting this backwards makes
-  stock either invisible or oversold, and neither shows up as an error.
-- **If per warehouse: which store(s) sell from each warehouse?** The answer
-  becomes `store` records whose `supplyChannels` list those warehouses. A
-  warehouse no store lists, in a feed where some store lists others, is stock
-  the storefront cannot see — `validate` warns
-  (`inventory-supply-channel-not-in-store`). "No stores yet" is a valid
-  answer; record it.
-
-Write each question above as its own row in the interview file, not one
-stock row: the freshness row is the one a person other than the answerer can
-take, as `unknown, owner: <name>`, while "load it at all?" writes
-`inventoryEntry` records and cannot be left open.
-
-Skip it when the export carries no stock at all. Do **not** skip it because
-stock looks like an implementation detail — it is the one field that decides
-whether a loaded catalog can take an order.
-
-## 0c-conditional. If slugs collide, ask who owns the URLs
-
-Slugs are unique per locale across the Project, so a retail taxonomy that
-reuses names forces suffixes — and a forced suffix is a **changed URL**, which
-is an SEO decision and someone else's to make. `derive` and `plan` report the
-count; what they cannot do is find the owner. Ask while the mapping is still
-cheap to change, not after the load.
-
-**Two questions, not one:** the policy, *and* the name. Asking only the
-policy logs every changed URL against nobody, which reads as a decision and
-is not one. The name is what makes the entry a decision rather than a guess.
-
-Do not raise it when nothing collides.
-
-## 0c-conditional. If 0b found relative media URLs, ask about the host
-
-Do not raise this otherwise — it is not a standing question.
-
-Sources commonly store `/medias/...` and keep the host in a CDN setting, a
-storefront config, or an operations runbook. It is **not in the export**, so
-it can only be supplied. Put it to the user plainly, with the cost: a wrong
-base loads a catalog whose every image 404s, and neither the pipeline nor
-the project can detect that — the only way to find out is to open one.
-
-Ask what host or prefix these image paths resolve against; it writes
-`media.baseUrl`. Two acceptable answers. **A confirmed prefix** — set
-`media.baseUrl`, and the mapper resolves every relative URL against it,
-recording the count and the base as a reviewable decision. **No host
-available** — drop the images in the adapter and report them as not migrated.
-An absent image is recoverable; a wrong URL on every product is not, because
-it looks like success. Do not guess: `validate` refuses relative URLs with no
-`media.baseUrl` for exactly this reason. Absolute URLs need none of it, and a
-feed may mix the two.
+- The export carries stock: is it in scope, current, per warehouse?
+- Slugs collide: the suffix policy, and who owns the URLs.
+- Media URLs are relative: the host they resolve against.
+- Variants have no SKU: real SKUs, derived ones, or the source's id.
+- Texts are in a language the project lacks: add the language, or translate.
 
 ## 0d. The project facts
 

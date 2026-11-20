@@ -69,7 +69,7 @@ the engagement later. An engagement set up that way is unstaged with
 nothing to guard against, so commit it. Its own `.gitignore` keeps `node_modules/`,
 `dist/` and `.env*` files out of the commit, which is where `preflight` expects the
 credentials file. The engagement's `.gitignore` needs no entry for it, but it must
-anchor `feed/` and `out/`
+anchor `source-export/`, `feed/` and `out/`
 ([layout](decision-log.md#where-it-lives--and-the-layout-it-belongs-to)).
 
 Run the tests even for a release you trust. "The four stages ran clean on my feed"

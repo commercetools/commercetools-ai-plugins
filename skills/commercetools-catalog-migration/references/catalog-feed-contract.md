@@ -174,7 +174,9 @@ rather than an update.
 | `externalId` | optional — **the only externalId that reaches commercetools**; `CategoryImport` has the field |
 
 Supply `sourceOrder` and let the pipeline encode a legal order hint. See
-[categories-and-slugs.md](categories-and-slugs.md).
+[categories-and-slugs.md](categories-and-slugs.md). It orders categories among
+their siblings; a product's position inside a category is
+[not carried](categories-and-slugs.md#product-order-within-a-category-is-not-carried).
 
 ### `attributeDefinition`
 

@@ -48,7 +48,7 @@ record there files it inside a directory that an upgrade replaces. So be explici
 
 ```
 <engagement-root>/
-  .gitignore                    ignores feed/ and out/ — see below
+  .gitignore                    ignores source-export/, feed/ and out/ — see below
   ct-catalog-migration-pipeline/  the tool, a fetched release, committed with the
                                   engagement. Never write engagement files here:
                                   an upgrade replaces the directory. A change to
@@ -67,7 +67,7 @@ record there files it inside a directory that an upgrade replaces. So be explici
                                     `.json` on purpose: the pipeline reads only
                                     `*.ndjson` from `feed/`, so the report stays
                                     out of the feed digest
-    out/                          pipeline artefacts; regenerated, gitignored
+    out/                          pipeline artefacts; regenerated, never committed
 ```
 
 The adapter needs **its own `package.json`** containing at least
@@ -81,22 +81,26 @@ to fix and the very first thing an adapter author hits:
 ```
 
 Commit `migration.config.json`, `DECISIONS.md`, `MAPPING-PROPOSAL.md` and
-`adapter/`. Do not commit `feed/` or `out/` — both are regenerated, and `out/`
-is gitignored by the pipeline already. The adapter report sits in `feed/` and is
+`adapter/`. Do not commit `source-export/`, `feed/` or `out/`: the first is the
+customer's material, the other two are regenerated, and once customers or orders
+are in scope all three hold personal data. The pipeline's own `.gitignore` covers
+only its folder, not the engagement's `out/` beside the config, so the engagement
+needs its own `.gitignore` (below) before its first commit. The adapter report sits in `feed/` and is
 overwritten on the next run, so anything in it that is a decision (a cap, a
 count of skipped rows) belongs in `DECISIONS.md`, where it survives.
 
-**Anchor the two generated directories.** The pipeline copy is ordinary files, fetched
+**Anchor the three directories.** The pipeline copy is ordinary files, fetched
 without git history, and is committed with the engagement
 ([why](getting-the-pipeline.md#getting-the-pipeline)). The engagement's own
 `.gitignore` starts as:
 
 ```text
+/source-export/
 /migration/feed/
 /migration/out/
 ```
 
-Both are regenerated on every run. Anchor them: a bare `out/` also matches the
+Anchor them: a bare `out/` also matches the
 audit fixtures the pipeline commits at `ct-catalog-migration-pipeline/fixtures/*/out/plan.json`,
 which `npm test` reads, so a copy committed without them fails its own tests when
 someone else checks the engagement out. The version of the copy belongs in

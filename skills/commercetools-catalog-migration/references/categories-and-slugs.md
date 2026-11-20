@@ -1,6 +1,6 @@
 ---
 name: categories-and-slugs
-description: "Rebuilding the category tree, project-wide per-locale slug uniqueness and how collisions are disambiguated, and encoding a legal order hint from sibling order."
+description: "Rebuilding the category tree, project-wide per-locale slug uniqueness and how collisions are disambiguated, encoding a legal order hint from sibling order, and why product order within a category is not carried."
 metadata:
   contentType: REFERENCE
 ---
@@ -50,7 +50,7 @@ made. So when `derive` reports collisions, ask two things, not one: which
 suffix policy the business wants, and **who owns the URLs**. Logging every
 changed URL against nobody reads as a decision and is not one. The question and
 why it is asked are in
-[step-0-interview.md](step-0-interview.md#0c-conditional-if-slugs-collide-ask-who-owns-the-urls).
+[step-0-conditionals.md](step-0-conditionals.md#if-slugs-collide-ask-who-owns-the-urls).
 
 Derivation from a name strips diacritics by decomposing them rather than
 dropping the letters, so `Oberbekleidung für Männer` becomes
@@ -90,6 +90,24 @@ migration one.
 
 Order hints are scoped to a **sibling group**, so two categories under different
 parents legitimately share a value.
+
+### Product order within a category is not carried
+
+The order hints above order categories among their siblings. A product's
+position inside a category is a different field, `Product.categoryOrderHints`
+([CategoryOrderHints](https://docs.commercetools.com/api/projects/products.md#categoryorderhints)),
+and neither the feed contract nor the pipeline carries it. The Import API's
+product draft has no field for it either
+([ProductDraftImport](https://docs.commercetools.com/api/import-export/import-resources.md#productdraftimport)).
+
+So a position the source holds per product and category (a merchandising
+sort, a manual category-page order) is a loss:
+
+- Count it in the adapter's report and record it in `DECISIONS.md`.
+- Tell whoever owns merchandising: category pages lose the shop's manual order.
+  Products without an order hint sort below those with one, so the hints can be
+  set after the load with the Set Category Order Hint update action, by
+  whoever owns that order.
 
 ## Modelling questions worth raising
 

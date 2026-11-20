@@ -116,10 +116,17 @@ the adapter or drop one, and log the others as not migrated, with the count.
 ## The personal data in the engagement
 
 Once customers are in scope, personal data sits in `source-export/`, the feed,
-`out/plan.json` and `out/load-requests.json`. Keep all four out of version
-control and out of chat, tickets and screenshots. What is safe to share:
-diagnostics and `MODEL-REVIEW.md`, which name customer codes and counts, never
-an email or a name. Use invented people on `example.com` for any test feed.
+`out/plan.json` and the `load-requests` and `load-result` files. Keep all of them
+out of version control and out of chat, tickets and screenshots. What is safe to
+share: diagnostics and `MODEL-REVIEW.md`, which name customer codes and counts,
+never an email or a name. Use invented people on `example.com` for any test feed.
+
+The pipeline writes the files in `out/` readable by their owner only. The export
+and the feed are not its files, so keep them where only the people working on the
+migration can read them. A clean `verify` ends by listing the local copies: pass
+that on, and let the user decide when they are deleted. Deleting is theirs to
+decide, and `teardown` reads `plan.json`, so it stays until any trial load is
+removed.
 
 ## Loading, verifying, removing
 
@@ -149,4 +156,6 @@ an email or a name. Use invented people on `example.com` for any test feed.
 - [ ] Duplicate emails were resolved by the business, and the dropped accounts
       are logged as not migrated.
 - [ ] `source-export/`, the feed and `out/` are outside version control.
+- [ ] After `verify`, the user knows where the local copies of the personal data
+      are and decides when they are deleted.
 - [ ] The API Client has the customer scopes above.

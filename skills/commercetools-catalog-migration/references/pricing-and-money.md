@@ -218,9 +218,10 @@ Report these as information loss rather than approximating them:
 
   "Gross" is also not the whole answer: **gross at which country's rate?** A
   source can treat every price as including its *home* country's tax and
-  re-gross it for a foreign destination — Magento does exactly that with
-  tax-inclusive prices and cross-border trade switched off, so an Irish
-  €21.00 entered under a UK default is charged at about €21.53. commercetools
+  re-gross it for a foreign destination
+  ([Magento does](sources/magento.md#tax), with tax-inclusive prices and
+  cross-border trade off), so an Irish €21.00 entered under a UK default is
+  charged at about €21.53. commercetools
   applies the destination's rate to the price as given, so the same figure
   comes out as €21.00. Look for the setting that decides this whenever prices
   are gross and more than one country is sold into, and have whoever owns

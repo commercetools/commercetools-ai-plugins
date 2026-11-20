@@ -278,13 +278,18 @@ From the environment or `.env`, never from the committed config. See
 | Variable | Notes |
 | :--- | :--- |
 | `CTP_PROJECT_KEY`, `CTP_CLIENT_ID`, `CTP_CLIENT_SECRET` | required |
-| `CTP_REGION` | derives all three hosts |
-| `CTP_AUTH_URL`, `CTP_API_URL`, `CTP_IMPORT_URL` | override individually |
+| `CTP_REGION` | derives all three hosts; an unknown region is refused unless all three are set |
+| `CTP_AUTH_URL`, `CTP_API_URL`, `CTP_IMPORT_URL` | override individually; https only (plain http only to `localhost`) |
 | `CTP_SCOPES` | optional; omitting it grants every scope the API Client has |
 
 The Import API is on a **different host** from the HTTP API
 (`https://import.{region}…`). The conventional commercetools variable set has no
 import host, so it is derived from `CTP_API_URL` when absent.
+
+Every command that reads the project prints the hosts first, and a `warn` line for
+any host outside `commercetools.com`. The client secret goes to the auth host, so
+show that line to the user and continue only once they confirm the host is the
+proxy they mean. A typo or an edited `.env` is the likely cause otherwise.
 
 **Which project a run targets is refused rather than resolved, twice over.**
 Exported variables otherwise win over the file, but not for project identity:
